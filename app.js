@@ -172,6 +172,15 @@ const MAT_DETAIL={
  flower:new THREE.MeshStandardMaterial({color:0x8e4d55,roughness:.9}),
  leaf:new THREE.MeshStandardMaterial({color:0x496b43,roughness:1})
 };
+function rockMesh(radius=0.25){
+  const material=new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:.98,metalness:0});
+  const geometry=new THREE.DodecahedronGeometry(radius,1);
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.castShadow=true;mesh.receiveShadow=true;
+  mesh.rotation.set(Math.random()*1.7,Math.random()*Math.PI,Math.random()*1.4);
+  return mesh;
+}
+
 function box(w,h,d,m,pos,rotY=0,parent=null){const q=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);q.position.set(...pos);q.rotation.y=rotY;q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
 function cyl(r,h,m,pos,rot=[0,0,0],parent=null){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.94,h,10),m);q.position.set(...pos);q.rotation.set(...rot);q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
 function windowUnit(x,y,z,rot=0,w=1.15,h=1.45){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;const warm=new THREE.MeshPhysicalMaterial({color:0xb7c7bd,roughness:.22,metalness:.02,transmission:.12,transparent:true,opacity:.84,emissive:0x2a1b10,emissiveIntensity:.18});warmWindows.push(warm);box(w,h,.10,warm,[0,0,0],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[-w*.5,0,.08],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[w*.5,0,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,-h*.5,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,h*.5,.08],0,g);box(.06,h,.18,MAT_DETAIL.timber,[0,0,.10],0,g);box(w,.06,.18,MAT_DETAIL.timber,[0,0,.10],0,g);scene.add(g);return g}

@@ -3,6 +3,7 @@ import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js';
 
 const root=document.querySelector('#scene');
+const captureMode=new URLSearchParams(location.search).get('capture')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -22,7 +23,7 @@ scene.fog=new THREE.FogExp2(0x6f8279,.00265);
 
 const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,1400);
 camera.position.set(42,52,46);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;

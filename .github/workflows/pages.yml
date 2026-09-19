@@ -24,6 +24,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stage the real Hearthmere assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          curl -fsSL "https://api.github.com/repos/corgifighter/Test-screen/git/trees/main?recursive=1" -o /tmp/hearthmere-tree.json
+          jq -r '.tree[] | select(.type == "blob") | .path | select(test("\\.(glb|png|jpg)$"))' /tmp/hearthmere-tree.json > /tmp/hearthmere-assets.txt
+          while IFS= read -r file; do
+            echo "Downloading $file"
+            curl -fL --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/corgifighter/Test-screen/main/$file" -o "assets/$file"
+          done < /tmp/hearthmere-assets.txt
+          test -f assets/hero.glb
+          test -f assets/character.glb
+          test -f assets/inn.glb
+          test -f assets/grass.png
+          test -f assets/cobble.png
+          test -f assets/roof.png
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

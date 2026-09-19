@@ -55,7 +55,7 @@ jobs:
             await page.waitForTimeout(20000);
             const status = await page.locator('#boot-status').textContent().catch(() => '');
             const canvasCount = await page.locator('#scene canvas').count();
-            await page.locator('#scene canvas').screenshot({ path: 'hearthmere-live-canvas.png' });
+            await page.screenshot({ path: 'hearthmere-live-canvas.png', fullPage: false });
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
               const u = 'https://corgifighter.github.io/Nightfalltesting/assets/' + name;
               const res = await page.request.get(u);

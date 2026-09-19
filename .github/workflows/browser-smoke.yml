@@ -26,6 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.55.0
           node <<'NODE'
           const { chromium } = require('playwright');
           (async () => {

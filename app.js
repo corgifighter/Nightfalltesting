@@ -47,7 +47,7 @@ const moon=new THREE.DirectionalLight(0x5f79a4,.18);moon.position.set(30,50,-45)
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
 
-const ASSET_BASE='./assets/';
+const ASSET_BASE=new URL('./assets/',document.baseURI).href;
 const loader=new THREE.TextureLoader();
 function tex(path,repeat){const t=loader.load(ASSET_BASE+path.replace('./assets/',''));t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);t.colorSpace=THREE.SRGBColorSpace;return t}
 const grass=tex('./assets/grass.png',[27,27]);
@@ -68,7 +68,7 @@ const MAT={
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='varying vec3 vWorldPos;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment',"#include <map_fragment\n float macro=sin(vWorldPos.x*.075)*sin(vWorldPos.z*.061)+sin((vWorldPos.x+vWorldPos.z)*.021);\n float variation=smoothstep(-1.0,1.0,macro)*.075;\n diffuseColor.rgb*=vec3(1.0+variation,1.0+variation*.82,1.0+variation*.48);");
+ shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\n float macro=sin(vWorldPos.x*.075)*sin(vWorldPos.z*.061)+sin((vWorldPos.x+vWorldPos.z)*.021);\n float variation=smoothstep(-1.0,1.0,macro)*.075;\n diffuseColor.rgb*=vec3(1.0+variation,1.0+variation*.82,1.0+variation*.48);");
  MAT.grass.userData.shader=shader;
 };
 MAT.water.onBeforeCompile=(shader)=>{

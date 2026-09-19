@@ -57,7 +57,7 @@ jobs:
             const canvasCount = await page.locator('#scene canvas').count();
             await page.screenshot({ path: 'hearthmere-live-canvas.png', fullPage: false });
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
-              const u = 'https://corgifighter.github.io/Nightfalltesting/assets/' + name;
+              const u = 'https://raw.githubusercontent.com/corgifighter/Test-screen/main/' + name;
               const res = await page.request.get(u);
               return { name, status: res.status() };
             }));

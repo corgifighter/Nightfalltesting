@@ -42,6 +42,9 @@ jobs:
             });
             const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
             const errors = [];
+            const failedRequests = [];
+            page.on('requestfailed', r => failedRequests.push(r.url() + ' :: ' + (r.failure()?.errorText || 'failed')));
+            page.on('response', r => { if (r.status() >= 400) failedRequests.push(r.status() + ' ' + r.url()); });
             page.on('pageerror', e => errors.push('pageerror: ' + e.message));
             page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
             await page.goto('https://corgifighter.github.io/Nightfalltesting/?browser-smoke=1', {
@@ -53,10 +56,16 @@ jobs:
             const status = await page.locator('#boot-status').textContent().catch(() => '');
             const canvasCount = await page.locator('#scene canvas').count();
             await page.locator('#scene canvas').screenshot({ path: 'hearthmere-live-canvas.png' });
+            const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
+              const u = 'https://corgifighter.github.io/Nightfalltesting/assets/' + name;
+              const res = await page.request.get(u);
+              return { name, status: res.status() };
+            }));
             require('fs').writeFileSync(
               'hearthmere-browser-check.txt',
-              JSON.stringify({ canvasCount, status, errors }, null, 2)
+              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks }, null, 2)
             );
+            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks }, null, 2));
             if (canvasCount < 1) throw new Error('No Three.js canvas was created.');
             if (status && status.startsWith('Runtime error:')) throw new Error(status);
             if (errors.some(e => /THREE|WebGL|GLTF|failed|error/i.test(e))) {

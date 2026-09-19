@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v1';
+const CACHE='hearthmere-nightfalltesting-v2';
 const CORE=["./","./index.html","./app.js","./manifest.webmanifest","./assets/ASSET_MANIFEST.json"];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",

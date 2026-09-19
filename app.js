@@ -220,7 +220,7 @@ function landmarkAccent(g,type,x,z,scale=1){
   const add=(o,px,py,pz,rot=0)=>{o.position.set(px,py,pz);o.rotation.y=rot;g.add(o);return o};
   if(type==='inn'){
     // Deep timber porch + hanging sign + stacked firewood make the inn read immediately from the road.
-    add(box(5.6,.18,1.15,MAT_DETAIL.wood,undefined,0),0,2.15,-4.1);
+    add(box(5.6,.18,1.15,MAT_DETAIL.wood,[0,0,0],0),0,2.15,-4.1);
     for(const px of [-2.35,2.35]) add(cyl(.13,3.9,MAT_DETAIL.timber),px,1.15,-4.0);
     add(box(4.9,.08,.16,MAT_DETAIL.timber),0,4.05,-4.0);
     add(box(1.25,.10,.08,MAT_DETAIL.timber),0,3.25,-4.28);

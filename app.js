@@ -252,7 +252,8 @@ const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshB
 sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
 // Transitional production asset source: the reference repository is public and already contains the full core GLB/texture set.
-// Keep distilled CC0 replacements local; core authored assets load from a stable raw GitHub origin until they are vendored into Nightfalltesting.\nconst ASSET_BASE='https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
+// Keep distilled CC0 replacements local; core authored assets load from a stable raw GitHub origin until they are vendored into Nightfalltesting.
+const ASSET_BASE='https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
 const loader=new THREE.TextureLoader();
 const MAX_TEXTURE_ANISOTROPY=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
 function configureTexture(t,repeat=[1,1],colorSpace=THREE.SRGBColorSpace){

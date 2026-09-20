@@ -77,8 +77,11 @@ jobs:
                 const u = new URL('app.js?live-parse=' + Date.now(), location.href);
                 const res = await fetch(u.href, { cache: 'no-store' });
                 const src = await res.text();
-                try { new Function(src); return { ok:true, length:src.length, status:res.status }; }
-                catch(e) { return { ok:false, name:e?.name, message:e?.message, stack:e?.stack, length:src.length, status:res.status }; }
+                try {
+                  const blob=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+                  try { await import(blob + '#parse=' + Date.now()); return { ok:true, length:src.length, status:res.status }; }
+                  finally { URL.revokeObjectURL(blob); }
+                } catch(e) { return { ok:false, name:e?.name, message:e?.message, stack:e?.stack, length:src.length, status:res.status }; }
               } catch(e) { return { fetchError:String(e) }; }
             });
             const canvasCount = await page.locator('#scene canvas').count();

@@ -433,13 +433,13 @@ roadShoulder(23,6,24,6.2,.02);
 
 const assetLoader=new GLTFLoader();
 const assetCache=new Map();const assetPromises=new Map();const assetClips=new Map();
-const assetLoadStats={requested:0,loaded:0,failed:0,failedNames:[]};
+const assetLoadStats={requested:0,pending:0,loaded:0,failed:0,failedNames:[]};
 window.__HEARTHMERE_ASSET_LOAD_STATS=assetLoadStats;
 window.__HEARTHMERE_ASSET_FAILURES=assetLoadStats.failedNames;
 let loadedCount=0;const assetQueue=['inn','forge','chapel','mill','watchtower','well','cart','fence','bench','crate','sign','lantern','rock','tree_oak','tree_pine','shrub','grass_clump','bridge','barrel','character','hero','chimney_detail','door_detail','window_detail','roof_ridge_detail','timber_brace_detail','stone_foundation_detail','eave_bracket_detail','roof_eave_trim_detail'];
 async function loadAsset(name){
  if(assetPromises.has(name))return assetPromises.get(name);
- assetLoadStats.requested++;
+ assetLoadStats.requested++;assetLoadStats.pending++;
  const p=assetLoader.loadAsync(ASSET_BASE+`${name}.glb`).then(gltf=>{
    gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=true;if(o.material){o.material=o.material.clone();o.material.roughness=Math.min(.94,Math.max(.34,o.material.roughness??.7));const n=(o.name||'').toLowerCase();if(n.includes('roof')||n.includes('ridge')){o.material.map=roof;o.material.normalMap=roofNormal;o.material.normalScale=new THREE.Vector2(.34,.34);o.material.needsUpdate=true;}if(n.includes('window')){o.material.emissive=new THREE.Color(0x6f4925);o.material.emissiveIntensity=.18;warmWindows.push(o);}
           if(n.includes('leaf')||n.includes('foliage')||n.includes('crown')||name.includes('tree')||name.includes('shrub')){
@@ -450,8 +450,8 @@ async function loadAsset(name){
           if(n.includes('stone')||n.includes('foundation')||name==='rock'){o.material.roughness=.92;o.material.metalness=0;}
           if(n.includes('wood')||n.includes('timber')||n.includes('beam')){o.material.roughness=.82;o.material.metalness=0;}
         }}});
-   assetCache.set(name,gltf.scene);assetClips.set(name,gltf.animations||[]);loadedCount++;assetLoadStats.loaded++;bootSet(.08+.57*(loadedCount/assetQueue.length),'Loading '+name+'…');return {scene:gltf.scene,clips:gltf.animations||[]};
- }).catch(err=>{assetLoadStats.failed++;assetLoadStats.failedNames.push(name);console.warn('Asset failed',name,err);return null});
+   assetCache.set(name,gltf.scene);assetClips.set(name,gltf.animations||[]);loadedCount++;assetLoadStats.loaded++;assetLoadStats.pending--;bootSet(.08+.57*(loadedCount/assetQueue.length),'Loading '+name+'…');return {scene:gltf.scene,clips:gltf.animations||[]};
+ }).catch(err=>{assetLoadStats.failed++;assetLoadStats.pending--;assetLoadStats.failedNames.push(name);console.warn('Asset failed',name,err);return null});
  assetPromises.set(name,p);return p;
 }
 async function placeAsset(name,x,z,scale=1,rotation=0,tint=null){const loaded=await loadAsset(name);if(!loaded)return null;const g=loaded.scene.clone(true);g.position.set(x,name==='bridge'?0.12:terrainHeight(x,z),z);g.scale.setScalar(scale);g.rotation.y=rotation;g.userData.assetName=name;g.userData.animations=loaded.clips;if(tint){g.traverse(o=>{if(o.isMesh&&o.material?.color){o.material=o.material.clone();o.material.color.lerp(new THREE.Color(tint),.18)}})}scene.add(g);return g}
@@ -1845,7 +1845,7 @@ window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='page
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
-bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested===assetQueue.length && assetLoadStats.failed===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
+bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested>0 && assetLoadStats.pending===0 && assetLoadStats.failed===0 && distilledLoadStats.pending===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;
 window.__HEARTHMERE_READY=true;

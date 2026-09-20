@@ -1727,9 +1727,49 @@ function hdCharacter(root,isPlayer=false){
   const clasp=new THREE.Mesh(new THREE.SphereGeometry(.09,16,12),metal);clasp.position.set(0,2.14,-.32);clasp.castShadow=true;g.add(clasp);
 
   if(isPlayer){
-    // Base weapon geometry remains separate so the equipment layer can animate it.
-    const blade=hdCyl(.045,.055,1.75,metal,[.78,1.72,.05],g,22);blade.rotation.z=-.55;g.userData.baseBlade=blade;
-    hdBox(.12,.12,.72,metal,[.38,2.48,.03],g,0,0,-.55,.018);
+    // HERO PRODUCTION PRESENTATION: layered PBR equipment, fur collar, shield,
+    // shoulder armor, belt hardware and a readable heraldic silhouette.
+    const heroCloth=new THREE.MeshPhysicalMaterial({color:0x304d62,roughness:.78,clearcoat:.10,clearcoatRoughness:.68,sheen:.16,sheenColor:new THREE.Color(0x7d9caf),sheenRoughness:.72});
+    const heroLeather=new THREE.MeshPhysicalMaterial({color:0x302019,roughness:.82,clearcoat:.16,clearcoatRoughness:.58});
+    const heroMetal=new THREE.MeshPhysicalMaterial({color:0x7c817d,metalness:.82,roughness:.24,clearcoat:.28,clearcoatRoughness:.24});
+    const heroFur=new THREE.MeshPhysicalMaterial({color:0x9a8b72,roughness:.96,sheen:.28,sheenColor:new THREE.Color(0xd0c4a4),sheenRoughness:.86});
+    // Replace the simple cloth read with a richer layered chest panel.
+    const chestPlate=new THREE.Mesh(new THREE.CapsuleGeometry(.42,.56,8,24),heroCloth);
+    chestPlate.position.set(0,1.76,.23);chestPlate.scale.set(1.08,.92,.62);chestPlate.castShadow=true;g.add(chestPlate);
+    for(const side of [-1,1]){
+      const pauldron=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),heroMetal);
+      pauldron.position.set(side*.57,2.02,.03);pauldron.scale.set(1.18,.62,.92);pauldron.rotation.z=side*.12;pauldron.castShadow=true;g.add(pauldron);
+      const bracer=new THREE.Mesh(new THREE.CylinderGeometry(.13,.17,.48,24),heroMetal);
+      bracer.position.set(side*.70,1.18,.02);bracer.rotation.z=side*.10;bracer.castShadow=true;g.add(bracer);
+    }
+    const collar=new THREE.Mesh(new THREE.TorusGeometry(.43,.105,10,36),heroFur);
+    collar.position.set(0,2.20,.01);collar.rotation.x=Math.PI/2;collar.scale.set(1.02,.86,1);collar.castShadow=true;g.add(collar);
+    const belt=new THREE.Mesh(new THREE.TorusGeometry(.50,.055,8,32),heroLeather);
+    belt.position.set(0,1.18,0);belt.rotation.x=Math.PI/2;belt.scale.set(1,.72,1);g.add(belt);
+    const buckle=new THREE.Mesh(new THREE.BoxGeometry(.17,.17,.055),heroMetal);
+    buckle.position.set(0,1.19,.46);g.add(buckle);
+    for(const side of [-1,1]){
+      const pouch=new THREE.Mesh(new THREE.BoxGeometry(.24,.25,.14),heroLeather);
+      pouch.position.set(side*.48,1.16,.30);pouch.rotation.z=side*.08;pouch.castShadow=true;g.add(pouch);
+    }
+    // Round shield with layered rim, boss and simple Hearthmere leaf heraldry.
+    const shield=new THREE.Group();shield.position.set(-.42,1.60,-.34);shield.rotation.set(.06,.15,.08);g.add(shield);
+    const shieldFace=new THREE.Mesh(new THREE.CylinderGeometry(.48,.48,.12,40),heroCloth);shieldFace.rotation.x=Math.PI/2;shieldFace.castShadow=true;shield.add(shieldFace);
+    const shieldRim=new THREE.Mesh(new THREE.TorusGeometry(.47,.055,10,40),heroMetal);shieldRim.rotation.x=Math.PI/2;shield.add(shieldRim);
+    const boss=new THREE.Mesh(new THREE.SphereGeometry(.09,18,12),heroMetal);boss.position.set(0,0,.10);shield.add(boss);
+    for(const s of [-1,1]){const leaf=new THREE.Mesh(new THREE.CapsuleGeometry(.035,.25,5,12),heroFur);leaf.position.set(s*.075,.10,.12);leaf.rotation.z=s*.55;leaf.rotation.x=Math.PI/2;shield.add(leaf);}
+    const shieldStem=new THREE.Mesh(new THREE.CapsuleGeometry(.028,.25,5,12),heroFur);shieldStem.position.set(0,.02,.12);shieldStem.rotation.x=Math.PI/2;shield.add(shieldStem);
+    // Sword: bright blade, wrapped grip, guard and pommel.
+    const blade=new THREE.Mesh(new THREE.CylinderGeometry(.045,.075,1.82,6),heroMetal);
+    blade.position.set(.78,1.72,.05);blade.rotation.z=-.55;blade.castShadow=true;g.add(blade);g.userData.baseBlade=blade;
+    const guard=new THREE.Mesh(new THREE.BoxGeometry(.13,.08,.62),heroMetal);guard.position.set(.38,2.48,.03);guard.rotation.z=-.55;g.add(guard);
+    const grip=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.38,16),heroLeather);grip.position.set(.25,2.63,.03);grip.rotation.z=-.55;g.add(grip);
+    const pommel=new THREE.Mesh(new THREE.SphereGeometry(.09,16,12),heroMetal);pommel.position.set(.14,2.80,.03);g.add(pommel);
+    // Beard/eyebrows give the face a stronger authored silhouette at mobile scale.
+    const beardMat=new THREE.MeshPhysicalMaterial({color:0x3a2922,roughness:.93,sheen:.12,sheenColor:new THREE.Color(0x765644),sheenRoughness:.88});
+    const beard=new THREE.Mesh(new THREE.SphereGeometry(.26,20,14),beardMat);beard.position.set(0,2.48,.30);beard.scale.set(.92,.66,.60);g.add(beard);
+    for(const side of [-1,1]){const brow=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.035),beardMat);brow.position.set(side*.13,2.77,.395);brow.rotation.z=side*.08;g.add(brow);}
+    g.userData.heroPresentation=true;
   }else{
     hdBox(1.05,.13,.20,leather,[0,1.12,.36],g,0,0,0,.018);
   }

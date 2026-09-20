@@ -2432,10 +2432,10 @@ const MASTER={
 };
 function masterLamp(x,z,scale=1){
   const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);
-  cyl(.075,2.7,MASTER.timber,[0,1.35,0],[],g);box(.46,.12,.46,MASTER.brass,[0,2.58,0]);
+  cyl(.075,2.7,MASTER.timber,[0,1.35,0],[],g);box(.46,.12,.46,MASTER.brass,[0,2.58,0],0,g);
   const glow=new THREE.Mesh(new THREE.OctahedronGeometry(.20,2),new THREE.MeshBasicMaterial({color:0xffbd6c,transparent:true,opacity:.92}));
-  glow.position.set(x, y+2.30, z);scene.add(glow);
-  const light=new THREE.PointLight(0xffa451,1.15,7.5,.85);light.position.set(x,y+2.25,z);scene.add(light);
+  glow.position.set(0,2.30,0);g.add(glow);
+  const light=new THREE.PointLight(0xffa451,1.15,7.5,.85);light.position.set(0,2.25,0);g.add(light);
   g.scale.setScalar(scale);scene.add(g);return g;
 }
 function masterBanner(x,z,rot=0,h=4.2){
@@ -2484,7 +2484,7 @@ function masterTreeCluster(x,z,s=1){
 }
 function masterFlowerMeadow(x,z,r=4){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.03,z);
-  for(let i=0;i<26;i++){const a=worldRandom()*Math.PI*2,rr=Math.sqrt(worldRandom())*r;cyl(.018,.22+worldRandom()*.20,i%3?MASTER.green:MASTER.flower,[Math.cos(a)*rr,.11,Math.sin(a)*rr]);}
+  for(let i=0;i<26;i++){const a=worldRandom()*Math.PI*2,rr=Math.sqrt(worldRandom())*r;cyl(.018,.22+worldRandom()*.20,i%3?MASTER.green:MASTER.flower,[Math.cos(a)*rr,.11,Math.sin(a)*rr],[0,0,0],g);}
   scene.add(g);return g;
 }
 function buildMasterArtDirectionPass(){

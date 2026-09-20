@@ -407,6 +407,59 @@ async function loadAsset(name){
 }
 async function placeAsset(name,x,z,scale=1,rotation=0,tint=null){const loaded=await loadAsset(name);if(!loaded)return null;const g=loaded.scene.clone(true);g.position.set(x,name==='bridge'?0.12:terrainHeight(x,z),z);g.scale.setScalar(scale);g.rotation.y=rotation;g.userData.assetName=name;g.userData.animations=loaded.clips;if(tint){g.traverse(o=>{if(o.isMesh&&o.material?.color){o.material=o.material.clone();o.material.color.lerp(new THREE.Color(tint),.18)}})}scene.add(g);return g}
 
+// ============================================================================
+// DISTILLED EXTERNAL-ASSET PIPELINE
+// Selected CC0 source models are vendored locally after an explicit mobile-first
+// distillation decision. They are not runtime CDN dependencies and are used as
+// high-information replacements for the weakest procedural silhouettes.
+// ============================================================================
+const DISTILLED_ASSETS=Object.freeze({
+  rock:'./assets/cc0/polyhaven/rock_moss_set_01.glb',
+  shrub:'./assets/cc0/polyhaven/shrub_02.glb',
+  fern:'./assets/cc0/polyhaven/fern_02.glb',
+  grass:'./assets/cc0/polyhaven/grass_medium_01.glb'
+});
+const distilledAssetPromises=new Map();
+const distilledAssetCache=new Map();
+const distilledLoadStats={pending:0,loaded:0,failed:0,failedKeys:[]};
+window.__HEARTHMERE_DISTILLED_LOAD_STATS=distilledLoadStats;
+async function loadDistilledAsset(key){
+  if(distilledAssetPromises.has(key))return distilledAssetPromises.get(key);
+  const url=DISTILLED_ASSETS[key];
+  if(!url)return null;
+  distilledLoadStats.pending++;
+  const p=assetLoader.loadAsync(url).then(gltf=>{
+    gltf.scene.traverse(o=>{
+      if(!o.isMesh)return;
+      o.castShadow=true;o.receiveShadow=true;o.frustumCulled=true;
+      if(o.material){
+        o.material=o.material.clone();
+        o.material.roughness=Math.min(.96,Math.max(.38,o.material.roughness??.82));
+        o.material.metalness=0;
+        if('alphaTest' in o.material)o.material.alphaTest=Math.max(o.material.alphaTest||0,.28);
+        if(o.material.color)o.material.color.multiplyScalar(.98);
+      }
+    });
+    distilledAssetCache.set(key,gltf.scene);
+    distilledLoadStats.loaded++;distilledLoadStats.pending--;
+    return gltf.scene;
+  }).catch(err=>{
+    distilledLoadStats.failed++;distilledLoadStats.failedKeys.push(key);distilledLoadStats.pending--;console.warn('Distilled asset failed',key,err);return null;
+  });
+  distilledAssetPromises.set(key,p);
+  return p;
+}
+async function placeDistilledVariant(key,x,z,scale=1,rotation=0,variant=0){
+  const source=await loadDistilledAsset(key);if(!source)return null;
+  const roots=source.children.filter(o=>o.visible!==false);
+  const base=roots.length?roots[variant%roots.length]:source;
+  const g=base.clone(true);
+  g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);g.rotation.y=rotation;
+  g.userData.assetName='distilled_'+key;g.userData.distilled=true;g.userData.variant=variant%Math.max(1,roots.length);
+  scene.add(g);return g;
+}
+
+
 
 // Hearthmere authored-detail pass: architectural trim, windows, doors, chimneys,
 // market dressing and terrain-edge storytelling. These are modular scene details,
@@ -1072,7 +1125,7 @@ function hdCharacter(root,isPlayer=false){
   return g;
 }
 
-function replaceLegacyVisuals(){
+async function replaceLegacyVisuals(){
   const hideNames=new Set(['tree_oak','tree_pine','shrub','grass_clump','rock','cottage_A','cottage_B','cottage_C','inn','forge','chapel','mill','watchtower','bridge','well','barrel','bench','cart','crate','fence','lantern','sign','hero','character']);
   const legacy=[];
   scene.traverse(o=>{if(o.userData?.assetName && hideNames.has(o.userData.assetName))legacy.push(o);});
@@ -1104,10 +1157,21 @@ function replaceLegacyVisuals(){
   legacy.filter(g=>g.userData.assetName==='tree_oak'||g.userData.assetName==='tree_pine').forEach(g=>{
     const x=g.position.x,z=g.position.z,sc=g.scale.x;hdTree(x,z,sc,g.userData.assetName==='tree_pine');
   });
-  legacy.filter(g=>g.userData.assetName==='rock').forEach(g=>hdRock(g.position.x,g.position.z,g.scale.x));
-  legacy.filter(g=>['shrub','grass_clump'].includes(g.userData.assetName)).forEach(g=>{
-    const x=g.position.x,z=g.position.z,sc=g.scale.x;const h=hdSphere(.48,g.userData.assetName==='shrub'?HD.leafLight:HD.leaf,[x,terrainHeight(x,z)+.3*sc,z],scene,[1.7*sc,.55*sc,1.15*sc]);
-  });
+  const legacyRocks=legacy.filter(g=>g.userData.assetName==='rock');
+  await Promise.all(legacyRocks.map(async (g,i)=>{
+    const h=await placeDistilledVariant('rock',g.position.x,g.position.z,g.scale.x*.92,g.rotation.y,i%6);
+    if(!h)hdRock(g.position.x,g.position.z,g.scale.x);
+  }));
+  const legacyShrubs=legacy.filter(g=>g.userData.assetName==='shrub');
+  await Promise.all(legacyShrubs.map(async (g,i)=>{
+    const h=await placeDistilledVariant('shrub',g.position.x,g.position.z,g.scale.x*.82,g.rotation.y,i%4);
+    if(!h)hdSphere(.48,HD.leaf,[g.position.x,terrainHeight(g.position.x,g.position.z)+.3*g.scale.x,g.position.z],scene,[1.7*g.scale.x,.55*g.scale.x,1.15*g.scale.x]);
+  }));
+  const legacyGrass=legacy.filter(g=>g.userData.assetName==='grass_clump');
+  await Promise.all(legacyGrass.map(async (g,i)=>{
+    const h=await placeDistilledVariant('grass',g.position.x,g.position.z,g.scale.x*.52,g.rotation.y,i%3);
+    if(!h)hdSphere(.38,HD.leaf,[g.position.x,terrainHeight(g.position.x,g.position.z)+.22*g.scale.x,g.position.z],scene,[1.9*g.scale.x,.30*g.scale.x,1.35*g.scale.x]);
+  }));
   const propNames=new Set(['well','barrel','bench','fence','lantern','crate']);
   legacy.filter(g=>propNames.has(g.userData.assetName)).forEach(g=>hdProp(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y));
   legacy.filter(g=>g.userData.assetName==='bridge').forEach(g=>hdBridge(g.position.x,g.position.z,g.scale.x,g.rotation.y));
@@ -1119,6 +1183,18 @@ function replaceLegacyVisuals(){
   });
 }
 
+async function buildDistilledNature(){
+  // Additional high-information foliage is concentrated near the water, paths and
+  // village edge where it is large enough to change the image rather than becoming
+  // expensive background noise.
+  const fernSpots=[
+    [27.2,-22.5,.48,.12],[28.4,-18.8,.42,-.22],[27.6,-12.4,.46,.31],[28.8,-7.8,.40,-.12],
+    [27.1,-2.4,.44,.26],[34.7,2.6,.48,-.18],[35.6,6.9,.43,.34],[36.8,11.2,.40,-.28],
+    [26.4,17.8,.46,.18],[27.8,22.2,.41,-.34],[25.9,27.1,.45,.25],[37.0,29.0,.42,-.15],
+    [-21.8,-8.4,.34,.44],[-17.5,-6.6,.30,-.21],[-7.4,-5.8,.32,.16],[3.6,-7.1,.31,-.27]
+  ];
+  await Promise.all(fernSpots.map((v,i)=>placeDistilledVariant('fern',v[0],v[1],v[2],v[3],i%4)));
+}
 let villageWell=null;
 const interactables=[];
 const gameState={quest:0, gathered:0, gold:24, inventory:{wood:12,stone:8,herb:6,fish:7}, lastInteraction:null};
@@ -1539,10 +1615,10 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
+controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

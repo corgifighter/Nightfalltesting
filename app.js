@@ -2781,6 +2781,7 @@ function frame(t){
 
  shorelineGlints.forEach((g,i)=>{g.material.opacity=.10+.11*(Math.sin(time*1.35+i*.63)+1)/2;g.scale.x=.82+.32*(Math.sin(time*1.1+i)+1)/2});
  if(MAT.grass.userData.shader)MAT.grass.userData.shader.uniforms.uTime.value=time;
+ TREE_LEAF_MATS.forEach(m=>{if(m.userData.foliageShader)m.userData.foliageShader.uniforms.uFoliageTime.value=time;});
  shadowRefreshFrame++;
  if(shadowRefreshFrame>=3){sun.shadow.needsUpdate=true;shadowRefreshFrame=0;}
  updateHeroPresentation();

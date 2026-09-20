@@ -252,7 +252,7 @@ const MAT_DETAIL={
 };
 function rockMesh(radius=0.25){
   const material=new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:.98,metalness:0});
-  const geometry=new THREE.DodecahedronGeometry(radius,1);
+  const geometry=new THREE.SphereGeometry(radius,32,20);
   const mesh=new THREE.Mesh(geometry,material);
   mesh.castShadow=true;mesh.receiveShadow=true;
   mesh.rotation.set(Math.random()*1.7,Math.random()*Math.PI,Math.random()*1.4);
@@ -589,11 +589,11 @@ function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0){
   (parent||scene).add(m);return m;
 }
 function hdCyl(r1,r2,h,mat,pos,parent,segments=24){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments,3),mat);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments,6),mat);
   m.position.set(...pos);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(r,28,20),mat);
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,48,32),mat);
   m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdRoof(parent,w,d,y,mat,angle=.58){
@@ -694,8 +694,10 @@ function hdTree(x,z,scale=1,pine=false){
 }
 function hdRock(x,z,scale=1){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
-  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(.65,2),HD.stone);
-  m.scale.set(1.25,.72,.92);m.rotation.set(.2,.7,.08);m.castShadow=true;m.receiveShadow=true;g.add(m);return g;
+  const m=new THREE.Mesh(new THREE.SphereGeometry(.72,40,24),HD.stone);
+  m.scale.set(1.35,.72,.96);m.rotation.set(.2,.7,.08);m.castShadow=true;m.receiveShadow=true;g.add(m);
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(.46,32,20),HD.stoneDark);cap.position.set(-.18,.32,.08);cap.scale.set(1.3,.34,.9);cap.castShadow=true;g.add(cap);
+  return g;
 }
 function hdProp(name,x,z,scale=1,rot=0){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);

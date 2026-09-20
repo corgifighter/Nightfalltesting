@@ -2757,6 +2757,7 @@ function installFoundationSurfaceShader(mat,seed=1,edge=.018){
   mat.userData.foundationShaderInstalled=true;
   mat.needsUpdate=true;
 }
+window.__HEARTHMERE_FOLIAGE_SHADERS=[];
 function foundationPhysicalizeFoliageMaterial(mat,phase=0){
   if(!mat || mat.userData.foundationFoliageConverted || mat.isMeshBasicMaterial) return mat;
   const physical=new THREE.MeshPhysicalMaterial();
@@ -3075,6 +3076,7 @@ function frame(t){
  shorelineGlints.forEach((g,i)=>{g.material.opacity=.10+.11*(Math.sin(time*1.35+i*.63)+1)/2;g.scale.x=.82+.32*(Math.sin(time*1.1+i)+1)/2});
  if(MAT.grass.userData.shader)MAT.grass.userData.shader.uniforms.uTime.value=time;
  TREE_LEAF_MATS.forEach(m=>{if(m.userData.foliageShader)m.userData.foliageShader.uniforms.uFoliageTime.value=time;});
+ window.__HEARTHMERE_FOLIAGE_SHADERS.forEach(shader=>{if(shader?.uniforms?.uFoliageTime)shader.uniforms.uFoliageTime.value=time;});
  shadowRefreshFrame++;
  if(shadowRefreshFrame>=3){sun.shadow.needsUpdate=true;shadowRefreshFrame=0;}
  updateHeroPresentation();

@@ -2292,6 +2292,41 @@ function smokeColumn(x,z){for(let i=0;i<7;i++){const sp=new THREE.Sprite(new THR
 smokeColumn(5,-10);smokeColumn(-4,-28);smokeColumn(20,-24);
 const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:THREE.DoubleSide});
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
+
+// ============================================================================
+// DEEP LIFE/VFX RECONSTRUCTION — AMBIENT MOTION
+// Small moving elements are distributed with intent: leaves in woodland air,
+// fireflies around damp edges, and river mist near the waterline. They exist to
+// give the world temporal depth without turning the scene into particle noise.
+// ============================================================================
+const ambientLeaves=[];
+const leafMat=new THREE.MeshBasicMaterial({color:0x7f9b5d,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
+for(let i=0;i<34;i++){
+  const leaf=new THREE.Mesh(new THREE.PlaneGeometry(.12+.04*(i%3),.07+.025*(i%2)),leafMat.clone());
+  leaf.position.set(-48+worldRandom()*96,1.2+worldRandom()*6,-44+worldRandom()*92);
+  leaf.rotation.set(worldRandom()*Math.PI,worldRandom()*Math.PI,worldRandom()*Math.PI);
+  leaf.userData.phase=worldRandom()*Math.PI*2;
+  leaf.userData.speed=.16+worldRandom()*.22;
+  leaf.userData.wind=worldRandom()-.5;
+  scene.add(leaf);ambientLeaves.push(leaf);
+}
+const fireflies=[];
+const fireflyMat=new THREE.MeshBasicMaterial({color:0xffd98b,transparent:true,opacity:0,depthWrite:false});
+for(let i=0;i<26;i++){
+  const f=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),fireflyMat.clone());
+  f.position.set(17+(worldRandom()-.5)*30,.8+worldRandom()*3,8+(worldRandom()-.5)*42);
+  f.userData.phase=worldRandom()*Math.PI*2;f.userData.radius=.4+worldRandom()*1.2;
+  scene.add(f);fireflies.push(f);
+}
+const riverMist=[];
+const mistMat=new THREE.SpriteMaterial({color:0xd9eee9,transparent:true,opacity:.055,depthWrite:false});
+for(let i=0;i<16;i++){
+  const m=new THREE.Sprite(mistMat.clone());
+  const z=-42+worldRandom()*86,x=riverCenterX(z)+(worldRandom()-.5)*14;
+  m.position.set(x,.55+worldRandom()*1.6,z);m.scale.set(1.2+worldRandom()*1.5,.45+worldRandom()*.65,1);
+  m.userData.phase=worldRandom()*Math.PI*2;m.userData.baseY=m.position.y;
+  scene.add(m);riverMist.push(m);
+}
 let last=performance.now(),time=0;
 const perfStats={
   frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,lastFrameMs:0,geometryBytes:0,textureBytes:0,programs:0,
@@ -2501,6 +2536,10 @@ function frame(t){
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
+ ambientLeaves.forEach((l,i)=>{l.position.y-=dt*l.userData.speed;l.position.x+=dt*(.18+l.userData.wind*.12);l.position.z+=Math.sin(time*.7+l.userData.phase)*dt*.10;l.rotation.z+=dt*(.7+Math.sin(i)*.12);l.material.opacity=.16+.20*(Math.sin(time*.8+l.userData.phase)+1)/2;if(l.position.y<.4||l.position.x>55){l.position.set(-48,5+worldRandom()*3,-44+worldRandom()*92);}});
+ fireflies.forEach((f,i)=>{const night=1-day;f.position.y+=Math.sin(time*1.6+f.userData.phase)*dt*.12;f.position.x+=Math.cos(time*.9+f.userData.phase)*dt*.06;f.position.z+=Math.sin(time*.7+f.userData.phase)*dt*.05;f.material.opacity=Math.max(0,night*.72)*(0.45+0.55*(Math.sin(time*2.2+f.userData.phase)+1)/2);f.scale.setScalar(.7+.5*(Math.sin(time*2.7+f.userData.phase)+1)/2);});
+ riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
+
  const day=(Math.sin(time*.014)+1)/2;
 const golden=1-Math.abs(day-.52)*1.92;
 scene.fog.density=.00105+.00058*(1-day);

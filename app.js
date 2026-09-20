@@ -274,7 +274,8 @@ MAT.water.onBeforeCompile=(shader)=>{
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
-function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement('canvas');c.width=640;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,640,128);x.font='700 31px Georgia';x.textAlign='center';x.fillStyle='rgba(5,9,8,.78)';x.roundRect(22,20,596,88,18);x.fill();x.fillStyle=color;x.fillText(text,320,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(6.8*scale,1.36*scale,1);s.position.set(...pos);s.userData.worldLabel=true;scene.add(s);return s}
+const worldLabels=[];
+function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement('canvas');c.width=640;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,640,128);x.font='700 31px Georgia';x.textAlign='center';x.fillStyle='rgba(5,9,8,.78)';x.roundRect(22,20,596,88,18);x.fill();x.fillStyle=color;x.fillText(text,320,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(6.8*scale,1.36*scale,1);s.position.set(...pos);s.userData.worldLabel=true;worldLabels.push(s);scene.add(s);return s}
 
 // Ground: broad playable meadow with restrained sculpted undulation.
 // MAJOR TERRAIN RECONSTRUCTION — macro landforms first, detail later.
@@ -1443,7 +1444,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   camera.position.x+=dx;camera.position.z+=dz;
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
-scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
+for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();composer.render();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 

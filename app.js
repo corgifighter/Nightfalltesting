@@ -1358,7 +1358,11 @@ function smokeColumn(x,z){for(let i=0;i<7;i++){const sp=new THREE.Sprite(new THR
 smokeColumn(5,-10);smokeColumn(-4,-28);smokeColumn(20,-24);
 const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:THREE.DoubleSide});
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
-let last=performance.now(),time=0;const tmpTarget=new THREE.Vector3();
+let last=performance.now(),time=0;
+const tmpTarget=new THREE.Vector3();
+const tmpMove=new THREE.Vector3();
+const tmpNext=new THREE.Vector3();
+const tmpWanderDelta=new THREE.Vector3();
 
 // Hero readability pass: a soft selection disc, grounded shadow, and stronger layered motion.
 const heroRing=new THREE.Mesh(new THREE.RingGeometry(.52,.68,32),new THREE.MeshBasicMaterial({color:0xe5c66e,transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false}));
@@ -1385,7 +1389,7 @@ function updateVillager(g,t,dt){
    g.userData.nextWander=now+6500+Math.random()*6500;
  }
  const target=g.userData.wanderTarget;if(!target)return;
- const d=target.clone().sub(g.position);d.y=0;const len=d.length();
+ const d=tmpWanderDelta.copy(target).sub(g.position);d.y=0;const len=d.length();
  if(len<.28){g.userData.wanderTarget=null;g.userData.walking=false;return;}
  d.normalize();g.position.x+=d.x*dt*1.15;g.position.z+=d.z*dt*1.15;g.position.y=terrainHeight(g.position.x,g.position.z)+.02;
  g.rotation.y=THREE.MathUtils.lerp(g.rotation.y,Math.atan2(d.x,d.z),Math.min(1,dt*7));
@@ -1412,7 +1416,7 @@ function updateAdaptiveQuality(now){
 }
 function frame(t){const dt=Math.min(.05,(t-last)/1000);last=t;time+=dt;
  if(MAT.water.userData.shader)MAT.water.userData.shader.uniforms.uTime.value=time;
- if(dest&&player){const d=dest.clone().sub(player.position);d.y=0;const len=d.length();if(len<.25){dest=null;player.userData.walking=false;destinationMarker.visible=false}else{d.normalize();const next=player.position.clone().addScaledVector(d,dt*5.5);if(traversable(next.x,next.z)){player.position.copy(next);player.position.y=terrainHeight(next.x,next.z)+.02;player.rotation.y=Math.atan2(d.x,d.z);player.userData.walking=true}else{dest=null;player.userData.walking=false;destinationMarker.visible=false;say('You cannot cross the river here.')}}}
+ if(dest&&player){const d=tmpMove.copy(dest).sub(player.position);d.y=0;const len=d.length();if(len<.25){dest=null;player.userData.walking=false;destinationMarker.visible=false}else{d.normalize();const next=tmpNext.copy(player.position).addScaledVector(d,dt*5.5);if(traversable(next.x,next.z)){player.position.copy(next);player.position.y=terrainHeight(next.x,next.z)+.02;player.rotation.y=Math.atan2(d.x,d.z);player.userData.walking=true}else{dest=null;player.userData.walking=false;destinationMarker.visible=false;say('You cannot cross the river here.')}}}
  characters.forEach((g,i)=>{
   updateVillager(g,t,dt);
   const walk=g.userData.walking?1:0; const phase=time*9+g.userData.phase; const swing=Math.sin(phase)*(.48*walk+.06*(1-walk));
@@ -1437,10 +1441,10 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
  const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00158+.00052*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=1.85+2.15*day;moon.intensity=.08+.32*(1-day);hemi.intensity=.94+.54*day;renderer.toneMappingExposure=.94+.10*day;scene.environmentIntensity=.30+.12*day;
  if(player){
-  const oldTarget=controls.target.clone();
+  const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;
   tmpTarget.set(player.position.x,0,player.position.z);
   controls.target.lerp(tmpTarget,.11);
-  const dx=controls.target.x-oldTarget.x,dz=controls.target.z-oldTarget.z;
+  const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }

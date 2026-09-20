@@ -39,6 +39,26 @@ camera.position.set(27,18,25);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=true;
+const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
+const gl=renderer.getContext();
+const rendererDiagnostics={
+  threeRevision:THREE.REVISION,
+  webglVersion:String(gl.getParameter(gl.VERSION)||''),
+  shadingLanguage:String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)||''),
+  vendor:String(gl.getParameter(gl.VENDOR)||''),
+  renderer:String(gl.getParameter(gl.RENDERER)||''),
+  maxTextureSize:renderer.capabilities.maxTextureSize,
+  maxTextures:renderer.capabilities.maxTextures,
+  maxAttributes:renderer.capabilities.maxAttributes,
+  maxVaryings:renderer.capabilities.maxVaryings,
+  maxSamples:renderer.capabilities.maxSamples,
+  precision:renderer.capabilities.precision,
+  maxAnisotropy:renderer.capabilities.getMaxAnisotropy(),
+  pixelRatio:renderer.getPixelRatio(),
+  drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
+};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;
+if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 const composer=new EffectComposer(renderer);
 // Keep the post-processing buffers at the exact same capped device-pixel ratio as the renderer.
@@ -1369,4 +1389,4 @@ requestAnimationFrame(frame);
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,1.55);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,1.55);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

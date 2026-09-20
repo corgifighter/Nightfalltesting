@@ -1609,6 +1609,100 @@ async function buildDistilledNature(){
   ];
   await Promise.all(fernSpots.map((v,i)=>placeDistilledVariant('fern',v[0],v[1],v[2],v[3],i%4)));
 }
+
+// ============================================================================
+// DEEP VEGETATION RECONSTRUCTION — ECOLOGICAL LAYERS
+// Vegetation is treated as an ecosystem: hero trees establish silhouette,
+// understory fills negative space, river vegetation responds to moisture,
+// and meadow species create irregular density gradients. This is deliberately
+// additive to the authored tree layout rather than another random scatter pass.
+// ============================================================================
+async function buildVegetationBiomes(){
+  const heroGroves=[
+    [-33,-31,1.42,false],[-27,-25,1.18,false],[-18,-28,1.30,true],
+    [23,-31,1.48,false],[29,-27,1.20,true],[43,-24,1.36,false],
+    [-37,28,1.38,true],[-31,34,1.25,false],[-22,31,1.42,false],
+    [39,29,1.52,false],[45,38,1.30,true],[24,42,1.24,false]
+  ];
+  for(let i=0;i<heroGroves.length;i++){
+    const [x,z,scale,pine]=heroGroves[i];
+    const tree=hdTree(x,z,scale,pine);
+    tree.userData.staticVisual=true;
+    tree.userData.vegetationTier='hero';
+    tree.userData.windPhase=i*.83;
+    tree.userData.windStrength=.0035;
+    // A second, smaller companion creates a natural canopy transition rather than isolated trees.
+    const side=i%2?-1:1;
+    const companion=hdTree(x+side*(2.0+(i%3)*.45),z+1.4+(i%2)*.7,scale*(.56+(i%3)*.06),!pine&&i%4===0);
+    companion.userData.staticVisual=true;
+    companion.userData.vegetationTier='hero_companion';
+    companion.userData.windPhase=i*.91+.4;
+    companion.userData.windStrength=.0042;
+  }
+
+  const shrubZones=[
+    // wet woodland edge
+    [25,-48,38,98,.76,'shrub'],[38,-46,18,100,.82,'shrubAlt'],
+    // western woodland edge
+    [-49,-43,18,96,.68,'scrub'],[-40,-46,16,100,.74,'shrub'],
+    // northern meadow/forest transition
+    [-34,31,74,30,.82,'shrubAlt'],[18,32,58,29,.76,'scrub'],
+    // village outskirts — controlled density, leaving authored sightlines open
+    [-31,-26,62,18,.54,'shrub'],[18,-28,38,17,.56,'scrub']
+  ];
+  const placements=[];
+  for(const [cx,cz,w,d,density,key] of shrubZones){
+    const count=Math.round(w*density);
+    for(let i=0;i<count;i++){
+      const x=cx+(worldRandom()-.5)*w;
+      const z=cz+(worldRandom()-.5)*d;
+      const nearRiver=Math.abs(x-31)<15;
+      const central= Math.abs(x)<23 && z>-27 && z<25;
+      const nearRoad=Math.abs(x)<7 && z>-50 && z<54;
+      if(central&&worldRandom()<.72)continue;
+      if(nearRoad&&worldRandom()<.58)continue;
+      if(nearRiver&&worldRandom()<.18)continue;
+      placements.push([key,x,z,.34+worldRandom()*.62,worldRandom()*Math.PI*2,i%4]);
+    }
+  }
+  await Promise.all(placements.map(v=>placeDistilledVariant(...v)));
+
+  // Ferns are concentrated where moisture and shade would naturally support them.
+  const fernPlacements=[];
+  for(let i=0;i<58;i++){
+    const side=i%2?-1:1;
+    const x=31+side*(9.8+worldRandom()*8.2);
+    const z=-46+worldRandom()*96;
+    fernPlacements.push(['fern',x,z,.28+worldRandom()*.48,(worldRandom()-.5)*Math.PI,i%4]);
+  }
+  for(let i=0;i<26;i++){
+    const x=-36+worldRandom()*70,z=22+worldRandom()*30;
+    fernPlacements.push(['fern',x,z,.25+worldRandom()*.42,worldRandom()*Math.PI,i%4]);
+  }
+  await Promise.all(fernPlacements.map(v=>placeDistilledVariant(...v)));
+
+  // Meadow grasses are clustered, not evenly sprinkled. This creates visible density
+  // gradients at the edge of clearings and around structures.
+  const grassPlacements=[];
+  for(let i=0;i<110;i++){
+    const x=-46+worldRandom()*92,z=-50+worldRandom()*104;
+    const central=Math.abs(x)<22&&z>-30&&z<25;
+    if(central&&worldRandom()<.76)continue;
+    const roadCut=Math.abs(x)<7&&z>-49&&z<55;
+    if(roadCut&&worldRandom()<.84)continue;
+    grassPlacements.push(['grass',x,z,.24+worldRandom()*.42,worldRandom()*Math.PI*2,i%3]);
+  }
+  await Promise.all(grassPlacements.map(v=>placeDistilledVariant(...v)));
+
+  // A final irregular under-canopy layer uses small rocks to interrupt the repeated
+  // green silhouette and make the forest floor read as material rather than paint.
+  for(let i=0;i<34;i++){
+    const side=i%2?-1:1;
+    const x=31+side*(12+worldRandom()*20),z=-44+worldRandom()*94;
+    const rock=hdRock(x,z,.20+worldRandom()*.30);
+    rock.userData.vegetationTier='forest_floor';
+  }
+}
 let villageWell=null;
 const interactables=[];
 const gameState={quest:0, gathered:0, gold:24, inventory:{wood:12,stone:8,herb:6,fish:7}, lastInteraction:null};
@@ -2189,7 +2283,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

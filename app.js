@@ -1160,9 +1160,8 @@ function hdTree(x,z,scale=1,pine=false){
 }
 function hdRock(x,z,scale=1){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
-  const m=new THREE.Mesh(new THREE.SphereGeometry(.72,40,24),HD.stone);
-  m.scale.set(1.35,.72,.96);m.rotation.set(.2,.7,.08);m.castShadow=true;m.receiveShadow=true;g.add(m);
-  const cap=new THREE.Mesh(new THREE.SphereGeometry(.46,32,20),HD.stoneDark);cap.position.set(-.18,.32,.08);cap.scale.set(1.3,.34,.9);cap.castShadow=true;g.add(cap);
+  const m=hdSphere(.72,HD.stone,[0,0,0],g,[1.35,.72,.96]);m.rotation.set(.2,.7,.08);
+  hdSphere(.46,HD.stoneDark,[-.18,.32,.08],g,[1.3,.34,.9]);
   return g;
 }
 function hdProp(name,x,z,scale=1,rot=0){
@@ -1624,7 +1623,8 @@ const perfStats={
   frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,lastFrameMs:0,
   drawCalls:0,triangles:0,geometries:0,textures:0,
   visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0,
-  qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0
+  qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0,
+  shadowPolicyDisabledTiny:0
 };
 const sceneBudget={visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0};
 const textureBudget={count:0,estimatedBaseBytes:0,largest:[]};
@@ -1668,6 +1668,26 @@ function collectSceneBudget(){
   textureBudget.count=textures.size;
   textureBudget.estimatedBaseBytes=estimatedBaseBytes;
   textureBudget.largest=largest.slice(0,12);
+}
+const shadowPolicy={examined:0,castersBefore:0,castersAfter:0,disabledTiny:0};
+window.__HEARTHMERE_SHADOW_POLICY=shadowPolicy;
+function applyShadowPolicy(){
+  shadowPolicy.examined=0;shadowPolicy.castersBefore=0;shadowPolicy.castersAfter=0;shadowPolicy.disabledTiny=0;
+  scene.traverseVisible(o=>{
+    if(!o.isMesh)return;
+    shadowPolicy.examined++;
+    if(!o.castShadow)return;
+    shadowPolicy.castersBefore++;
+    const critical=o.userData.shadowCritical===true || o.userData.assetName==='hero' || o.userData.role==='player';
+    if(critical)return;
+    const geo=o.geometry;if(!geo)return;
+    if(!geo.boundingSphere)geo.computeBoundingSphere();
+    const localRadius=geo.boundingSphere?.radius||0;
+    const scale=o.getWorldScale(new THREE.Vector3());
+    const worldRadius=localRadius*Math.max(scale.x,scale.y,scale.z);
+    if(worldRadius<.22){o.castShadow=false;shadowPolicy.disabledTiny++;}
+  });
+  scene.traverseVisible(o=>{if(o.isMesh&&o.castShadow)shadowPolicy.castersAfter++;});
 }
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
@@ -1720,6 +1740,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.shadowCasters=sceneBudget.shadowCasters;
   perfStats.transparentMeshes=sceneBudget.transparentMeshes;
   perfStats.lights=sceneBudget.lights;
+  perfStats.shadowPolicyDisabledTiny=shadowPolicy.disabledTiny;
   perfStats.qualityLevel=quality.level;
   perfStats.updatedAt=now;
   if(diagnosticsMode) console.table(perfStats);
@@ -1816,7 +1837,8 @@ updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t)
     cc0Failures:[...cc0LoadStats.failedUrls],
     runtimeErrors:runtimeDiagnostics.errors.slice(-8),
     unhandledRejections:runtimeDiagnostics.unhandledRejections.slice(-8),
-    contextLost:runtimeDiagnostics.contextLost
+    contextLost:runtimeDiagnostics.contextLost,
+    shadowPolicy:{...shadowPolicy}
   };
   renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
@@ -1828,6 +1850,7 @@ window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='page
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
+applyShadowPolicy();
 bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested===assetQueue.length && assetLoadStats.failed===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;

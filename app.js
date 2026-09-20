@@ -1823,17 +1823,16 @@ async function buildVegetationBiomes(){
   for(let i=0;i<heroGroves.length;i++){
     const [x,z,scale,pine]=heroGroves[i];
     const tree=hdTree(x,z,scale,pine);
-    tree.userData.staticVisual=true;
     tree.userData.vegetationTier='hero';
     tree.userData.windPhase=i*.83;
     tree.userData.windStrength=.0035;
     // A second, smaller companion creates a natural canopy transition rather than isolated trees.
     const side=i%2?-1:1;
     const companion=hdTree(x+side*(2.0+(i%3)*.45),z+1.4+(i%2)*.7,scale*(.56+(i%3)*.06),!pine&&i%4===0);
-    companion.userData.staticVisual=true;
     companion.userData.vegetationTier='hero_companion';
     companion.userData.windPhase=i*.91+.4;
     companion.userData.windStrength=.0042;
+    foliage.push(tree,companion);
   }
 
   const shrubZones=[
@@ -2350,7 +2349,7 @@ renderer.shadowMap.autoUpdate=false;sun.shadow.needsUpdate=true;
 function freezeStaticVisuals(){
   let frozen=0;
   scene.traverse(o=>{
-    if(!o.userData?.staticVisual)return;
+    if(!o.userData?.staticVisual || o.userData?.vegetationTier)return;
     o.updateMatrix();
     o.matrixAutoUpdate=false;
     o.updateMatrixWorld(true);

@@ -327,7 +327,7 @@ function addBeautyShader(mat,seed=1,edge=.08){
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
     shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
-    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+');
+    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+';');
   };
 }
 async function applyCC0Materials(){

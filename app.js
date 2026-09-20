@@ -585,7 +585,7 @@ function buildLandscapeAnchors(){
 }
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);
-  fill.intensity=.92;sun.intensity=3.55;
+  fill.intensity=.48;sun.intensity=2.35;
   const practicals=[[-14,-8,0xffb35c,2.2,11],[4,-12,0xffa14c,1.7,9],[15,-10,0xffb35c,1.6,9],[-4,-28,0xffc07a,1.5,8],[20,-24,0xffb15b,1.8,10]];
   practicals.forEach(([x,z,c,i,d])=>{const l=new THREE.PointLight(c,i,d,.8);l.position.set(x,2.3,z);scene.add(l);});
   const hazeMat=new THREE.MeshBasicMaterial({color:0xc8d5cc,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
@@ -781,28 +781,31 @@ function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
   m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdRoof(parent,w,d,y,mat,angle=.58){
-  // Continuous, thick roof planes establish a believable architectural surface.
-  // The restrained overlapping bands add depth without turning the roof into stacked boxes.
-  const half=d*.48;
+  // Layered shingle construction: the roof remains efficient, but its silhouette and
+  // visible courses read as individually built rather than as two dark slabs.
+  const half=d*.50;
   const run=half/Math.cos(angle);
   const rise=half*Math.tan(angle);
+  const courses=7;
   for(const side of [-1,1]){
-    const panel=hdBox(w+.86, .16, run*2.0, mat,
-      [0,y+rise*.50,side*half*.50],parent,side*angle,0,0,.035);
-    panel.receiveShadow=true;
-    // Raised fascia follows the lower eave and keeps the silhouette crisp.
-    hdBox(w+1.02,.22,.24,HD.timber,[0,y+.01,side*half],parent,side*angle,0,0,.045);
-    // Three shallow roof bands provide scale cues rather than chunky tile blocks.
-    for(let i=0;i<3;i++){
-      const t=(i+1)/4;
-      const z=side*(half*t);
-      const yy=y+rise*(1-t)+.07;
-      hdBox(w+.94,.065,.075,HD.roof,[0,yy,z],parent,side*angle,0,0,.018);
+    const under=hdBox(w+1.02,.18,run*2.0,mat,
+      [0,y+rise*.50,side*half*.50],parent,side*angle,0,0,.04);
+    under.receiveShadow=true;
+    for(let i=0;i<courses;i++){
+      const t=(i+.5)/courses;
+      const z=side*(half*(1-t*.94));
+      const yy=y+rise*(1-t*.94)+.08;
+      const shingleW=w+1.12-(i%2)*.10;
+      const shingleD=run/courses*1.32;
+      const row=hdBox(shingleW,.075,shingleD,mat,[0,yy,z],parent,side*angle,0,0,.022);
+      row.receiveShadow=true;
+      // A timber/metallic edge gives each course a readable break at mobile distance.
+      hdBox(shingleW*.98,.025,.045,HD.timber,[0,yy+.055,z-side*.025],parent,side*angle,0,0,.01);
     }
+    hdBox(w+1.30,.25,.28,HD.timber,[0,y+.02,side*half],parent,side*angle,0,0,.045);
   }
-  // Heavy ridge beam and cap unify both planes.
-  hdBox(w+1.02,.26,.34,HD.timber,[0,y+rise+.08,0],parent,0,0,0,.055);
-  hdBox(w+.34,.20,.28,mat,[0,y+rise+.18,0],parent,0,0,0,.035);
+  hdBox(w+1.30,.28,.38,HD.timber,[0,y+rise+.10,0],parent,0,0,0,.06);
+  hdBox(w+.48,.18,.30,mat,[0,y+rise+.28,0],parent,0,0,0,.035);
 }
 
 function hdWindow(parent,x,y,z,scale=1){
@@ -895,6 +898,27 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   hdChimney(g,w*.24,-d*.16,forge?2.35:chapel?.95:1.7,chimneyBase);
   if(!chapel&&!tower)hdChimney(g,-w*.28,-d*.16,forge?2.0:1.3,chimneyBase);
 
+  // Architectural material break-up: stone plinth courses, projecting sills, shutters,
+  // and small timber joinery turn the large masses into constructed buildings.
+  for(let i=0;i<4;i++){
+    const yy=.95+i*.72;
+    if(yy<lowerH+.45) hdBox(w*.92,.045,.055,HD.stoneDark,[0,yy,d*.518],g,0,0,0,.012);
+  }
+  for(const sx of [-1,1]){
+    const wx=sx*w*.27;
+    hdBox(.16,.72,.10,HD.timber,[wx-.58,2.15,d*.552],g,0,0,0,.018);
+    hdBox(.16,.72,.10,HD.timber,[wx+.58,2.15,d*.552],g,0,0,0,.018);
+    hdBox(1.30,.10,.16,HD.stoneDark,[wx,1.39,d*.555],g,0,0,0,.018);
+  }
+  // Small projecting flower boxes create a human scale cue beneath the windows.
+  if(!tower){
+    for(const sx of [-1,1]){
+      const fx=sx*w*.27;
+      hdBox(1.12,.12,.38,HD.timber,[fx,1.34,d*.60],g,0,0,0,.025);
+      for(let k=0;k<5;k++) hdSphere(.075,HD.leafLight,[fx-.42+k*.21,1.54,d*.64],g,[1,.75,1]);
+    }
+  }
+
   if(inn){
     // Offset two-storey entrance bay and deep porch make the inn read as a specific building.
     hdBox(3.35,2.55,1.02,HD.plasterWarm,[.12,2.02,d*.43],g,0,0,0,.12);
@@ -936,21 +960,51 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   return g;
 }
 function hdTree(x,z,scale=1,pine=false){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);scene.add(g);
-  hdCyl(.34,.20,3.8,HD.trunk,[0,1.9,0],g,28);
-  for(const [bx,by,bz,br] of [[-.45,1.8,0,.16],[.48,2.25,0,.14],[0,2.7,.38,.12]]){const b=hdCyl(br,br*.62,1.8,HD.trunk,[bx,by,bz],g,20);b.rotation.z=(bx>0?.52:-.52);}
+  const g=new THREE.Group();
+  g.position.set(x,terrainHeight(x,z),z);
+  g.scale.setScalar(scale);
+  scene.add(g);
+  // Organic trunk with visible taper and a small set of asymmetric branches.
+  hdCyl(.38,.18,4.6,HD.trunk,[0,2.3,0],g,32);
+  for(const [bx,by,bz,len,lean] of [
+    [-.52,2.15,.02,1.55,-.48],[.46,2.55,.08,1.45,.46],
+    [-.28,3.05,.05,1.15,-.34],[.25,3.42,-.03,.95,.30]
+  ]){
+    const b=hdCyl(.13,.075,len,HD.trunk,[bx,by,bz],g,24);
+    b.rotation.z=lean;
+    b.rotation.x=(bz*.55);
+  }
   if(pine){
-    hdCyl(2.0,1.15,2.0,HD.leaf,[0,3.25,0],g,32);
-    hdCyl(1.62,.82,2.1,HD.leafLight,[0,4.65,0],g,32);
-    hdCyl(1.15,.45,2.0,HD.leaf,[0,5.9,0],g,32);
+    // A continuous, tapered conifer silhouette with overlapping soft foliage masses.
+    const tiers=[
+      [0,3.15,2.35,1.55,HD.leaf],
+      [0,4.35,1.95,1.35,HD.leafLight],
+      [0,5.35,1.52,1.12,HD.leaf],
+      [0,6.20,1.02,.90,HD.leafLight],
+      [0,6.82,.52,.62,HD.leaf]
+    ];
+    for(const [px,py,r,sy,mat] of tiers) hdSphere(r,mat,[px,py,0],g,[1.0,sy/r,1.0]);
   }else{
-    hdSphere(1.55,HD.leaf,[0,3.65,0],g,[1.05,.88,1.02]);
-    hdSphere(1.18,HD.leafLight,[-.95,4.0,.18],g,[1.05,.9,.92]);
-    hdSphere(1.22,HD.leaf,[.88,4.05,-.12],g,[1.0,.92,1.0]);
-    hdSphere(.98,HD.leafLight,[.05,4.85,.12],g,[1.05,.9,.95]);
+    // Broad deciduous crown: overlapping irregular lobes avoid the old stacked/topiary profile.
+    const lobes=[
+      [-.95,3.75,.18,1.28,1.00,.92,HD.leaf],
+      [-.38,4.28,.30,1.30,1.08,.96,HD.leafLight],
+      [.48,3.72,-.18,1.34,1.02,1.00,HD.leaf],
+      [1.00,4.10,.12,1.12,.96,.88,HD.leafLight],
+      [-.18,4.95,.08,1.18,1.02,.90,HD.leaf],
+      [.68,4.78,-.12,.94,.86,.82,HD.leafLight],
+      [-.82,4.68,-.10,.82,.80,.76,HD.leaf]
+    ];
+    for(const [px,py,pz,r,sx,sy,mat] of lobes) hdSphere(r,mat,[px,py,pz],g,[sx,sy,1.0]);
+  }
+  // Root flare gives the trunk a grounded transition instead of a stick entering the soil.
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5;
+    hdCyl(.16,.045,.72,HD.trunk,[Math.cos(a)*.28,.16,Math.sin(a)*.28],g,20).rotation.z=Math.cos(a)*.34;
   }
   return g;
 }
+
 function hdRock(x,z,scale=1){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
   const m=new THREE.Mesh(new THREE.SphereGeometry(.72,40,24),HD.stone);

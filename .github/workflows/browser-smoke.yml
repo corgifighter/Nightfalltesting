@@ -96,8 +96,9 @@ jobs:
               canvasData = await page.locator('#scene canvas').evaluate(canvas => canvas.toDataURL('image/png'));
               require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
             }
+            const coreAssetBase = 'https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
-              const u = new URL('assets/' + name, page.url()).href;
+              const u = coreAssetBase + name;
               const res = await page.request.get(u);
               return { name, status: res.status() };
             }));

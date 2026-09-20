@@ -2739,7 +2739,7 @@ function installFoundationSurfaceShader(mat,seed=1,edge=.018){
     shader.fragmentShader='varying vec3 vFoundationWorld;\n'+
       shader.fragmentShader.replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);\n float fUp=clamp(dot(normalize(normal),vec3(0.0,1.0,0.0)),0.0,1.0);\n float fCrease=1.0-fUp;\n diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);\n diffuseColor.rgb*=1.0-fCrease*.045;'
+        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);\n float fUp=clamp(dot(normalize(normal),vec3(0.0,1.0,0.0)),0.0,1.0);\n float fCrease=1.0-fUp;\n diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);\n diffuseColor.rgb*=1.0-fCrease*.045;\n float fSpec=pow(1.0-max(dot(normalize(normal),normalize(-vViewPosition)),0.0),4.0);\n diffuseColor.rgb*=1.0+fSpec*.012;'
       );
   };
   mat.userData.foundationShaderInstalled=true;
@@ -2819,6 +2819,14 @@ function buildGraphicsFoundationV2(){
         if(mat.normalMap && mat.normalScale){
           const ns=Math.min(1.0,Math.max(.16,mat.normalScale.x||.5));
           mat.normalScale.set(ns,ns);
+        }
+        if(mat.isMeshPhysicalMaterial){
+          mat.ior=1.45;
+          mat.specularIntensity=Math.max(mat.specularIntensity??.5,isMetal?0.85:.52);
+          if(mat.specularColor)mat.specularColor.set(isMetal?0xffffff:0xe7ddd0);
+          if(!isMetal && isWood)mat.clearcoat=Math.max(mat.clearcoat||0,.08);
+          if(!isMetal && isRoof)mat.clearcoat=Math.max(mat.clearcoat||0,.12);
+          if(!isMetal && isCloth)mat.sheen=Math.max(mat.sheen||0,.16);
         }
         if(!mat.transparent && !mat.userData.noFoundationShader){
           installFoundationSurfaceShader(mat,((obj.id||1)*.37)+(mi*.91),.018);

@@ -15,7 +15,6 @@ const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js",
-  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/MaskPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/OutputShader.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/FXAAShader.js",

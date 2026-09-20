@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v19';
+const CACHE='hearthmere-nightfalltesting-v20';
 const CORE=["./","./index.html","./app.js","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
@@ -43,6 +43,11 @@ self.addEventListener('fetch',e=>{
         const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy));
       }
       return res;
-    }).catch(()=>caches.match('./index.html'));
+    }).catch(err=>{
+      // Only navigations may fall back to the app shell. Asset/module failures must
+      // remain real failures so a broken GLB/texture/module cannot masquerade as index.html.
+      if(e.request.mode==='navigate') return caches.match('./index.html');
+      throw err;
+    });
   }));
 });

@@ -859,6 +859,36 @@ function buildWorldVisualPass(){
   const hazeMat=new THREE.MeshBasicMaterial({color:0xc8d5cc,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
   const haze=new THREE.Mesh(new THREE.PlaneGeometry(170,42),hazeMat);haze.position.set(0,23,-82);scene.add(haze);
 }
+
+const cinematicSpots=[];
+const lightingTargets=[];
+function buildCinematicLighting(){
+  // A small authored local-light rig creates hierarchy: warm human light around
+  // inhabited buildings, cool fill in the river corridor, and a controlled rim
+  // around the major silhouettes.
+  const specs=[
+    [-14,6,-7,0xffb66a,22,17],
+    [1,6,-1,0xff9a4d,18,14],
+    [16,6,-12,0xffc174,20,15],
+    [-12,7,12,0xffd08a,16,14],
+    [16,8,12,0xd6e7e5,9,16]
+  ];
+  for(const [x,y,z,color,intensity,distance] of specs){
+    const light=new THREE.SpotLight(color,intensity,distance,Math.PI*.30,.72,2);
+    light.position.set(x,y,z);
+    const target=new THREE.Object3D();
+    target.position.set(x+(x>0?-1.8:1.4),1.0,z+(z>0?-1.5:1.8));
+    scene.add(target);scene.add(light);light.target=target;
+    light.castShadow=false;
+    cinematicSpots.push(light);lightingTargets.push(target);
+  }
+  // A broad cool river fill separates the water corridor from the warm settlement.
+  const riverFill=new THREE.DirectionalLight(0x6ca4ae,.22);
+  riverFill.position.set(48,24,-4);scene.add(riverFill);
+  // Slightly stronger environment response on architecture keeps shadowed facades from
+  // collapsing into a single dark value while preserving the sun as the primary key.
+  scene.environmentIntensity=.30;
+}
 async function buildNaturalDressing(){
  const specs=[];
  for(let i=0;i<34;i++){const x=-44+worldRandom()*92,z=-49+worldRandom()*104;if(Math.abs(x-31)<15)continue;if(Math.abs(z-7)<7&&x>-32&&x<25)continue;specs.push(['shrub',x,z,.42+worldRandom()*.46,(worldRandom()-.5)*Math.PI]);}
@@ -2337,7 +2367,25 @@ function frame(t){
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
- const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00122+.00042*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=1.65+1.85*day;moon.intensity=.06+.20*(1-day);hemi.intensity=.72+.40*day;renderer.toneMappingExposure=.86+.08*day;scene.environmentIntensity=.22+.10*day;
+ const day=(Math.sin(time*.014)+1)/2;
+const golden=1-Math.abs(day-.52)*1.92;
+scene.fog.density=.00105+.00058*(1-day);
+scene.fog.color.setHSL(.42,.10,.39+.08*day);
+sun.position.y=48+day*58;
+sun.position.x=-58+Math.sin(time*.018)*22;
+sun.position.z=42+Math.cos(time*.014)*18;
+sun.intensity=1.35+2.15*day;
+sun.color.setHSL(.075-.015*day,.42,.68+.08*day);
+fill.color.setHSL(.55,.28,.60);
+fill.intensity=.30+.28*day;
+moon.intensity=.035+.24*(1-day);
+hemi.intensity=.66+.48*day;
+hemi.color.setHSL(.48,.16,.82);
+hemi.groundColor.setHSL(.08,.20,.18+.04*day);
+renderer.toneMappingExposure=.82+.12*day+.035*golden;
+scene.environmentIntensity=.22+.12*day;
+cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
+
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;
   tmpTarget.set(player.position.x,0,player.position.z);
@@ -2387,7 +2435,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

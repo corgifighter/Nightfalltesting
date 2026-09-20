@@ -4,6 +4,7 @@ import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js
 import {EffectComposer} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/EffectComposer.js';
 import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js';
+import {SSAOPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js';
 
 const root=document.querySelector('#scene');
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
@@ -32,13 +33,22 @@ renderer.setSize(innerWidth,innerHeight);
 const composer=new EffectComposer(renderer);
 const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
-const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.16,.52,.82);
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.10,.42,.86);
 composer.addPass(bloomPass);
+// Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
+// between architecture, props, terrain, and the character without changing world layout.
+const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
+ssaoPass.kernelRadius=7;
+ssaoPass.minDistance=.0015;
+ssaoPass.maxDistance=.085;
+ssaoPass.output='Default';
+composer.addPass(ssaoPass);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.02;
+renderer.toneMappingExposure=.98;
+renderer.setClearColor(0x9aaea5,1);
 renderer.physicallyCorrectLights=true;
 renderer.useLegacyLights=false;
 renderer.sortObjects=true;
@@ -1309,7 +1319,7 @@ function frame(t){const dt=Math.min(.05,(t-last)/1000);last=t;time+=dt;
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
- const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00165+.00065*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=2.05+2.65*day;moon.intensity=.10+.42*(1-day);hemi.intensity=1.02+.68*day;renderer.toneMappingExposure=.90+.20*day;scene.environmentIntensity=.34+.16*day;
+ const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00158+.00052*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=1.85+2.15*day;moon.intensity=.08+.32*(1-day);hemi.intensity=.94+.54*day;renderer.toneMappingExposure=.94+.10*day;scene.environmentIntensity=.30+.12*day;
  if(player){
   const oldTarget=controls.target.clone();
   tmpTarget.set(player.position.x,0,player.position.z);
@@ -1325,4 +1335,4 @@ requestAnimationFrame(frame);
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloomPass.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloomPass.setSize(innerWidth,innerHeight);ssaoPass.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

@@ -243,7 +243,7 @@ for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cl
 const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xffe6b1,transparent:true,opacity:.86}));
 sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
-const ASSET_BASE='https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
+const ASSET_BASE='./assets/';
 const loader=new THREE.TextureLoader();
 const MAX_TEXTURE_ANISOTROPY=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
 function configureTexture(t,repeat=[1,1],colorSpace=THREE.SRGBColorSpace){

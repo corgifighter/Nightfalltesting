@@ -355,7 +355,8 @@ MAT.grass.onBeforeCompile=(shader)=>{
 };
 MAT.water.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
- shader.vertexShader='uniform float uTime;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
+ shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
+ shader.fragmentShader='varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}

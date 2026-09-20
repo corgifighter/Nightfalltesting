@@ -109,8 +109,8 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.98;
 renderer.setClearColor(0x9aaea5,1);
-renderer.physicallyCorrectLights=true;
-renderer.useLegacyLights=false;
+// r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
+// toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
 renderer.domElement.style.touchAction='none';
 root.appendChild(renderer.domElement);

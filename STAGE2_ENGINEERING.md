@@ -24,6 +24,12 @@ This document records the objective engineering work that should be completed be
 - Asset readiness now tracks actual loader pending state instead of assuming every manifest entry was requested.
 - Capture readiness is now false when required runtime assets fail, preventing false-positive “ready” captures.
 - Static parser validation was added during this audit and exposed a malformed terrain shader string that had survived earlier iterations; the shader source was repaired and app.js/sw.js now pass parser checks.
+- Legacy GLB visual roots are now removed after replacement; obsolete source geometries/materials are explicitly disposed so hidden reference assets do not remain as GPU baggage.
+- Landmark and well interaction references now point at the reconstructed visual objects rather than the hidden legacy roots.
+- Procedural replacement characters now own their animation-part references; stale references to hidden legacy character limbs are removed.
+- Static reconstructed architecture/props are frozen with matrixAutoUpdate disabled after construction, reducing needless per-frame transform work.
+- Directional shadow-map updates are now cadenced instead of being regenerated every frame; the sun remains dynamic while avoiding unnecessary shadow renders between meaningful lighting changes.
+- GPU telemetry now records renderer-reported attribute/texture memory and program counts when available.
 
 ## Remaining Stage 2 engineering backlog
 

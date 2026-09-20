@@ -81,12 +81,19 @@ composer.addPass(ssaoPass);
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
-const SSAO_RESOLUTION_SCALE=.75;
+const quality={
+  pixelRatioCap:1.55,
+  pixelRatioMin:1.00,
+  ssaoScale:.75,
+  level:0,
+  frameCount:0,
+  sampleStarted:performance.now()
+};
 function resizeSSAO(){
   const ratio=renderer.getPixelRatio();
   ssaoPass.setSize(
-    Math.max(1,Math.floor(innerWidth*ratio*SSAO_RESOLUTION_SCALE)),
-    Math.max(1,Math.floor(innerHeight*ratio*SSAO_RESOLUTION_SCALE))
+    Math.max(1,Math.floor(innerWidth*ratio*quality.ssaoScale)),
+    Math.max(1,Math.floor(innerHeight*ratio*quality.ssaoScale))
   );
 }
 resizeSSAO();
@@ -1348,6 +1355,25 @@ function updateVillager(g,t,dt){
  d.normalize();g.position.x+=d.x*dt*1.15;g.position.z+=d.z*dt*1.15;g.position.y=terrainHeight(g.position.x,g.position.z)+.02;
  g.rotation.y=THREE.MathUtils.lerp(g.rotation.y,Math.atan2(d.x,d.z),Math.min(1,dt*7));
 }
+function updateAdaptiveQuality(now){
+  if(captureMode) return;
+  quality.frameCount++;
+  if(quality.frameCount<90) return;
+  const elapsed=now-quality.sampleStarted;
+  const avgFrameMs=elapsed/quality.frameCount;
+  quality.frameCount=0;quality.sampleStarted=now;
+  let next=quality.level;
+  if(avgFrameMs>24 && quality.level<3) next=quality.level+1;
+  else if(avgFrameMs<15 && quality.level>0) next=quality.level-1;
+  if(next===quality.level) return;
+  quality.level=next;
+  quality.pixelRatioCap=[1.55,1.40,1.25,1.10][quality.level];
+  quality.ssaoScale=[.75,.70,.64,.58][quality.level];
+  const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);
+  renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
+  composer.setPixelRatio(pixelRatio);resizeSSAO();
+  rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.qualityLevel=quality.level;rendererDiagnostics.averageFrameMs=avgFrameMs;
+}
 function frame(t){const dt=Math.min(.05,(t-last)/1000);last=t;time+=dt;
  if(MAT.water.userData.shader)MAT.water.userData.shader.uniforms.uTime.value=time;
  if(dest&&player){const d=dest.clone().sub(player.position);d.y=0;const len=d.length();if(len<.25){dest=null;player.userData.walking=false;destinationMarker.visible=false}else{d.normalize();const next=player.position.clone().addScaledVector(d,dt*5.5);if(traversable(next.x,next.z)){player.position.copy(next);player.position.y=terrainHeight(next.x,next.z)+.02;player.rotation.y=Math.atan2(d.x,d.z);player.userData.walking=true}else{dest=null;player.userData.walking=false;destinationMarker.visible=false;say('You cannot cross the river here.')}}}
@@ -1383,10 +1409,10 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
-controls.update();composer.render();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
+controls.update();composer.render();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,1.55);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

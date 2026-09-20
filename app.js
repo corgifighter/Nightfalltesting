@@ -2873,6 +2873,35 @@ function upgradeArchitecturalLibraries(){
   window.__HEARTHMERE_ARCHITECTURE_PHYSICAL={sourceMaterials:sourceMats.size,replaced:replacements.size};
 }
 
+function buildWaterDetailPass(){
+  if(window.__HEARTHMERE_WATER_DETAIL?.version===1)return;
+  const root=new THREE.Group();root.name='WaterDetail';
+  const makeFoam=(side)=>{
+    const verts=[],indices=[],segments=96;
+    for(let j=0;j<=segments;j++){
+      const t=j/segments,z=-55+t*120,cx=riverCenterX(z),hw=riverHalfWidth(z);
+      const inner=cx+side*(hw-.18),outer=cx+side*(hw-.92);
+      const y=.12+Math.sin(z*.29+side)*.006;
+      verts.push(inner,y,z,outer,y+.008,z);
+    }
+    for(let j=0;j<segments;j++){const a=j*2,b=a+1,c=a+2,d=c+1;indices.push(a,c,b,b,c,d);}
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();
+    const mat=new THREE.MeshBasicMaterial({color:0xd9eee4,transparent:true,opacity:.19,depthWrite:false,side:THREE.DoubleSide});
+    const mesh=new THREE.Mesh(geo,mat);mesh.renderOrder=3;root.add(mesh);
+  };
+  makeFoam(-1);makeFoam(1);
+  const glintMat=new THREE.MeshBasicMaterial({color:0xffe4ae,transparent:true,opacity:.42,depthWrite:false});
+  for(let i=0;i<34;i++){
+    const z=-48+worldRandom()*106,cx=riverCenterX(z),hw=riverHalfWidth(z);
+    const x=cx+(worldRandom()-.5)*hw*1.35;
+    const g=new THREE.Mesh(new THREE.PlaneGeometry(.32+worldRandom()*.65,.045+worldRandom()*.025),glintMat);
+    g.position.set(x,.15,z);g.rotation.x=-Math.PI/2;g.rotation.z=worldRandom()*Math.PI;
+    g.userData.waterGlint=true;root.add(g);
+  }
+  scene.add(root);
+  window.__HEARTHMERE_WATER_DETAIL={version:1,bankFoamRibbons:2,surfaceGlints:34};
+}
 function buildCinematicWorldDepthPass(){
   if(window.__HEARTHMERE_WORLD_DEPTH?.version===1)return;
   const root=new THREE.Group();
@@ -3696,7 +3725,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

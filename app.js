@@ -2479,6 +2479,33 @@ function collectSceneBudget(){
 const shadowPolicy={examined:0,castersBefore:0,castersAfter:0,disabledTiny:0};
 let shadowRefreshFrame=0;
 renderer.shadowMap.autoUpdate=false;sun.shadow.needsUpdate=true;
+/* GRAPHICS PASS 8 — world life, landmark atmosphere, and frame-loop hardening.
+   This pass works across the authored slice: living landmarks, role-readable NPC
+   motion, practical-light animation, interaction focus, and hot-path cleanup.
+*/
+const worldLife={smoke:[],windFlags:[],practicalLights:[],roleRigs:[],interactionPulse:null};
+function buildWorldLifeAndInteractionPass(){
+  if(window.__HEARTHMERE_WORLD_LIFE?.version===1)return;
+  scene.traverse(o=>{if(o.userData?.windFlag)worldLife.windFlags.push(o);});
+  const smokeTexture=(()=>{const c=document.createElement('canvas');c.width=96;c.height=96;const x=c.getContext('2d');const g=x.createRadialGradient(48,48,3,48,48,44);g.addColorStop(0,'rgba(230,225,205,.24)');g.addColorStop(.42,'rgba(205,202,190,.12)');g.addColorStop(1,'rgba(180,185,180,0)');x.fillStyle=g;x.fillRect(0,0,96,96);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t})();
+  const smokeSpecs=[[-11.2,-15.0,5.0,.85],[2.9,-7.4,5.1,.72],[19.1,-19.0,5.4,.62]];
+  smokeSpecs.forEach(([x,z,y,scale])=>{for(let i=0;i<5;i++){const m=new THREE.SpriteMaterial({map:smokeTexture,color:0xc9c7bc,transparent:true,opacity:0,depthWrite:false});const p=new THREE.Sprite(m);p.name='LandmarkSmoke';p.position.set(x+(i%2-.5)*.22,y+i*.22,z+(i%3-.5)*.18);p.scale.setScalar(scale*(.65+i*.11));p.userData.smoke={baseX:p.position.x,baseY:p.position.y,baseZ:p.position.z,phase:worldRandom()*Math.PI*2,speed:.18+worldRandom()*.10,life:worldRandom()};scene.add(p);worldLife.smoke.push(p);}});
+  scene.traverse(o=>{if(!o.isPointLight)return;const n=(o.name||'').toLowerCase();if(/lamp|fire|lantern|forge|practical|graphicsrim/.test(n)){o.userData.practicalLight=true;o.userData.baseIntensity=o.intensity;o.userData.flickerPhase=worldRandom()*Math.PI*2;worldLife.practicalLights.push(o);}});
+  characters.forEach(g=>{if(!g||g===player)return;const role=g.userData.role;const rig={g,role,phase:g.userData.phase||0,hammer:null,spear:null};g.traverse(o=>{const n=(o.name||'').toLowerCase();if(role==='smith'&&!rig.hammer&&n.includes('cylinder'))rig.hammer=o;if(role==='watch'&&!rig.spear&&n.includes('cylinder'))rig.spear=o;});worldLife.roleRigs.push(rig);});
+  const pulse=new THREE.Mesh(new THREE.RingGeometry(.48,.58,32),new THREE.MeshBasicMaterial({color:0xf0c86b,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));pulse.rotation.x=-Math.PI/2;pulse.name='InteractionFocusPulse';scene.add(pulse);worldLife.interactionPulse=pulse;
+  window.__HEARTHMERE_WORLD_LIFE={version:1,smokePuffs:worldLife.smoke.length,windFlags:worldLife.windFlags.length,practicalLights:worldLife.practicalLights.length,roleRigs:worldLife.roleRigs.length,interactionFocus:true};
+  window.__HEARTHMERE_FRAME_OPTIMIZATION={version:1,cachedWindFlags:worldLife.windFlags.length,sceneTraversalRemoved:true};
+}
+function updateWorldLife(dt){
+  const t=time;
+  worldLife.windFlags.forEach((o,i)=>{o.rotation.z=Math.sin(t*.85+i*.37)*.055;o.rotation.x=Math.cos(t*.57+i*.29)*.025});
+  worldLife.smoke.forEach((p,i)=>{const q=p.userData.smoke;const phase=(q.life+t*q.speed)%1;p.position.y=q.baseY+phase*2.15;p.position.x=q.baseX+Math.sin(t*.35+q.phase)*(.18+.25*phase);p.position.z=q.baseZ+Math.cos(t*.29+q.phase)*(.12+.18*phase);p.material.opacity=Math.sin(Math.PI*phase)*.18*(1-phase*.35);p.scale.setScalar((1+phase*.9)*(.55+i%3*.08));});
+  worldLife.practicalLights.forEach((l,i)=>{const base=l.userData.baseIntensity??l.intensity;l.intensity=base*(.965+.035*Math.sin(t*5.4+(l.userData.flickerPhase||i)));});
+  worldLife.roleRigs.forEach(r=>{const g=r.g,p=t*1.8+r.phase;if(r.role==='smith'&&r.hammer)r.hammer.rotation.z=.20+Math.sin(p*1.7)*.18;if(r.role==='watch'&&r.spear)r.spear.rotation.y=Math.sin(t*.42+r.phase)*.08;g.scale.y=1+Math.sin(t*1.35+r.phase)*.012;});
+  const pulse=worldLife.interactionPulse;
+  if(pulse){const target=window.__HEARTHMERE_ACTIVE_INTERACTION;if(target?.position){pulse.visible=true;pulse.position.set(target.position.x,terrainHeight(target.position.x,target.position.z)+.045,target.position.z);const a=.5+.5*Math.sin(t*3.4);pulse.material.opacity=.16+.14*a;pulse.scale.setScalar(1+.12*a);}else pulse.visible=false;}
+}
+
 function freezeStaticVisuals(){
   let frozen=0;
   scene.traverse(o=>{
@@ -3167,12 +3194,11 @@ function frame(t){
   if(g===player&&g.userData.heroMeshes){const breathe=Math.sin(time*2.15)*.012;g.userData.heroMeshes.forEach((m,j)=>{m.rotation.z+=Math.sin(time*1.7+j*.37)*.0007;m.scale.y=1+breathe*(j%3===0?1:.35)});}
   if(g.userData.mixer)g.userData.mixer.update(dt);if(g===player){g.position.y=terrainHeight(g.position.x,g.position.z)+.02+Math.sin(time*7)*.018}else{g.position.y=terrainHeight(g.position.x,g.position.z)+.02+Math.sin(time*1.7+(g.userData.phase||0))*.035;g.rotation.y+=Math.sin(time*.65+(g.userData.phase||0))*dt*.018}});
  foliage.forEach((g,i)=>{const ph=g.userData.windPhase??i*.71;const st=g.userData.windStrength??.008;g.rotation.z=Math.sin(time*.48+ph)*st;g.rotation.x=Math.cos(time*.42+ph*.61)*st*.72});
- scene.traverse(o=>{if(o.userData?.windFlag){o.rotation.z=Math.sin(time*.85)*.055;o.rotation.x=Math.cos(time*.57)*.025;}});
-
+ 
  shorelineGlints.forEach((g,i)=>{g.material.opacity=.10+.11*(Math.sin(time*1.35+i*.63)+1)/2;g.scale.x=.82+.32*(Math.sin(time*1.1+i)+1)/2});
  if(MAT.grass.userData.shader)MAT.grass.userData.shader.uniforms.uTime.value=time;
  TREE_LEAF_MATS.forEach(m=>{if(m.userData.foliageShader)m.userData.foliageShader.uniforms.uFoliageTime.value=time;});
- window.__HEARTHMERE_FOLIAGE_SHADERS.forEach(shader=>{if(shader?.uniforms?.uFoliageTime)shader.uniforms.uFoliageTime.value=time;});
+ window.__HEARTHMERE_FOLIAGE_SHADERS.forEach(shader=>{if(shader?.uniforms?.uFoliageTime)shader.uniforms.uFoliageTime.value=time;});updateWorldLife(dt);
  shadowRefreshFrame++;
  if(shadowRefreshFrame>=3){sun.shadow.needsUpdate=true;shadowRefreshFrame=0;}
  updateHeroPresentation();updateCharacterPresentation();
@@ -3615,7 +3641,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

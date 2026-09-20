@@ -55,7 +55,7 @@ jobs:
             // Pages' dynamic deployment can lag behind the source workflow completion.
             // Wait for the actual deployed asset set before booting the game, otherwise
             // a perfectly good build can be falsely judged as an asset failure.
-            const assetGate = new URL('assets/hero.glb', smokeUrl);
+            const assetGate = new URL('https://raw.githubusercontent.com/corgifighter/Test-screen/main/hero.glb');
             let assetReady = false;
             for (let attempt = 0; attempt < 24; attempt++) {
               try {

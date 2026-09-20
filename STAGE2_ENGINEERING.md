@@ -21,6 +21,9 @@ This document records the objective engineering work that should be completed be
 - Shadow participation now has a geometry-aware tiny-caster policy; large/medium silhouettes remain eligible while very small trim/fasteners are removed from shadow-map participation.
 - Reconstructed rock geometry now reuses the existing high-segment geometry cache.
 - Service-worker cache coverage now includes capture.html and runtime caching for the external Test-screen and Poly Haven asset prefixes.
+- Asset readiness now tracks actual loader pending state instead of assuming every manifest entry was requested.
+- Capture readiness is now false when required runtime assets fail, preventing false-positive “ready” captures.
+- Static parser validation was added during this audit and exposed a malformed terrain shader string that had survived earlier iterations; the shader source was repaired and app.js/sw.js now pass parser checks.
 
 ## Remaining Stage 2 engineering backlog
 

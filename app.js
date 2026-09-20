@@ -2356,6 +2356,7 @@ function freezeStaticVisuals(){
     o.updateMatrixWorld(true);
     o.traverse(child=>{
       if(child===o)return;
+      if(child.userData?.windFlag){child.matrixAutoUpdate=true;return;}
       child.updateMatrix();
       child.matrixAutoUpdate=false;
       frozen++;
@@ -2487,6 +2488,8 @@ function frame(t){
   if(g===player&&g.userData.heroMeshes){const breathe=Math.sin(time*2.15)*.012;g.userData.heroMeshes.forEach((m,j)=>{m.rotation.z+=Math.sin(time*1.7+j*.37)*.0007;m.scale.y=1+breathe*(j%3===0?1:.35)});}
   if(g.userData.mixer)g.userData.mixer.update(dt);if(g===player){g.position.y=terrainHeight(g.position.x,g.position.z)+.02+Math.sin(time*7)*.018}else{g.position.y=terrainHeight(g.position.x,g.position.z)+.02+Math.sin(time*1.7+(g.userData.phase||0))*.035;g.rotation.y+=Math.sin(time*.65+(g.userData.phase||0))*dt*.018}});
  foliage.forEach((g,i)=>{const ph=g.userData.windPhase??i*.71;const st=g.userData.windStrength??.008;g.rotation.z=Math.sin(time*.48+ph)*st;g.rotation.x=Math.cos(time*.42+ph*.61)*st*.72});
+ scene.traverse(o=>{if(o.userData?.windFlag){o.rotation.z=Math.sin(time*.85)*.055;o.rotation.x=Math.cos(time*.57)*.025;}});
+
  shorelineGlints.forEach((g,i)=>{g.material.opacity=.10+.11*(Math.sin(time*1.35+i*.63)+1)/2;g.scale.x=.82+.32*(Math.sin(time*1.1+i)+1)/2});
  if(MAT.grass.userData.shader)MAT.grass.userData.shader.uniforms.uTime.value=time;
  shadowRefreshFrame++;

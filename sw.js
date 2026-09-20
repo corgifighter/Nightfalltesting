@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v14';
+const CACHE='hearthmere-nightfalltesting-v15';
 const CORE=["./","./index.html","./app.js","./manifest.webmanifest"];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
@@ -10,9 +10,12 @@ const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/MaskPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/OutputShader.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/FXAAShader.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/LuminosityHighPassShader.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/math/SimplexNoise.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/SSAOShader.js",

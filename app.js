@@ -3310,10 +3310,10 @@ function strengthenMaterialGrounding(){
       const prior=mat.onBeforeCompile;
       mat.onBeforeCompile=(shader,renderer)=>{
         if(prior)prior(shader,renderer);
-        shader.vertexShader='varying vec3 vGroundingWorld;\\n'+
-          shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vGroundingWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
-        shader.fragmentShader='varying vec3 vGroundingWorld;\\n'+
-          shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\\n float groundBand=1.0-smoothstep(-.10,.72,vGroundingWorld.y);\\n float groundNoise=sin(vGroundingWorld.x*.83+vGroundingWorld.z*.61)*.5+.5;\\n diffuseColor.rgb*=1.0-groundBand*(.035+groundNoise*.028);');
+        shader.vertexShader='varying vec3 vGroundingWorld;\n'+
+          shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vGroundingWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+        shader.fragmentShader='varying vec3 vGroundingWorld;\n'+
+          shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float groundBand=1.0-smoothstep(-.10,.72,vGroundingWorld.y);\n float groundNoise=sin(vGroundingWorld.x*.83+vGroundingWorld.z*.61)*.5+.5;\n diffuseColor.rgb*=1.0-groundBand*(.035+groundNoise*.028);');
       };
       mat.userData.groundingPassInstalled=true;
       mat.needsUpdate=true;installed++;

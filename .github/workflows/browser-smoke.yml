@@ -69,7 +69,8 @@ jobs:
               waitUntil: 'domcontentloaded',
               timeout: 120000
             });
-            await page.waitForTimeout(15000);
+            await page.waitForTimeout(8000);
+            await page.waitForFunction(() => window.__HEARTHMERE_READY === true, { timeout: 60000 }).catch(() => {});
             const status = await page.locator('#boot-status').textContent().catch(() => '');
             const canvasCount = await page.locator('#scene canvas').count();
             const webglSupport = await page.evaluate(() => {

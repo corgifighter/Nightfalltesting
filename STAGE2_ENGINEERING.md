@@ -14,16 +14,23 @@ This document records the objective engineering work that should be completed be
 - Navigation volumes separated into named river/bridge data rather than embedding those dimensions directly in movement code.
 - Texture-budget telemetry added with unique texture count, estimated base memory, and largest texture entries.
 - Service-worker fallback corrected so only navigation requests fall back to index.html; failed assets/modules remain actual failures.
-- Stage 2 performance telemetry remains compatible with adaptive quality and the existing real-frame capture harness.
+- Runtime lifecycle diagnostics added for uncaught errors, unhandled rejections, WebGL context creation/loss/restoration, and page visibility.
+- CC0 enhancement textures now settle before the authoritative ready state and are explicitly GPU-initialized when loaded.
+- Adaptive quality now uses a rolling 120-frame sample with p95 frame-interval protection rather than reacting to a single average window.
+- Capture metadata now includes runtime failures and shadow-policy telemetry.
+- Shadow participation now has a geometry-aware tiny-caster policy; large/medium silhouettes remain eligible while very small trim/fasteners are removed from shadow-map participation.
+- Reconstructed rock geometry now reuses the existing high-segment geometry cache.
+- Service-worker cache coverage now includes capture.html and runtime caching for the external Test-screen and Poly Haven asset prefixes.
 
 ## Remaining Stage 2 engineering backlog
 
-1. Complete shadow-participation classification for large authored architecture/props and medium vegetation after the first real-frame performance sample.
+1. Validate the new shadow classification against the first real-frame performance sample and tune only if evidence shows visual or GPU regressions.
 2. Establish explicit distance/LOD policy for hero, gameplay vicinity, midground, and far-background assets.
 3. Expand navigation volumes beyond the river/bridge into authored building and landmark blockers.
 4. Use the new texture telemetry to identify duplicate/heavy texture families before expanding the asset library.
 5. Replace hidden legacy visual GLBs with layout metadata where practical so old visual assets stop consuming runtime resources.
 6. Vendor the remaining Three.js runtime dependency chain when the asset/runtime architecture is stable enough to do so safely.
+7. Evaluate GPU-compressed texture delivery (KTX2/Basis) for the final asset pipeline; this is a production pipeline change, not a blind runtime dependency to add before compressed assets exist.
 
 ## Operating rule
 

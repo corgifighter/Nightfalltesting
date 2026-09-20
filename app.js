@@ -113,6 +113,35 @@ function makeMeadowTexture(){
 }
 const meadowTexture=makeMeadowTexture();
 
+
+// High-fidelity CC0 material library integration.
+// Remote maps are optional enhancement layers; local/procedural materials remain the fallback.
+function loadCC0Map(url,repeat=1){
+  const t=new THREE.TextureLoader(); t.setCrossOrigin('anonymous');
+  const map=t.load(url,()=>{map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;map.repeat.set(repeat,repeat);map.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);},undefined,()=>{});
+  return map;
+}
+const CC0={
+  meadow:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_diff_2k.jpg',
+  meadowNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_nor_gl_2k.jpg',
+  wood:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_planks/wood_planks_diff_2k.jpg',
+  woodNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_planks/wood_planks_nor_gl_2k.jpg',
+  roof:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_tiles/roof_tiles_diff_2k.jpg',
+  roofNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_tiles/roof_tiles_nor_gl_2k.jpg',
+  stone:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_diff_2k.jpg',
+  stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_nor_gl_2k.jpg'
+};
+function applyCC0Materials(){
+  const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6);
+  meadowN.colorSpace=THREE.NoColorSpace;
+  MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
+  const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35);woodN.colorSpace=THREE.NoColorSpace;
+  [HD.timber,HD.timberLight].forEach(m=>{m.map=wood;m.normalMap=woodN;m.normalScale.set(.28,.28);m.needsUpdate=true;});
+  const roof=loadCC0Map(CC0.roof,1.15),roofN=loadCC0Map(CC0.roofNormal,1.15);roofN.colorSpace=THREE.NoColorSpace;
+  [HD.roof,HD.roofWarm].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.38,.38);m.needsUpdate=true;});
+  const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05);stoneN.colorSpace=THREE.NoColorSpace;
+  [HD.stone,HD.stoneDark].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
+}
 const MAT={
  grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
  water:new THREE.MeshPhysicalMaterial({color:0x176270,roughness:.08,metalness:.04,transmission:.08,clearcoat:1,clearcoatRoughness:.10,transparent:true,opacity:.92}),
@@ -1173,7 +1202,7 @@ scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
 controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

@@ -316,18 +316,12 @@ function addBeautyShader(mat,seed=1,edge=.08){
   const prior=mat.onBeforeCompile;
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
-    shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;
-'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>
- vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
-    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;
-'+shader.fragmentShader
-      .replace('#include <map_fragment>','#include <map_fragment>
- float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+';')
-      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>
- roughnessFactor=clamp(roughnessFactor+abs(grain)*.8,.18,1.0);');
+    shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
+    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\n'+shader.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+';')
+      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n roughnessFactor=clamp(roughnessFactor+abs(grain)*.8,.18,1.0);');
   };
 }
-
 async function applyCC0Materials(){
   const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
@@ -355,42 +349,14 @@ const MAT={
 // Terrain material pass: subtle macro variation keeps the meadow from reading as a tiled texture.
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
- shader.vertexShader='varying vec3 vWorldPos;
-'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>
- vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;
-'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>
- float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);
- float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;
- float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;
- float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);
- vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);
- vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));
- float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);
- natural+=vec3(fleck*.025,fleck*.018,fleck*.008);
- float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;
- float domain=sin((vWorldPos.x+sin(vWorldPos.z*.021)*6.5)*.026+(vWorldPos.z+cos(vWorldPos.x*.018)*5.0)*.017);
- vec3 soil=vec3(.23,.18,.115);
- vec3 richMeadow=vec3(.18,.32,.115);
- vec3 meadowBright=vec3(.31,.46,.18);
- natural=mix(soil,richMeadow,smoothstep(-.48,.42,biome));
- natural=mix(natural,meadowBright,smoothstep(.48,.92,biome));
- natural=mix(natural,vec3(.15,.25,.105),smoothstep(.72,1.0,abs(domain))*.18);
- float riverWet=1.0-smoothstep(5.0,17.0,abs(vWorldPos.x-31.0));
- natural=mix(natural,vec3(.18,.27,.13),riverWet*.12);
- float pathWear=1.0-smoothstep(2.8,7.0,abs(vWorldPos.x));
- pathWear*=smoothstep(-52.0,58.0,vWorldPos.z);
- natural=mix(natural,vec3(.27,.23,.16),pathWear*.055);');
+ shader.vertexShader='varying vec3 vWorldPos;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;\n float domain=sin((vWorldPos.x+sin(vWorldPos.z*.021)*6.5)*.026+(vWorldPos.z+cos(vWorldPos.x*.018)*5.0)*.017);\n vec3 soil=vec3(.23,.18,.115);\n vec3 richMeadow=vec3(.18,.32,.115);\n vec3 meadowBright=vec3(.31,.46,.18);\n natural=mix(soil,richMeadow,smoothstep(-.48,.42,biome));\n natural=mix(natural,meadowBright,smoothstep(.48,.92,biome));\n natural=mix(natural,vec3(.15,.25,.105),smoothstep(.72,1.0,abs(domain))*.18);\n float riverWet=1.0-smoothstep(5.0,17.0,abs(vWorldPos.x-31.0));\n natural=mix(natural,vec3(.18,.27,.13),riverWet*.12);\n float pathWear=1.0-smoothstep(2.8,7.0,abs(vWorldPos.x));\n pathWear*=smoothstep(-52.0,58.0,vWorldPos.z);\n natural=mix(natural,vec3(.27,.23,.16),pathWear*.055);');
  MAT.grass.userData.shader=shader;
 };
 MAT.water.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
- shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld;
-'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>
- vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
- shader.fragmentShader='varying vec3 vWaterWorld;
-'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>
- float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
+ shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
+ shader.fragmentShader='varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
@@ -1094,18 +1060,12 @@ const HD={
 HD.leaf=new THREE.MeshPhysicalMaterial({color:0x3f7044,roughness:.88,metalness:0,clearcoat:.08,clearcoatRoughness:.72,sheen:.12,sheenColor:new THREE.Color(0x7eaa72),sheenRoughness:.72});
 HD.leafLight=new THREE.MeshPhysicalMaterial({color:0x679052,roughness:.86,metalness:0,clearcoat:.06,clearcoatRoughness:.74,sheen:.14,sheenColor:new THREE.Color(0xa4c28e),sheenRoughness:.70});
 HD.trunk=new THREE.MeshPhysicalMaterial({color:0x4a3323,roughness:.91,metalness:0,clearcoat:.04,clearcoatRoughness:.82});
-
-function addSurfaceVariation(mat,seed=1,contrast=.12){
+\nfunction addSurfaceVariation(mat,seed=1,contrast=.12){
   mat.onBeforeCompile=(shader)=>{
-    shader.vertexShader='varying vec3 vSurfaceWorld;
-'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>
- vSurfaceWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
-    shader.fragmentShader='varying vec3 vSurfaceWorld;
-'+shader.fragmentShader
-      .replace('#include <map_fragment>','#include <map_fragment>
- float sv1=sin(vSurfaceWorld.x*(.37+'+seed*.013+')+vSurfaceWorld.z*(.29+'+seed*.009+'))*sin(vSurfaceWorld.z*.19+vSurfaceWorld.x*.07+'+seed+'); float sv2=sin(vSurfaceWorld.x*2.8+vSurfaceWorld.z*2.1+'+seed*1.7+')*.22; float surfaceNoise=clamp(.5+sv1*.42+sv2,0.0,1.0); diffuseColor.rgb*=1.0+(surfaceNoise-.5)*'+contrast+';')
-      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>
- roughnessFactor=clamp(roughnessFactor+(surfaceNoise-.5)*.10,.18,1.0);');
+    shader.vertexShader='varying vec3 vSurfaceWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSurfaceWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vSurfaceWorld;\n'+shader.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\n float sv1=sin(vSurfaceWorld.x*(.37+'+seed*.013+')+vSurfaceWorld.z*(.29+'+seed*.009+'))*sin(vSurfaceWorld.z*.19+vSurfaceWorld.x*.07+'+seed+'); float sv2=sin(vSurfaceWorld.x*2.8+vSurfaceWorld.z*2.1+'+seed*1.7+')*.22; float surfaceNoise=clamp(.5+sv1*.42+sv2,0.0,1.0); diffuseColor.rgb*=1.0+(surfaceNoise-.5)*'+contrast+';')
+      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n roughnessFactor=clamp(roughnessFactor+(surfaceNoise-.5)*.10,.18,1.0);');
   };
 }
 
@@ -1119,12 +1079,8 @@ addSurfaceVariation(HD.roofWarm,11.6,.14);
 addSurfaceVariation(HD.trunk,13.4,.11);
 function addPlasterVariation(mat,a,b){
   mat.onBeforeCompile=(shader)=>{
-    shader.vertexShader='varying vec3 vPlasterWorld;
-'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>
- vPlasterWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
-    shader.fragmentShader='varying vec3 vPlasterWorld;
-'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>
- float p1=sin(vPlasterWorld.x*0.72+'+a+')*sin(vPlasterWorld.z*0.61-'+a+'); float p2=sin(vPlasterWorld.x*2.7+vPlasterWorld.z*1.9+'+b+')*.22; float p3=sin(vPlasterWorld.y*3.4+vPlasterWorld.x*.31)*.16; float plasterNoise=clamp(.5+.34*p1+p2+p3,0.0,1.0); vec3 plasterWarm=mix(vec3(.66,.60,.50),vec3(.95,.88,.72),plasterNoise); diffuseColor.rgb*=mix(vec3(1.0),plasterWarm,.24); roughnessFactor=clamp(roughnessFactor+(plasterNoise-.5)*.10,.45,1.0);');
+    shader.vertexShader='varying vec3 vPlasterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vPlasterWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vPlasterWorld;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float p1=sin(vPlasterWorld.x*0.72+'+a+')*sin(vPlasterWorld.z*0.61-'+a+'); float p2=sin(vPlasterWorld.x*2.7+vPlasterWorld.z*1.9+'+b+')*.22; float p3=sin(vPlasterWorld.y*3.4+vPlasterWorld.x*.31)*.16; float plasterNoise=clamp(.5+.34*p1+p2+p3,0.0,1.0); vec3 plasterWarm=mix(vec3(.66,.60,.50),vec3(.95,.88,.72),plasterNoise); diffuseColor.rgb*=mix(vec3(1.0),plasterWarm,.24); roughnessFactor=clamp(roughnessFactor+(plasterNoise-.5)*.10,.45,1.0);');
   };
 }
 addPlasterVariation(HD.plaster,1.15,1.96);
@@ -1633,12 +1589,8 @@ function upgradeFoliageMaterial(mat,phase){
     if(prior)prior(shader);
     shader.uniforms.uFoliageTime={value:0};
     shader.uniforms.uFoliagePhase={value:phase};
-    shader.vertexShader='uniform float uFoliageTime; uniform float uFoliagePhase; varying vec3 vFoliageWorld;
-'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>
- vFoliageWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float sway=sin(uFoliageTime*1.25+uFoliagePhase+transformed.y*1.7+transformed.x*1.1)*.035; transformed.x+=sway*max(0.0,transformed.y); transformed.z+=cos(uFoliageTime*1.05+uFoliagePhase+transformed.y*1.3)*.018*max(0.0,transformed.y);');
-    shader.fragmentShader='varying vec3 vFoliageWorld;
-'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>
- float leafNoise=fract(sin(dot(vFoliageWorld.xz,vec2(17.13,41.77)))*43758.5453); diffuseColor.rgb*=mix(.93,1.07,leafNoise);');
+    shader.vertexShader='uniform float uFoliageTime; uniform float uFoliagePhase; varying vec3 vFoliageWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vFoliageWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float sway=sin(uFoliageTime*1.25+uFoliagePhase+transformed.y*1.7+transformed.x*1.1)*.035; transformed.x+=sway*max(0.0,transformed.y); transformed.z+=cos(uFoliageTime*1.05+uFoliagePhase+transformed.y*1.3)*.018*max(0.0,transformed.y);');
+    shader.fragmentShader='varying vec3 vFoliageWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float leafNoise=fract(sin(dot(vFoliageWorld.xz,vec2(17.13,41.77)))*43758.5453); diffuseColor.rgb*=mix(.93,1.07,leafNoise);');
     mat.userData.foliageShader=shader;
   };
 }
@@ -2626,7 +2578,6 @@ function buildMasterArtDirectionPass(){
   const gateLight=new THREE.PointLight(0xff9c52,1.8,12,.8);gateLight.position.set(-5,4,-31);scene.add(gateLight);
 }
 
-
 // ============================================================================
 // CIVIC ARCHITECTURE PASS — second macro construction layer.
 // Adds a coherent settlement silhouette rather than isolated asset drops.
@@ -2679,7 +2630,6 @@ function buildCivicArchitecturePass(){
   }
 }
 
-
 // ============================================================================
 // PRESENTATION MATERIAL PASS — large-value readability before micro detail.
 // ============================================================================
@@ -2702,7 +2652,6 @@ function buildPresentationMaterialPass(){
   scene.fog.color.set(0x72827b);scene.fog.density=.00086;
   bloomPass.strength=.07;bloomPass.radius=.34;bloomPass.threshold=.88;
 }
-
 
 // ============================================================================
 // LANDMARK COURTYARD PASS — integrate the five major silhouettes into believable
@@ -2746,7 +2695,6 @@ function buildLandmarkCourtyardPass(){
   masterLamp(12.8,12.2,.86);
 }
 
-
 // ============================================================================
 // BEAUTY LIGHTING PASS — layered key/fill/rim and a restrained sun disc.
 // The purpose is dimensional material response, not decorative town dressing.
@@ -2767,7 +2715,6 @@ function buildBeautyLightingPass(){
   bloomPass.strength=.075;bloomPass.radius=.32;bloomPass.threshold=.90;
 }
 
-
 // ============================================================================
 // HIGH-END ATMOSPHERE PASS — depth cues without foreground transparency sheets.
 // ============================================================================
@@ -2784,28 +2731,15 @@ function installFoundationSurfaceShader(mat,seed=1,edge=.018){
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
     const worldSeed=Number(seed)||1;
-    shader.vertexShader='varying vec3 vFoundationWorld;
-'+
+    shader.vertexShader='varying vec3 vFoundationWorld;\n'+
       shader.vertexShader.replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>
- vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
+        '#include <begin_vertex>\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
       );
-    shader.fragmentShader='varying vec3 vFoundationWorld;
-'+
+    shader.fragmentShader='varying vec3 vFoundationWorld;\n'+
       shader.fragmentShader.replace(
         '#include <color_fragment>',
-        '#include <color_fragment>
- float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));
- float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');
- float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);
- diffuseColor.rgb*=1.0+fBreak;
- float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;
- diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);
- float fUp=clamp(dot(normalize(normal),vec3(0.0,1.0,0.0)),0.0,1.0);
- float fCrease=1.0-fUp;
- diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);
- diffuseColor.rgb*=1.0-fCrease*.045;'
+        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);\n float fUp=clamp(dot(normalize(normal),vec3(0.0,1.0,0.0)),0.0,1.0);\n float fCrease=1.0-fUp;\n diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);\n diffuseColor.rgb*=1.0-fCrease*.045;'
       );
   };
   mat.userData.foundationShaderInstalled=true;
@@ -2968,7 +2902,6 @@ function buildHighEndAtmospherePass(){
   }
   sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
 }
-
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();

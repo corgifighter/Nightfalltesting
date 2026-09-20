@@ -1002,7 +1002,7 @@ function hdGable(parent,w,h,d,mat,z,bevel=.04){
   const m=new THREE.Mesh(geo,mat);m.position.set(0,0,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
 }
 function hdBuilding(type,x,z,scale=1,rot=0){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   const chapel=type==='chapel',inn=type==='inn',forge=type==='forge',mill=type==='mill',tower=type==='watchtower';
   const w=chapel?7.7:inn?8.8:forge?6.9:mill?7.5:tower?5.4:6.2;
   const d=chapel?9.5:inn?7.8:forge?6.7:mill?7.3:tower?5.4:5.9;
@@ -1153,13 +1153,13 @@ function hdTree(x,z,scale=1,pine=false){
   return g;
 }
 function hdRock(x,z,scale=1){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   const m=hdSphere(.72,HD.stone,[0,0,0],g,[1.35,.72,.96]);m.rotation.set(.2,.7,.08);
   hdSphere(.46,HD.stoneDark,[-.18,.32,.08],g,[1.3,.34,.9]);
   return g;
 }
 function hdProp(name,x,z,scale=1,rot=0){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   if(name==='barrel'){hdCyl(.48,.48,1.0,HD.timber,[0,.5,0],g,28);for(const y of [.22,.5,.78])hdCyl(.53,.035,.04,HD.iron,[0,y,0],g,28).rotation.x=Math.PI/2;}
   else if(name==='crate'){hdBox(1,1,1,HD.timber,[0,.5,0],g);for(const a of [-.32,.32])hdBox(.09,1.05,.08,HD.timber,[a,.5,.53],g,0,0,a*.8);}
   else if(name==='bench'){hdBox(2.5,.18,.55,HD.timber,[0,.9,0],g);for(const x of [-.9,.9])hdBox(.12,.9,.12,HD.timber,[x,.45,0],g);}
@@ -1170,7 +1170,7 @@ function hdProp(name,x,z,scale=1,rot=0){
   return g;
 }
 function hdBridge(x,z,scale=1,rot=0){
-  const g=new THREE.Group();g.position.set(x,.12,z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,.12,z);g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   // Wide timber deck with individually rounded-looking high-segment support geometry.
   for(let i=-8;i<=8;i++){const plank=hdBox(2.7,.18,.55,HD.timberLight,[i*1.0,1.15,0],g);plank.rotation.y=(i%3)*.008;}
   for(const x0 of [-8,8]){hdCyl(.38,.46,1.2,HD.stone,[x0,0,0],g,32);hdCyl(.30,.36,1.0,HD.stone,[x0,0,2.9],g,32);hdCyl(.30,.36,1.0,HD.stone,[x0,0,-2.9],g,32);}
@@ -1179,7 +1179,7 @@ function hdBridge(x,z,scale=1,rot=0){
   return g;
 }
 function hdCart(x,z,scale=1,rot=0){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   hdBox(2.5,.18,1.35,HD.timber,[0,.95,0],g);
   hdBox(1.9,.12,1.1,HD.timberLight,[0,1.65,0],g);
   for(const zz of [-.66,.66])hdCyl(.45,.45,.18,HD.iron,[0,.46,zz],g,32).rotation.x=Math.PI/2;
@@ -1187,7 +1187,7 @@ function hdCart(x,z,scale=1,rot=0){
   return g;
 }
 function hdSign(x,z,scale=1,rot=0){
-  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;scene.add(g);
   hdCyl(.09,.12,2.4,HD.timber,[0,1.2,0],g,24);
   hdBox(1.8,.72,.12,HD.timberLight,[0,2.15,0],g);
   hdBox(1.48,.44,.035,HD.warm,[0,2.15,.08],g);
@@ -1195,6 +1195,7 @@ function hdSign(x,z,scale=1,rot=0){
 }
 function hdCharacter(root,isPlayer=false){
   const g=new THREE.Group();g.position.set(0,0,0);root.add(g);
+  const parts={arms:[],legs:[],cloak:null,body:g};g.userData.parts=parts;g.userData.replacementVisual=true;
   const cloth=isPlayer?new THREE.MeshStandardMaterial({color:0x40586a,roughness:.82}):new THREE.MeshStandardMaterial({color:0x5b493e,roughness:.88});
   const leather=new THREE.MeshStandardMaterial({color:0x3a271d,roughness:.9});
   const skin=new THREE.MeshStandardMaterial({color:0xc89472,roughness:.88});
@@ -1204,9 +1205,9 @@ function hdCharacter(root,isPlayer=false){
   hdSphere(.42,skin,[0,2.55,0],g,[1,1.05,.95]);
   hdSphere(.22,cloth,[0,2.84,0],g,[1.7,.42,1.35]);
   for(const side of [-1,1]){
-    const arm=hdCyl(.18,.14,1.25,cloth,[side*.62,1.72,0],g,24);arm.rotation.z=side*.12;
+    const arm=hdCyl(.18,.14,1.25,cloth,[side*.62,1.72,0],g,24);arm.rotation.z=side*.12;parts.arms.push(arm);
     hdSphere(.18,skin,[side*.66,1.08,0],g,[1,.95,1]);
-    hdCyl(.20,.15,1.22,leather,[side*.25,.67,0],g,24);
+    const leg=hdCyl(.20,.15,1.22,leather,[side*.25,.67,0],g,24);parts.legs.push(leg);
     hdCyl(.22,.17,.34,leather,[side*.25,.12,0.05],g,24);
   }
   if(isPlayer){
@@ -1222,11 +1223,12 @@ async function replaceLegacyVisuals(){
   const hideNames=new Set(['tree_oak','tree_pine','shrub','grass_clump','rock','cottage_A','cottage_B','cottage_C','inn','forge','chapel','mill','watchtower','bridge','well','barrel','bench','cart','crate','fence','lantern','sign','hero','character']);
   const legacy=[];
   scene.traverse(o=>{if(o.userData?.assetName && hideNames.has(o.userData.assetName))legacy.push(o);});
-  legacy.forEach(g=>g.traverse(o=>{if(o.isMesh)o.visible=false;}));
+  legacy.forEach(g=>g.traverse(o=>{if(o.isMesh){o.visible=false;o.userData.legacyVisual=true;}}));
 
   const buildingNames=new Set(['inn','forge','chapel','mill','watchtower']);
   legacy.filter(g=>buildingNames.has(g.userData.assetName)).forEach(g=>{
-    hdBuilding(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y);
+    const replacement=hdBuilding(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y);
+    landmarks[g.userData.assetName]=replacement;
   });
   legacy.filter(g=>['cottage_A','cottage_B','cottage_C'].has?.(g.userData.assetName)).forEach(g=>{});
   legacy.filter(g=>g.userData.assetName?.startsWith('cottage_')).forEach(g=>{
@@ -1266,14 +1268,35 @@ async function replaceLegacyVisuals(){
     if(!h)hdSphere(.38,HD.leaf,[g.position.x,terrainHeight(g.position.x,g.position.z)+.22*g.scale.x,g.position.z],scene,[1.9*g.scale.x,.30*g.scale.x,1.35*g.scale.x]);
   }));
   const propNames=new Set(['well','barrel','bench','fence','lantern','crate']);
-  legacy.filter(g=>propNames.has(g.userData.assetName)).forEach(g=>hdProp(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y));
-  legacy.filter(g=>g.userData.assetName==='bridge').forEach(g=>hdBridge(g.position.x,g.position.z,g.scale.x,g.rotation.y));
+  legacy.filter(g=>propNames.has(g.userData.assetName)).forEach(g=>{
+    const replacement=hdProp(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y);
+    if(g.userData.assetName==='well')villageWell=replacement;
+  });
+  legacy.filter(g=>g.userData.assetName==='bridge').forEach(g=>{
+    const replacement=hdBridge(g.position.x,g.position.z,g.scale.x,g.rotation.y);
+    landmarks.bridge=replacement;
+  });
   legacy.filter(g=>g.userData.assetName==='cart').forEach(g=>hdCart(g.position.x,g.position.z,g.scale.x,g.rotation.y));
   legacy.filter(g=>g.userData.assetName==='sign').forEach(g=>hdSign(g.position.x,g.position.z,g.scale.x,g.rotation.y));
   legacy.filter(g=>g.userData.assetName==='hero'||g.userData.assetName==='character').forEach(g=>{
-    g.traverse(o=>{if(o.isMesh)o.visible=false;});
     hdCharacter(g,g.userData.assetName==='hero');
+    g.userData.parts={...g.userData.parts};
+    g.userData.heroMeshes=[];
+    g.traverse(o=>{if(o.isMesh&&o.userData.replacementVisual!==true&&o.userData.legacyVisual)o.userData.legacyVisual=true;if(o.isMesh&&o.userData.replacementVisual===true)g.userData.heroMeshes.push(o);});
   });
+  const legacyRoots=legacy.filter(g=>g.userData.assetName!=='hero'&&g.userData.assetName!=='character');
+  legacyRoots.forEach(g=>g.removeFromParent());
+  const disposeSceneResources=(root)=>{
+    root.traverse(o=>{
+      if(!o.isMesh)return;
+      if(o.geometry?.dispose)o.geometry.dispose();
+      const mats=Array.isArray(o.material)?o.material:[o.material];
+      mats.forEach(m=>{if(m?.dispose)m.dispose();});
+    });
+  };
+  assetCache.forEach(source=>disposeSceneResources(source));
+  assetCache.clear();assetClips.clear();assetPromises.clear();
+  warmWindows.length=0;
 }
 
 async function buildDistilledNature(){
@@ -1664,6 +1687,25 @@ function collectSceneBudget(){
   textureBudget.largest=largest.slice(0,12);
 }
 const shadowPolicy={examined:0,castersBefore:0,castersAfter:0,disabledTiny:0};
+let shadowRefreshFrame=0;
+renderer.shadowMap.autoUpdate=false;sun.shadow.needsUpdate=true;
+function freezeStaticVisuals(){
+  let frozen=0;
+  scene.traverse(o=>{
+    if(!o.userData?.staticVisual)return;
+    o.updateMatrix();
+    o.matrixAutoUpdate=false;
+    o.updateMatrixWorld(true);
+    o.traverse(child=>{
+      if(child===o)return;
+      child.updateMatrix();
+      child.matrixAutoUpdate=false;
+      frozen++;
+    });
+  });
+  window.__HEARTHMERE_STATIC_FROZEN=frozen;
+}
+
 window.__HEARTHMERE_SHADOW_POLICY=shadowPolicy;
 function applyShadowPolicy(){
   shadowPolicy.examined=0;shadowPolicy.castersBefore=0;shadowPolicy.castersAfter=0;shadowPolicy.disabledTiny=0;
@@ -1786,6 +1828,8 @@ function frame(t){
  foliage.forEach((g,i)=>{const ph=g.userData.windPhase??i*.71;const st=g.userData.windStrength??.008;g.rotation.z=Math.sin(time*.48+ph)*st;g.rotation.x=Math.cos(time*.42+ph*.61)*st*.72});
  shorelineGlints.forEach((g,i)=>{g.material.opacity=.10+.11*(Math.sin(time*1.35+i*.63)+1)/2;g.scale.x=.82+.32*(Math.sin(time*1.1+i)+1)/2});
  if(MAT.grass.userData.shader)MAT.grass.userData.shader.uniforms.uTime.value=time;
+ shadowRefreshFrame++;
+ if(shadowRefreshFrame>=3){sun.shadow.needsUpdate=true;shadowRefreshFrame=0;}
  updateHeroPresentation();
  foam.forEach((r,i)=>{r.position.z+=dt*(.65+(i%4)*.1);r.scale.x=1.5+Math.sin(time*1.8+i)*.22;r.material.opacity=.16+.10*(Math.sin(time*1.4+i)+1);if(r.position.z>62)r.position.z=-52;r.position.x=27+Math.sin(time*.7+i*1.8)*3.8});
  embers.forEach((e,i)=>{e.position.y+=dt*(.35+Math.sin(i)*.08);e.position.x+=Math.sin(time*2+i)*dt*.025;if(e.position.y>3)e.position.y=.9;e.material.opacity=.35+.5*(Math.sin(time*6+i)+1)/2});
@@ -1832,7 +1876,8 @@ updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t)
     runtimeErrors:runtimeDiagnostics.errors.slice(-8),
     unhandledRejections:runtimeDiagnostics.unhandledRejections.slice(-8),
     contextLost:runtimeDiagnostics.contextLost,
-    shadowPolicy:{...shadowPolicy}
+    shadowPolicy:{...shadowPolicy},
+    staticFrozen:window.__HEARTHMERE_STATIC_FROZEN||0
   };
   renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
@@ -1845,6 +1890,7 @@ window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='page
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
+freezeStaticVisuals();
 bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested>0 && assetLoadStats.pending===0 && assetLoadStats.failed===0 && distilledLoadStats.pending===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;

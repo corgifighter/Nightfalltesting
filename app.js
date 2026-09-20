@@ -120,8 +120,23 @@ controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;
 controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;controls.maxPolarAngle=1.20;controls.rotateSpeed=.24;
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.12);scene.add(hemi);
+const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
 const sun=new THREE.DirectionalLight(0xffd8ad,3.35);sun.position.set(-58,86,42);sun.castShadow=true;
-sun.shadow.mapSize.set(3072,3072);sun.shadow.camera.left=-62;sun.shadow.camera.right=62;sun.shadow.camera.top=62;sun.shadow.camera.bottom=-62;sun.shadow.bias=-.00008;sun.shadow.normalBias=.018;scene.add(sun);
+// Size the orthographic shadow volume from the actual playable footprint rather than
+// an arbitrary square. The diagonal is used because the shadow camera is rotated by
+// the light direction, so axis-aligned world extents are not sufficient coverage.
+const shadowHalfDiagonal=Math.hypot(WORLD_BOUNDS.maxX-WORLD_BOUNDS.minX,WORLD_BOUNDS.maxZ-WORLD_BOUNDS.minZ)*.5+10;
+sun.shadow.mapSize.set(3072,3072);
+sun.shadow.camera.left=-shadowHalfDiagonal;
+sun.shadow.camera.right=shadowHalfDiagonal;
+sun.shadow.camera.top=shadowHalfDiagonal;
+sun.shadow.camera.bottom=-shadowHalfDiagonal;
+sun.shadow.camera.near=1;
+sun.shadow.camera.far=220;
+sun.shadow.bias=-.00008;
+sun.shadow.normalBias=.018;
+sun.shadow.camera.updateProjectionMatrix();
+scene.add(sun);
 const fill=new THREE.DirectionalLight(0x89afc2,.82);fill.position.set(45,34,-55);scene.add(fill);
 const moon=new THREE.DirectionalLight(0x6682aa,.14);moon.position.set(30,50,-45);scene.add(moon);
 

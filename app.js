@@ -1189,15 +1189,15 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   g.rotation.y=rot;g.scale.setScalar(scale);g.userData.staticVisual=true;g.userData.architectureTier='hero';
   scene.add(g);
 
-  const chapel=type==='chapel',inn=type==='inn',forge=type==='forge',mill=type==='mill',tower=type==='watchtower';
-  const w=chapel?8.4:inn?9.6:forge?7.5:mill?8.2:tower?5.9:6.4;
-  const d=chapel?10.4:inn?8.6:forge?7.4:mill?7.9:tower?5.9:6.1;
-  const lowerH=chapel?3.75:tower?7.8:3.25;
-  const upperH=chapel?1.55:tower?1.0:1.35;
-  const upperW=chapel?w*.92:tower?w*.78:w*.86;
-  const upperD=chapel?d*.93:tower?d*.78:d*.86;
-  const plaster=inn?ARCH.plasterB:mill?ARCH.plasterC:ARCH.plasterA;
-  const roofMat=forge?ARCH.roofA:chapel?ARCH.roofC:ARCH.roofB;
+  const chapel=type==='chapel',inn=type==='inn',forge=type==='forge',mill=type==='mill',tower=type==='watchtower',cottage=type==='cottage';
+  const w=chapel?8.4:inn?9.6:forge?7.5:mill?8.2:tower?5.9:5.35;
+  const d=chapel?10.4:inn?8.6:forge?7.4:mill?7.9:tower?5.9:4.55;
+  const lowerH=chapel?3.75:tower?7.8:cottage?3.15:3.25;
+  const upperH=chapel?1.55:tower?1.0:cottage?1.05:1.35;
+  const upperW=chapel?w*.92:tower?w*.78:cottage?w*.88:w*.86;
+  const upperD=chapel?d*.93:tower?d*.78:cottage?d*.88:d*.86;
+  const plaster=inn?ARCH.plasterB:mill?ARCH.plasterC:cottage?ARCH.plasterA:ARCH.plasterA;
+  const roofMat=forge?ARCH.roofA:chapel?ARCH.roofC:cottage?ARCH.roofB:ARCH.roofB;
 
   // Primary masses: offset upper floor + deep plinth + roof overhang establish a real silhouette.
   archMasonryBase(g,w+0.32,d+0.32,.72,Math.round(x+z));
@@ -1214,11 +1214,13 @@ function hdBuilding(type,x,z,scale=1,rot=0){
 
   // Crafted arched openings replace the repeated rectangular panel language.
   const front=d*.515;
-  archDoor(g,0,1.02,front,.96,1);
-  archWindow(g,-w*.29,2.12,front,.92,1);
-  archWindow(g,w*.28,2.18,front,.88,1);
-  archWindow(g,-upperW*.26,3.78,upperD*.515,.70,1);
-  archWindow(g,upperW*.25,3.72,upperD*.515,.66,1);
+  archDoor(g,0,1.02,front,cottage?.84:.96,1);
+  archWindow(g,-w*.29,cottage?1.98:2.12,front,cottage?.70:.92,1);
+  archWindow(g,w*.28,cottage?2.02:2.18,front,cottage?.68:.88,1);
+  if(!cottage){
+    archWindow(g,-upperW*.26,3.78,upperD*.515,.70,1);
+    archWindow(g,upperW*.25,3.72,upperD*.515,.66,1);
+  }
 
   // Side openings make the architecture survive an orbiting camera instead of being a facade.
   for(const side of [-1,1]){
@@ -1227,15 +1229,28 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   }
 
   const roofY=.92+lowerH+upperH;
-  hdRoof(g,w+1.42,d+1.52,roofY,roofMat,chapel?.66:.60);
+  const roofAngle=chapel?.66:cottage?.56:.60;
+  hdRoof(g,w+1.42,d+1.52,roofY,roofMat,roofAngle);
   archEave(g,w,d,roofY-.02);
-  archRoofCrest(g,w,d,roofY+(d*.50)*Math.tan(chapel?.66:.60)+.26,roofMat);
-  archGableTrim(g,w*.96,roofY+.05,front,.98);
+  archRoofCrest(g,w,d,roofY+(d*.50)*Math.tan(roofAngle)+.26,roofMat);
+  archGableTrim(g,w*.96,roofY+.05,front,cottage?.78:.98);
 
   // Three dormers on the largest residential/civic roofs create a genuinely inhabited roofline.
   if(inn||mill){
     archDormer(g,-w*.29,roofY-.08,front*.72,.82,roofMat);
     archDormer(g,w*.22,roofY-.04,front*.72,.68,roofMat);
+  }
+  if(cottage){
+    // Cottage archetype: a projecting porch, asymmetrical lean-to and a smaller dormer
+    // turn the replacement into a home rather than a scaled-down civic building.
+    archPorch(g,3.05,1.05,.94,1,ARCH.roofB);
+    archDormer(g,w*.18,roofY-.06,front*.72,.48,roofMat);
+    hdBox(2.25,1.85,2.05,plaster,[w*.28,1.72,-d*.08],g,0,0,0,.13);
+    hdRoof(g,2.75,2.42,3.04,ARCH.roofA,.48);
+    for(const side of [-1,1]){
+      hdBox(.16,1.95,.20,ARCH.timber,[side*w*.38,1.92,d*.515],g,0,0,side*.10,.018);
+    }
+    archWindow(g,w*.27,1.72,d*.515+.03,.58,1);
   }
   if(chapel){
     archDormer(g,-w*.22,roofY-.10,front*.72,.66,roofMat);

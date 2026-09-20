@@ -88,7 +88,7 @@ jobs:
               'hearthmere-browser-check.txt',
               JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe, dependencyProbe }, null, 2)
             );
-            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe }, null, 2));
+            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe, dependencyProbe }, null, 2));
             if (canvasCount < 1) {
               if (!webglSupport.webgl1 && !webglSupport.webgl2) throw new Error('Browser smoke environment has no WebGL context; renderer could not create its canvas.');
               throw new Error('WebGL is available but Hearthmere did not create a Three.js canvas. Inspect errors and failedRequests above.');

@@ -60,8 +60,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
 scene.fog=new THREE.FogExp2(0x66776f,.00134);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
-camera.position.set(20,11.8,19);
+const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.08,1800);
+camera.position.set(17.2,9.8,17.4);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
@@ -163,7 +163,7 @@ root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-controls.minDistance=6.5;controls.maxDistance=52;controls.minPolarAngle=.40;controls.maxPolarAngle=1.12;controls.rotateSpeed=.24;
+controls.minDistance=5.5;controls.maxDistance=46;controls.minPolarAngle=.34;controls.maxPolarAngle=1.06;controls.rotateSpeed=.24;
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.86);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
@@ -2450,11 +2450,11 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;
-  tmpTarget.set(player.position.x,0,player.position.z);
+  tmpTarget.set(player.position.x+Math.sin(player.rotation.y)*1.15,.72,player.position.z+Math.cos(player.rotation.y)*1.15);
   controls.target.lerp(tmpTarget,.11);
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
-  if(!camera.userData.followInit){camera.position.set(controls.target.x+20,11.8,controls.target.z+19);camera.userData.followInit=true;}
+  if(!camera.userData.followInit){camera.position.set(controls.target.x+17.2,9.8,controls.target.z+17.4);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();composer.render();

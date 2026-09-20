@@ -3030,15 +3030,57 @@ const tmpWanderDelta=new THREE.Vector3();
 const heroRing=new THREE.Mesh(new THREE.RingGeometry(.52,.68,32),new THREE.MeshBasicMaterial({color:0xe5c66e,transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false}));
 heroRing.rotation.x=-Math.PI/2;heroRing.position.y=.035;heroRing.visible=false;scene.add(heroRing);
 function updateHeroPresentation(){
-  if(!player)return;
-  heroRing.visible=true;heroRing.position.set(player.position.x,.035,player.position.z);heroRing.scale.setScalar(1+Math.sin(time*2.8)*.035);
-  const walking=player.userData.walking?1:0, ph=time*(walking?9.5:2.1)+player.userData.phase;
-  if(player.userData.parts.arms.length){player.userData.parts.arms.forEach((a,j)=>{a.rotation.z=Math.sin(ph)*(walking?.34:.025)*(j?-1:1);a.rotation.x=walking?Math.cos(ph)*.08:Math.sin(time*1.4+ j)*.012;});}
-  if(player.userData.parts.legs.length){player.userData.parts.legs.forEach((l,j)=>l.rotation.x=Math.sin(ph)*(walking?.48:.018)*(j?-1:1));}
-  if(player.userData.parts.cloak){player.userData.parts.cloak.rotation.x=Math.sin(time*2.2+player.userData.phase)*.035;player.userData.parts.cloak.rotation.y=Math.sin(time*1.7+player.userData.phase)*.028;}
-  if(player.userData.heroCape){const amp=walking?.055:.018;player.userData.heroCape.rotation.z=Math.sin(ph*.72)*amp;player.userData.heroCape.rotation.y=-.08+Math.sin(ph*.51)*amp*.7;}
-  if(player.userData.heroShield){player.userData.heroShield.rotation.z=-.10+Math.sin(ph)*.018*walking;player.userData.heroShield.position.y=1.55+Math.sin(ph)*.012*walking;}
-  if(player.userData.heroBlade){player.userData.heroBlade.rotation.z=-.24+Math.sin(ph)*.012*walking;}
+ if(!player)return;
+ heroRing.visible=true;heroRing.position.set(player.position.x,.035,player.position.z);
+ heroRing.scale.setScalar(1+Math.sin(time*2.8)*.035);
+ const walking=player.userData.walking?1:0;
+ const ph=time*(walking?9.5:2.1)+player.userData.phase;
+ const stride=Math.sin(ph),strideOpp=Math.sin(ph+Math.PI);
+ const idleBreath=Math.sin(time*2.15+player.userData.phase);
+ if(player.userData.parts.arms.length){
+   player.userData.parts.arms.forEach((a,j)=>{
+     const swing=walking?(j?strideOpp:stride)*.34:idleBreath*.018;
+     a.rotation.z=swing;
+     a.rotation.x=walking?Math.cos(ph+(j?Math.PI:0))*.08:Math.sin(time*1.4+j)*.012;
+     a.rotation.y=walking?Math.sin(ph*.5+(j?1:0))*.025:Math.sin(time*1.1+j)*.006;
+   });
+ }
+ if(player.userData.parts.legs.length){
+   player.userData.parts.legs.forEach((l,j)=>{
+     const swing=walking?(j?stride:strideOpp)*.48:idleBreath*.018;
+     l.rotation.x=swing;
+     l.rotation.z=walking?Math.cos(ph+(j?Math.PI:0))*.025:0;
+   });
+ }
+ if(player.userData.parts.cloak){
+   player.userData.parts.cloak.rotation.x=Math.sin(time*2.2+player.userData.phase)*(.035+.025*walking);
+   player.userData.parts.cloak.rotation.y=Math.sin(time*1.7+player.userData.phase)*(.028+.018*walking);
+   player.userData.parts.cloak.position.y=.98+idleBreath*.008;
+ }
+ if(player.userData.heroCape){
+   const amp=walking?.055:.018;
+   player.userData.heroCape.rotation.z=Math.sin(ph*.72)*amp;
+   player.userData.heroCape.rotation.y=-.08+Math.sin(ph*.51)*amp*.7;
+   player.userData.heroCape.rotation.x=Math.sin(ph*.43)*amp*.38;
+ }
+ if(player.userData.heroShield){
+   player.userData.heroShield.rotation.z=-.10+Math.sin(ph)*.018*walking;
+   player.userData.heroShield.rotation.y=.02+Math.sin(ph*.55)*.012*walking;
+   player.userData.heroShield.position.y=1.55+Math.sin(ph)*.012*walking;
+ }
+ if(player.userData.heroBlade){
+   player.userData.heroBlade.rotation.z=-.24+Math.sin(ph)*.012*walking;
+   player.userData.heroBlade.rotation.y=Math.sin(ph*.5)*.008*walking;
+ }
+ // Equipment gets its own restrained secondary motion so the hero reads as a
+ // dressed character rather than a stack of rigid primitives.
+ if(player.userData.heroMeshes){
+   player.userData.heroMeshes.forEach((m,j)=>{
+     m.rotation.z+=Math.sin(time*(1.45+(j%4)*.17)+j*.37)*.00045;
+   });
+ }
+ const rigPulse=1+idleBreath*.0045;
+ player.scale.y=rigPulse;
 }
 
 function updateVillager(g,t,dt){

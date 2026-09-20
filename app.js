@@ -238,8 +238,11 @@ configureTexture(meadowTexture,[3.8,3.8]);
 // High-fidelity CC0 material library integration.
 // Remote maps are optional enhancement layers; local/procedural materials remain the fallback.
 const cc0Loader=new THREE.TextureLoader();cc0Loader.setCrossOrigin('anonymous');
+const cc0LoadStats={pending:0,loaded:0,failed:0,failedUrls:[]};
+window.__HEARTHMERE_CC0_LOAD_STATS=cc0LoadStats;
 function loadCC0Map(url,repeat=1,colorSpace=THREE.SRGBColorSpace){
-  const map=cc0Loader.load(url,()=>configureTexture(map,[repeat,repeat],colorSpace),undefined,()=>{});
+  cc0LoadStats.pending++;
+  const map=cc0Loader.load(url,()=>{configureTexture(map,[repeat,repeat],colorSpace);cc0LoadStats.loaded++;cc0LoadStats.pending--;},undefined,()=>{cc0LoadStats.failed++;cc0LoadStats.failedUrls.push(url);cc0LoadStats.pending--;});
   configureTexture(map,[repeat,repeat],colorSpace);
   return map;
 }
@@ -1479,7 +1482,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();const frameMs=dt*1000;updatePerformanceStats(t,frameMs);updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
+controls.update();composer.render();const frameMs=dt*1000;updatePerformanceStats(t,frameMs);updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});

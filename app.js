@@ -2731,15 +2731,15 @@ function installFoundationSurfaceShader(mat,seed=1,edge=.018){
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
     const worldSeed=Number(seed)||1;
-    shader.vertexShader='varying vec3 vFoundationWorld;\\n'+
+    shader.vertexShader='varying vec3 vFoundationWorld;\n'+
       shader.vertexShader.replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
+        '#include <begin_vertex>\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
       );
-    shader.fragmentShader='varying vec3 vFoundationWorld;\\n'+
+    shader.fragmentShader='varying vec3 vFoundationWorld;\n'+
       shader.fragmentShader.replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\\n diffuseColor.rgb*=1.0+fBreak;\\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);'
+        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);'
       );
   };
   mat.userData.foundationShaderInstalled=true;

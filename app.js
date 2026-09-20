@@ -299,12 +299,12 @@ async function waitForCC0Textures(){await Promise.all(cc0ReadyPromises);}
 const CC0={
   meadow:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_diff_2k.jpg',
   meadowNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_nor_gl_2k.jpg',
-  wood:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_planks/wood_planks_diff_2k.jpg',
-  woodNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wood_planks/wood_planks_nor_gl_2k.jpg',
-  roof:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_tiles/roof_tiles_diff_2k.jpg',
-  roofNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_tiles/roof_tiles_nor_gl_2k.jpg',
-  stone:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_diff_2k.jpg',
-  stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_nor_gl_2k.jpg'
+  wood:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_wood/medieval_wood_diff_2k.jpg',
+  woodNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_wood/medieval_wood_nor_gl_2k.jpg',
+  roof:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_slates_03/roof_slates_03_diff_2k.jpg',
+  roofNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/roof_slates_03/roof_slates_03_nor_gl_2k.jpg',
+  stone:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_wall_01/medieval_wall_01_diff_2k.jpg',
+  stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_wall_01/medieval_wall_01_nor_gl_2k.jpg'
 };
 
 // ============================================================================
@@ -854,13 +854,7 @@ function buildLandscapeAnchors(){
     farTrees.push(tree);
   }
 
-  // Two broad atmospheric veils soften the transition from playable land to horizon.
-  const veilMat=new THREE.MeshBasicMaterial({color:0xb9c8c0,transparent:true,opacity:.045,depthWrite:false,side:THREE.DoubleSide,fog:false});
-  for(const [z,y,w,h,o] of [[58,18,180,30,.032],[92,24,220,38,.048]]){
-    const veil=veilMat.clone();veil.opacity=o;
-    const plane=new THREE.Mesh(new THREE.PlaneGeometry(w,h),veil);
-    plane.position.set(0,y,z);plane.rotation.x=0;scene.add(plane);
-  }
+  // Horizon depth comes from fog, sky gradient and distant geometry.
 }
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);

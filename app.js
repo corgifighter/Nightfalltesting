@@ -41,6 +41,10 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=true;
 renderer.setSize(innerWidth,innerHeight);
 const composer=new EffectComposer(renderer);
+// Keep the post-processing buffers at the exact same capped device-pixel ratio as the renderer.
+// EffectComposer owns its own render targets, so this is synchronized explicitly rather than
+// relying on the constructor's one-time snapshot.
+composer.setPixelRatio(renderer.getPixelRatio());
 const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
@@ -1353,4 +1357,4 @@ requestAnimationFrame(frame);
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloomPass.setSize(innerWidth,innerHeight);ssaoPass.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,1.55);renderer.setPixelRatio(pixelRatio);composer.setPixelRatio(pixelRatio);mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

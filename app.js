@@ -39,7 +39,7 @@ const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
 camera.position.set(27,18,25);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
-renderer.info.autoReset=true;
+renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 const gl=renderer.getContext();
 const rendererDiagnostics={
@@ -1377,7 +1377,7 @@ smokeColumn(5,-10);smokeColumn(-4,-28);smokeColumn(20,-24);
 const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:THREE.DoubleSide});
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
 let last=performance.now(),time=0;
-const perfStats={frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,drawCalls:0,triangles:0,geometries:0,textures:0,qualityLevel:0,updatedAt:0};
+const perfStats={frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,drawCalls:0,triangles:0,geometries:0,textures:0,qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0};
 window.__HEARTHMERE_PERF=perfStats;
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
@@ -1421,14 +1421,14 @@ function updatePerformanceStats(now,frameMs){
   perfStats.maxFrameMs=Math.max(perfStats.maxFrameMs,frameMs);
   if(perfStats.frames<60)return;
   perfStats.frameMs/=perfStats.frames;
-  perfStats.drawCalls=renderer.info.render.calls;
-  perfStats.triangles=renderer.info.render.triangles;
+  perfStats.drawCalls=Math.round(perfStats.drawCallsAccum/perfStats.frames);
+  perfStats.triangles=Math.round(perfStats.trianglesAccum/perfStats.frames);
   perfStats.geometries=renderer.info.memory.geometries;
   perfStats.textures=renderer.info.memory.textures;
   perfStats.qualityLevel=quality.level;
   perfStats.updatedAt=now;
   if(diagnosticsMode) console.table(perfStats);
-  perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;
+  perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
   if(captureMode) return;
@@ -1485,7 +1485,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();const frameMs=rawDt*1000;updatePerformanceStats(t,frameMs);updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
+controls.update();composer.render();const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});

@@ -195,6 +195,11 @@ const moon=new THREE.DirectionalLight(0x6682aa,.10);moon.position.set(30,50,-45)
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
 
+// Shared geometry cache must exist before world-environment construction can call rockMesh().
+// The environment is built immediately during module evaluation, so this declaration
+// intentionally precedes that construction rather than living beside the helper itself.
+const rockGeometryCache=new Map();
+
 // WORLD VISUAL OVERHAUL — environment reflections, distant terrain, and sky depth.
 (function buildWorldEnvironment(){
   const c=document.createElement('canvas');c.width=768;c.height=384;const x=c.getContext('2d');
@@ -556,7 +561,6 @@ const MAT_DETAIL={
  flower:new THREE.MeshStandardMaterial({color:0x8e4d55,roughness:.9}),
  leaf:new THREE.MeshStandardMaterial({color:0x496b43,roughness:1})
 };
-const rockGeometryCache=new Map();
 function rockMesh(radius=0.25){
   const material=new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:.98,metalness:0});
   const key=radius.toFixed(3);

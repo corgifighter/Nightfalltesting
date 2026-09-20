@@ -698,10 +698,21 @@ function rockMesh(radius=0.25){
 
 function box(w,h,d,m,pos=[0,0,0],rotY=0,parent=null){const q=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);q.position.set(...pos);q.rotation.y=rotY;q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
 function cyl(r,h,m,pos=[0,0,0],rot=[0,0,0],parent=null){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.94,h,10),m);q.position.set(...pos);q.rotation.set(...rot);q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
-function windowUnit(x,y,z,rot=0,w=1.15,h=1.45){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;const cavity=new THREE.MeshStandardMaterial({color:0x151a18,roughness:1,metalness:0});
-const warm=new THREE.MeshPhysicalMaterial({color:0xb7c7bd,roughness:.20,metalness:.02,transmission:.12,transparent:true,opacity:.82,emissive:0x4b2814,emissiveIntensity:.24});
-warmWindows.push(warm);box(w+.16,h+.16,.16,cavity,[0,0,-.025],0,g);box(w,h,.10,warm,[0,0,.055],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[-w*.5,0,.08],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[w*.5,0,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,-h*.5,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,h*.5,.08],0,g);box(.06,h,.18,MAT_DETAIL.timber,[0,0,.10],0,g);box(w,.06,.18,MAT_DETAIL.timber,[0,0,.10],0,g);
-box(w+.18,.10,.28,MAT_DETAIL.stone,[0,-h*.53,.16],0,g);scene.add(g);return g}
+function windowUnit(x,y,z,rot=0,w=1.15,h=1.45){
+  const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  const cavity=new THREE.MeshStandardMaterial({color:0x151a18,roughness:1,metalness:0});
+  const warm=new THREE.MeshPhysicalMaterial({color:0xb7c7bd,roughness:.20,metalness:.02,transmission:.12,transparent:true,opacity:.82,emissive:0x4b2814,emissiveIntensity:.24});
+  warmWindows.push(warm);
+  box(w+.16,h+.16,.16,cavity,[0,0,-.025],0,g);box(w,h,.10,warm,[0,0,.055],0,g);
+  box(.08,h+.12,.16,MAT_DETAIL.timber,[-w*.5,0,.08],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[w*.5,0,.08],0,g);
+  box(w+.12,.08,.16,MAT_DETAIL.timber,[0,-h*.5,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,h*.5,.08],0,g);
+  box(.06,h,.18,MAT_DETAIL.timber,[0,0,.10],0,g);box(w,.06,.18,MAT_DETAIL.timber,[0,0,.10],0,g);
+  box(w+.18,.10,.28,MAT_DETAIL.stone,[0,-h*.53,.16],0,g);
+  scene.add(g);
+  const spill=new THREE.PointLight(0xffb36b,.18,4.8,2);
+  spill.position.set(x,y*.98,z+.14);scene.add(spill);windowSpillLights.push(spill);
+  return g;
+}
 function doorUnit(x,y,z,rot=0,w=1.35,h=2.65){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;box(w,h,.16,MAT_DETAIL.wood,[0,0,0],0,g);for(let i=-1;i<=1;i++)box(.08,h*.92,.2,MAT_DETAIL.timber,[i*w*.28,0,.12],0,g);box(w+.08,.10,.2,MAT_DETAIL.timber,[0,h*.44,.12],0,g);cyl(.07,.12,MAT_DETAIL.iron,[w*.24,0,.18],[Math.PI/2,0,0],g);scene.add(g);return g}
 function chimney(x,y,z,scale=1){const g=new THREE.Group();g.position.set(x,y,z);for(let i=0;i<4;i++)box(.58*scale,.72*scale,.58*scale,MAT_DETAIL.stone,[0,i*.62*scale,0]);box(.82*scale,.18*scale,.82*scale,MAT_DETAIL.stone,[0,2.45*scale,0]);scene.add(g);return g}
 function flowerBed(x,z,rot=0){const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.03,z);g.rotation.y=rot;box(2.8,.22,.8,MAT_DETAIL.wood,[0,.12,0],0,g);for(let i=0;i<8;i++){const px=-1.15+(i%4)*.75,pz=-.24+(i%2)*.48;cyl(.10,.28,i%3?MAT_DETAIL.flower:new THREE.MeshStandardMaterial({color:0xd0ad59,roughness:.9}),[px,.35,pz],[],g)}scene.add(g);return g}
@@ -2081,7 +2092,7 @@ async function buildCharacters(){
 
 // Small authored environmental effects.
 const fireLights=[];const embers=[];
-const warmWindows=[];
+const warmWindows=[];const windowSpillLights=[];
 function fire(x,z){const core=addMesh(new THREE.IcosahedronGeometry(.42,1),new THREE.MeshBasicMaterial({color:0xff6f31,transparent:true,opacity:.82}),[x,.85,z],undefined,false);const l=new THREE.PointLight(0xff7a32,5.5,15);l.position.set(x,2,z);scene.add(l);fireLights.push(l);for(let i=0;i<8;i++){const e=addMesh(new THREE.SphereGeometry(.055,6,6),MAT.ember,[x+(worldRandom()-.5)*.6,1+worldRandom()*2,z+(worldRandom()-.5)*.6],undefined,false);e.userData.phase=worldRandom()*6.28;embers.push(e)}}
 fire(5,-10);fire(-4,-28);fire(20,-24);
 const falls=addMesh(new THREE.PlaneGeometry(9,13),new THREE.MeshBasicMaterial({color:0xbbe8e4,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),[45,7,33],[0,.42,0],false);
@@ -3323,7 +3334,7 @@ function frame(t){
  updateHeroPresentation();updateCharacterPresentation();
  foam.forEach((r,i)=>{r.position.z+=dt*(.65+(i%4)*.1);r.scale.x=1.5+Math.sin(time*1.8+i)*.22;r.material.opacity=.16+.10*(Math.sin(time*1.4+i)+1);if(r.position.z>62)r.position.z=-52;r.position.x=27+Math.sin(time*.7+i*1.8)*3.8});
  embers.forEach((e,i)=>{e.position.y+=dt*(.35+Math.sin(i)*.08);e.position.x+=Math.sin(time*2+i)*dt*.025;if(e.position.y>3)e.position.y=.9;e.material.opacity=.35+.5*(Math.sin(time*6+i)+1)/2});
- fireLights.forEach((l,i)=>l.intensity=5.1+Math.sin(time*7+i)*.75+Math.sin(time*13)*.3);warmWindows.forEach((m,i)=>m.emissiveIntensity=.10+.055*(Math.sin(time*.9+i*.73)+1)/2);
+ fireLights.forEach((l,i)=>l.intensity=5.1+Math.sin(time*7+i)*.75+Math.sin(time*13)*.3);warmWindows.forEach((m,i)=>m.emissiveIntensity=.10+.055*(Math.sin(time*.9+i*.73)+1)/2);windowSpillLights.forEach((l,i)=>{l.intensity=.07+.34*(1-day)+.035*(Math.sin(time*.85+i*.61)+1)/2;});
  smoke.forEach((s,i)=>{s.position.y+=dt*(.22+.025*i);s.position.x+=Math.sin(time*.65+s.userData.phase)*dt*.018;s.material.opacity=.035+.025*(Math.sin(time*.8+s.userData.phase)+1)/2;if(s.position.y>6){s.position.y=.9;s.position.x+=((i%2)-.5)*.3}});
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});

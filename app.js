@@ -479,6 +479,10 @@ async function loadDistilledAsset(key){
           o.material.side=THREE.DoubleSide;
           o.material.depthWrite=true;
           o.material.shadowSide=THREE.DoubleSide;
+          // Micro foliage does not cast a full shadow-map silhouette; shrubs/scrub remain
+          // important shadow contributors while grass/ferns stay cheap.
+          o.castShadow=!(key==='grass'||key==='fern');
+          o.receiveShadow=true;
         }
       }
     });
@@ -1568,7 +1572,16 @@ function setHover(o){if(hovered===o)return;if(hovered?.traverse)hovered.traverse
 renderer.domElement.addEventListener('pointermove',e=>{mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactionRoots,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
 const destinationMarker=new THREE.Mesh(new THREE.RingGeometry(.34,.52,28),new THREE.MeshBasicMaterial({color:0xe7cb76,transparent:true,opacity:.86,side:THREE.DoubleSide,depthWrite:false}));destinationMarker.rotation.x=-Math.PI/2;destinationMarker.position.y=.18;destinationMarker.visible=false;scene.add(destinationMarker);
 function terrainHeight(x,z){return macroTerrainHeight(x,z);}
-function traversable(x,z){const riverBlocked=Math.abs(x-31)<13.4;const bridge=Math.abs(x-31)<6.2&&z>-2&&z<14;return !riverBlocked||bridge}
+const NAV={
+  river:{centerX:31,halfWidth:13.4},
+  bridge:{centerX:31,halfWidth:6.2,minZ:-2,maxZ:14}
+};
+function traversable(x,z){
+  const riverBlocked=Math.abs(x-NAV.river.centerX)<NAV.river.halfWidth;
+  const bridge=Math.abs(x-NAV.bridge.centerX)<NAV.bridge.halfWidth&&z>NAV.bridge.minZ&&z<NAV.bridge.maxZ;
+  return !riverBlocked||bridge;
+}
+window.__HEARTHMERE_NAV=NAV;
 function say(s){toast.textContent=s;toast.classList.add('show');clearTimeout(say.t);say.t=setTimeout(()=>toast.classList.remove('show'),2600)}
 function pick(e){mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactionRoots,true);if(hits.length){let o=hits[0].object;while(o&&!o.userData.interaction)o=o.parent;if(o){say(`${o.userData.interaction.name} — ${o.userData.interaction.msg}`);if(o.userData.interaction.action)o.userData.interaction.action();return}}const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),p=new THREE.Vector3();if(ray.ray.intersectPlane(plane,p)){p.x=THREE.MathUtils.clamp(p.x,WORLD_BOUNDS.minX,WORLD_BOUNDS.maxX);p.z=THREE.MathUtils.clamp(p.z,WORLD_BOUNDS.minZ,WORLD_BOUNDS.maxZ);if(!traversable(p.x,p.z)){say('The river is too deep here. Cross at the stone bridge.');return}dest=p.clone();destinationMarker.position.set(p.x,.2,p.z);destinationMarker.visible=true}}
 renderer.domElement.addEventListener('pointerdown',pick);
@@ -1593,10 +1606,13 @@ const perfStats={
   qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0
 };
 const sceneBudget={visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0};
+const textureBudget={count:0,estimatedBaseBytes:0,largest:[]};
 window.__HEARTHMERE_PERF=perfStats;
+window.__HEARTHMERE_TEXTURE_BUDGET=textureBudget;
 window.__HEARTHMERE_SCENE_BUDGET=sceneBudget;
 function collectSceneBudget(){
   let visibleMeshes=0,shadowCasters=0,transparentMeshes=0,lights=0;
+  const textures=new Map();
   scene.traverseVisible(o=>{
     if(o.isLight){lights++;return;}
     if(!o.isMesh)return;
@@ -1604,11 +1620,33 @@ function collectSceneBudget(){
     if(o.castShadow)shadowCasters++;
     const mats=Array.isArray(o.material)?o.material:[o.material];
     if(mats.some(m=>m?.transparent||m?.opacity<.999))transparentMeshes++;
+    for(const m of mats){
+      if(!m)continue;
+      for(const k of ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','alphaMap']){
+        const t=m[k];
+        if(t?.isTexture)textures.set(t.uuid,t);
+      }
+    }
   });
   sceneBudget.visibleMeshes=visibleMeshes;
   sceneBudget.shadowCasters=shadowCasters;
   sceneBudget.transparentMeshes=transparentMeshes;
   sceneBudget.lights=lights;
+  let estimatedBaseBytes=0;
+  const largest=[];
+  textures.forEach(t=>{
+    const w=t.image?.width||t.source?.data?.width||0;
+    const h=t.image?.height||t.source?.data?.height||0;
+    if(w&&h){
+      const bytes=w*h*4;
+      estimatedBaseBytes+=bytes;
+      largest.push({name:t.name||t.uuid,width:w,height:h,estimatedBaseBytes:bytes});
+    }
+  });
+  largest.sort((a,b)=>b.estimatedBaseBytes-a.estimatedBaseBytes);
+  textureBudget.count=textures.size;
+  textureBudget.estimatedBaseBytes=estimatedBaseBytes;
+  textureBudget.largest=largest.slice(0,12);
 }
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
@@ -1742,6 +1780,7 @@ const frameMs=rawDt*1000;perfStats.drawCallsAccum+=currentDrawCalls;perfStats.tr
     geometries:renderer.info.memory.geometries,
     textures:renderer.info.memory.textures,
     sceneBudget:{...sceneBudget},
+    textureBudget:{...textureBudget},
     assetFailures:[...assetLoadStats.failedNames],
     distilledFailures:[...distilledLoadStats.failedKeys]
   };

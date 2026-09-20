@@ -519,6 +519,185 @@ function addVillageMicroDressing(){
  for(const [x,z,r] of [[24,3,.02],[37,3,.02],[24,10,.02],[37,10,.02]]){cyl(.10,2.1,MAT_DETAIL.timber,[x,1.05,z],[0,0,0]);cyl(.08,.35,MAT_DETAIL.iron,[x,2.05,z],[Math.PI/2,0,0]);}
 }
 
+
+// ============================================================================
+// HEARTHMERE VISUAL REPLACEMENT PASS
+// The legacy GLBs remain in the project as authored layout/collision references,
+// but they are no longer used as the visible hero/world geometry. This pass
+// replaces the visibly low-detail silhouettes with smooth, high-segment forms.
+// ============================================================================
+
+const HD={
+  timber:new THREE.MeshStandardMaterial({color:0x3a271d,roughness:.78,metalness:0}),
+  timberLight:new THREE.MeshStandardMaterial({color:0x62412b,roughness:.74,metalness:0}),
+  plaster:new THREE.MeshStandardMaterial({color:0xb8ab91,roughness:.92,metalness:0}),
+  plasterWarm:new THREE.MeshStandardMaterial({color:0xc9b99b,roughness:.9,metalness:0}),
+  stone:new THREE.MeshStandardMaterial({color:0x77746b,roughness:.94,metalness:0}),
+  stoneDark:new THREE.MeshStandardMaterial({color:0x4e4c47,roughness:.96,metalness:0}),
+  roof:new THREE.MeshStandardMaterial({color:0x34322f,roughness:.82,metalness:0}),
+  roofWarm:new THREE.MeshStandardMaterial({color:0x51443a,roughness:.84,metalness:0}),
+  glass:new THREE.MeshPhysicalMaterial({color:0x88c6c5,roughness:.16,metalness:.05,transmission:.28,transparent:true,opacity:.86,clearcoat:1}),
+  leaf:new THREE.MeshStandardMaterial({color:0x426b45,roughness:.96,metalness:0}),
+  leafLight:new THREE.MeshStandardMaterial({color:0x5f8452,roughness:.95,metalness:0}),
+  trunk:new THREE.MeshStandardMaterial({color:0x4a3323,roughness:.95,metalness:0}),
+  dirt:new THREE.MeshStandardMaterial({color:0x735b40,roughness:1,metalness:0}),
+  iron:new THREE.MeshStandardMaterial({color:0x292d2b,roughness:.48,metalness:.72}),
+  warm:new THREE.MeshStandardMaterial({color:0xffb45c,emissive:0xff6b22,emissiveIntensity:1.6,roughness:.38}),
+  water:new THREE.MeshPhysicalMaterial({color:0x2d8d98,roughness:.07,metalness:.05,transmission:.18,clearcoat:1,clearcoatRoughness:.08})
+};
+
+function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d,3,2,3),mat);
+  m.position.set(...pos);m.rotation.set(rotX,rotY,rotZ);m.castShadow=true;m.receiveShadow=true;
+  (parent||scene).add(m);return m;
+}
+function hdCyl(r1,r2,h,mat,pos,parent,segments=24){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments,3),mat);
+  m.position.set(...pos);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
+}
+function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,28,20),mat);
+  m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
+}
+function hdRoof(parent,w,d,y,mat,angle=.58){
+  const depth=Math.sqrt(2)*d;
+  hdBox(w,.28,depth,mat,[0,y,d*.23],parent,angle,0,0);
+  hdBox(w,.28,depth,mat,[0,y,-d*.23],parent,-angle,0,0);
+  hdBox(w+.15,.22,.32,HD.timber,[0,y+.72,0],parent,0,0,0);
+}
+function hdWindow(parent,x,y,z,scale=1){
+  hdBox(1.05*scale,1.35*scale,.10,HD.timber,[x,y,z],parent);
+  const glass=hdBox(.78*scale,1.04*scale,.055,HD.glass,[x,y,z+(z>0?.055:-.055)],parent);
+  glass.material=HD.glass;
+  hdBox(.07*scale,1.04*scale,.07,HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
+  hdBox(.78*scale,.07*scale,.07,HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
+  const glow=hdBox(.56*scale,.82*scale,.03,HD.warm,[x,y,z+(z>0?.095:-.095)],parent);
+  glow.castShadow=false;
+}
+function hdDoor(parent,x,y,z,scale=1){
+  hdBox(1.0*scale,2.1*scale,.14*scale,HD.timber,[x,y,z],parent);
+  hdBox(.72*scale,1.7*scale,.035,HD.wood||HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
+  hdCyl(.055*scale,.055*scale,.08,HD.iron,[x+.28*scale,y-.08*scale,z+(z>0?.12:-.12)],parent,16).rotation.x=Math.PI/2;
+}
+function hdChimney(parent,x,z,height=1.7){
+  hdBox(.62,height,.62,HD.stone,[x,4.15,z],parent);
+  hdBox(.78,.14,.78,HD.stoneDark,[x,4.15+height/2,z],parent);
+}
+function hdBuilding(type,x,z,scale=1,rot=0){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  const w=type==='chapel'?7.2:type==='inn'?8.0:type==='forge'?6.4:type==='mill'?7.2:5.9;
+  const d=type==='chapel'?8.8:type==='inn'?6.8:type==='forge'?6.2:type==='mill'?7.0:5.5;
+  const h=type==='chapel'?4.8:3.7;
+  hdBox(w,.48,d,HD.stone,[0,.28,0],g);
+  hdBox(w-.38,h,d-.38,type==='chapel'?HD.plasterWarm:HD.plaster,[0,.48+h/2,0],g);
+  // timber frame gives the facade a real construction language
+  for(const px of [-w*.42,w*.42])hdBox(.16,h-.15,.16,HD.timber,[px,.55+h/2,d*.51],g);
+  for(const py of [1.25,2.45])hdBox(w*.88,.13,.18,HD.timber,[0,py,d*.51],g);
+  hdDoor(g,0,1.55,d*.51,.95);
+  hdWindow(g,-w*.28,2.15,d*.51,.92);hdWindow(g,w*.28,2.15,d*.51,.92);
+  hdRoof(g,w+.6,d+.8,h+.45,type==='chapel'?HD.roof:HD.roofWarm,type==='chapel'?.66:.57);
+  hdChimney(g,w*.25,-d*.18,type==='chapel'?.9:1.65);
+  hdChimney(g,-w*.28,-d*.18,type==='forge'?2.0:1.25);
+  // Side timber bracing and foundation courses.
+  for(const sx of [-1,1]){
+    hdBox(.11,1.45,.14,HD.timber,[sx*w*.28,1.62,d*.525],g,0,0,sx*.42);
+    hdBox(.11,1.45,.14,HD.timber,[sx*w*.08,1.62,d*.525],g,0,0,-sx*.42);
+  }
+  if(type==='inn'){
+    hdBox(2.7,.16,1.35,HD.timber,[0,1.0,d*.62],g);hdBox(2.7,.12,.10,HD.roofWarm,[0,2.15,d*.62],g);
+    for(const px of [-1.15,1.15])hdCyl(.075,.075,1.55,HD.timber,[px,1.0,d*.64],g,18);
+    hdBox(2.0,.58,.10,HD.timber,[0,2.8,d*.54],g);
+    hdBox(1.6,.34,.04,HD.warm,[0,2.8,d*.60],g);
+  }
+  if(type==='forge'){
+    hdBox(2.6,1.2,1.2,HD.stoneDark,[w*.34,1.1,-d*.25],g);
+    hdCyl(.36,.28,1.5,HD.iron,[w*.34,2.15,-d*.25],g,24);
+    const anvil=hdBox(.85,.25,.45,HD.iron,[w*.12,1.05,d*.57],g);anvil.rotation.z=-.08;
+    hdBox(3.0,.12,1.0,HD.timber,[-w*.2,2.35,d*.62],g);
+  }
+  if(type==='mill'){
+    // Mill wheel with real radial detail rather than the flat placeholder silhouette.
+    const wheel=new THREE.Group();wheel.position.set(w*.62,.9,d*.55);g.add(wheel);
+    const rim=hdCyl(1.35,1.35,.22,HD.timber,[0,0,0],wheel,40);rim.rotation.x=Math.PI/2;
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;const spoke=hdBox(.12,1.15,.10,HD.timber,[Math.cos(a)*.58,Math.sin(a)*.58,.12],wheel,0,0,a);spoke.castShadow=true;}
+    hdCyl(.18,.18,.34,HD.iron,[0,0,.16],wheel,24).rotation.x=Math.PI/2;
+  }
+  if(type==='chapel'){
+    hdBox(1.35,4.0,1.35,HD.stone,[0,2.5,d*.42],g);
+    hdRoof(g,1.65,1.8,4.55,HD.roof,.52);
+    hdBox(.72,1.35,.10,HD.glass,[0,2.7,d*.70],g);
+  }
+  if(type==='watchtower'){
+    // replace generic house shell with a taller timber watch structure
+    g.clear();
+    hdBox(5.0,.55,5.0,HD.stone,[0,.28,0],g);
+    hdBox(3.9,8.0,3.9,HD.timber,[0,4.25,0],g);
+    hdBox(3.55,7.5,3.55,HD.plaster,[0,4.1,0],g);
+    for(const y of [2.1,4.2,6.3])for(const sx of [-1,1])hdBox(.12,1.7,.14,HD.timber,[sx*1.25,y,1.8],g,0,0,sx*.38);
+    hdRoof(g,5.2,5.2,8.25,HD.roof,.74);
+    hdWindow(g,0,5.1,1.84,1.0);hdWindow(g,0,7.0,1.84,.8);
+  }
+  return g;
+}
+function hdTree(x,z,scale=1,pine=false){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);scene.add(g);
+  hdCyl(.34,.20,3.8,HD.trunk,[0,1.9,0],g,28);
+  for(const [bx,by,bz,br] of [[-.45,1.8,0,.16],[.48,2.25,0,.14],[0,2.7,.38,.12]]){const b=hdCyl(br,br*.62,1.8,HD.trunk,[bx,by,bz],g,20);b.rotation.z=(bx>0?.52:-.52);}
+  if(pine){
+    hdCyl(2.0,1.15,2.0,HD.leaf,[0,3.25,0],g,32);
+    hdCyl(1.62,.82,2.1,HD.leafLight,[0,4.65,0],g,32);
+    hdCyl(1.15,.45,2.0,HD.leaf,[0,5.9,0],g,32);
+  }else{
+    hdSphere(1.55,HD.leaf,[0,3.65,0],g,[1.05,.88,1.02]);
+    hdSphere(1.18,HD.leafLight,[-.95,4.0,.18],g,[1.05,.9,.92]);
+    hdSphere(1.22,HD.leaf,[.88,4.05,-.12],g,[1.0,.92,1.0]);
+    hdSphere(.98,HD.leafLight,[.05,4.85,.12],g,[1.05,.9,.95]);
+  }
+  return g;
+}
+function hdRock(x,z,scale=1){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
+  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(.65,2),HD.stone);
+  m.scale.set(1.25,.72,.92);m.rotation.set(.2,.7,.08);m.castShadow=true;m.receiveShadow=true;g.add(m);return g;
+}
+function hdProp(name,x,z,scale=1,rot=0){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  if(name==='barrel'){hdCyl(.48,.48,1.0,HD.timber,[0,.5,0],g,28);for(const y of [.22,.5,.78])hdCyl(.53,.035,.04,HD.iron,[0,y,0],g,28).rotation.x=Math.PI/2;}
+  else if(name==='crate'){hdBox(1,1,1,HD.timber,[0,.5,0],g);for(const a of [-.32,.32])hdBox(.09,1.05,.08,HD.timber,[a,.5,.53],g,0,0,a*.8);}
+  else if(name==='bench'){hdBox(2.5,.18,.55,HD.timber,[0,.9,0],g);for(const x of [-.9,.9])hdBox(.12,.9,.12,HD.timber,[x,.45,0],g);}
+  else if(name==='fence'){for(const x of [-.9,0,.9])hdCyl(.09,.09,1.25,HD.timber,[x,.62,0],g,20);hdBox(2.1,.10,.10,HD.timber,[0,.9,0],g);hdBox(2.1,.10,.10,HD.timber,[0,.55,0],g);}
+  else if(name==='lantern'){hdCyl(.055,.07,2.2,HD.timber,[0,1.1,0],g,18);hdSphere(.16,HD.warm,[0,2.0,0],g,[1,.9,1]);}
+  else if(name==='well'){hdCyl(1.35,1.35,.8,HD.stone,[0,.4,0],g,36);for(let i=0;i<18;i++){const a=i*Math.PI/9;hdBox(.38,.72,.22,HD.stone,[Math.cos(a)*1.12,.52,Math.sin(a)*1.12],g,0,a,0);}hdCyl(.08,.08,3.0,HD.timber,[0,1.85,0],g,20);}
+  else {hdSphere(.28,HD.stone,[0,.28,0],g,[1.4,.7,1]);}
+  return g;
+}
+function replaceLegacyVisuals(){
+  const hideNames=new Set(['tree_oak','tree_pine','shrub','grass_clump','rock','cottage_A','cottage_B','cottage_C','inn','forge','chapel','mill','watchtower','bridge','well','barrel','bench','cart','crate','fence','lantern','sign']);
+  const legacy=[];
+  scene.traverse(o=>{if(o.userData?.assetName && hideNames.has(o.userData.assetName))legacy.push(o);});
+  legacy.forEach(g=>g.traverse(o=>{if(o.isMesh)o.visible=false;}));
+
+  const buildingNames=new Set(['inn','forge','chapel','mill','watchtower']);
+  legacy.filter(g=>buildingNames.has(g.userData.assetName)).forEach(g=>{
+    hdBuilding(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y);
+  });
+  legacy.filter(g=>['cottage_A','cottage_B','cottage_C'].has?.(g.userData.assetName)).forEach(g=>{});
+  legacy.filter(g=>g.userData.assetName?.startsWith('cottage_')).forEach(g=>{
+    const variant=g.userData.assetName==='cottage_A'?0:g.userData.assetName==='cottage_B'?1:2;
+    const h=hdBuilding('cottage',g.position.x,g.position.z,g.scale.x,g.rotation.y);
+    if(variant===1){h.scale.y*=1.12;} if(variant===2){h.scale.x*=1.12;h.scale.z*=.9;}
+  });
+  legacy.filter(g=>g.userData.assetName==='tree_oak'||g.userData.assetName==='tree_pine').forEach(g=>{
+    const x=g.position.x,z=g.position.z,sc=g.scale.x;hdTree(x,z,sc,g.userData.assetName==='tree_pine');
+  });
+  legacy.filter(g=>g.userData.assetName==='rock').forEach(g=>hdRock(g.position.x,g.position.z,g.scale.x));
+  legacy.filter(g=>['shrub','grass_clump'].includes(g.userData.assetName)).forEach(g=>{
+    const x=g.position.x,z=g.position.z,sc=g.scale.x;const h=hdSphere(.48,g.userData.assetName==='shrub'?HD.leafLight:HD.leaf,[x,terrainHeight(x,z)+.3*sc,z],scene,[1.7*sc,.55*sc,1.15*sc]);
+  });
+  const propNames=new Set(['well','barrel','bench','fence','lantern','crate']);
+  legacy.filter(g=>propNames.has(g.userData.assetName)).forEach(g=>hdProp(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y));
+}
+
 let villageWell=null;
 const interactables=[];
 const gameState={quest:0, gathered:0, gold:24, inventory:{wood:12,stone:8,herb:6,fish:7}, lastInteraction:null};
@@ -890,7 +1069,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  if(player){tmpTarget.set(player.position.x,0,player.position.z);controls.target.lerp(tmpTarget,.07)}controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

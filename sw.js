@@ -10,7 +10,10 @@ const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js",
-  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/OutputShader.js"
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/OutputShader.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/math/SimplexNoise.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/SSAOShader.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/CopyShader.js"
 ];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(async c=>{

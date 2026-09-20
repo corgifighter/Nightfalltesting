@@ -2085,6 +2085,76 @@ function buildFarmArrival(){
   }
 }
 
+
+// ============================================================================
+// DEEP ENVIRONMENTAL STORYTELLING — FUNCTIONAL SCENES
+// Major locations receive authored activity zones rather than isolated decorative
+// props. Each scene has a material palette, physical logic and a readable silhouette.
+// ============================================================================
+function storyGroup(x,z){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.userData.staticVisual=true;g.userData.storyScene=true;scene.add(g);return g;
+}
+function buildStoryScenes(){
+  // Warm Lantern — public frontage: tables, benches, barrels, flower planters and stacked fuel.
+  {
+    const g=storyGroup(-14,-13);
+    for(const x of [-3.1,3.1])hdBox(2.6,.16,1.05,ARCH.timber,[x,1.00,-4.15],g,0,0,0,.035);
+    for(const x of [-4.0,-2.2,2.2,4.0])hdCyl(.10,.075,1.0,ARCH.timber,[x,.50,-4.15],g,24);
+    for(const x of [-3.6,3.6])hdCyl(.46,.46,.78,ARCH.timber,[x,.39,-2.65],g,28).rotation.x=Math.PI/2;
+    for(const x of [-4.3,-3.4,3.4,4.3])hdCyl(.13,.09,.95,ARCH.iron,[x,.48,-2.95],g,20);
+    for(let i=0;i<5;i++)hdCyl(.18,.15,1.55,ARCH.timber,[-4.2+i*.24,.32,-5.0],g,18).rotation.z=Math.PI/2;
+    for(const x of [-4.7,4.7]){hdBox(.72,.48,.72,ARCH.stone,[x,.28,-3.0],g,0,0,0,.08);hdSphere(.10,ARCH.warm,[x,.64,-3.0],g,[1,.8,1]);}
+  }
+  // Riverside Forge — ore, fuel, work surface and tool rack establish an active workshop.
+  {
+    const g=storyGroup(1,-7);
+    hdBox(2.9,.32,1.2,ARCH.stone,[3.0,.18,-3.75],g,0,0,0,.05);
+    hdBox(1.25,.24,.58,ARCH.iron,[3.0,.48,-3.75],g,0,0,-.06,.04);
+    for(let i=0;i<7;i++)hdCyl(.12,.10,.95,ARCH.timber,[-3.7+i*.52,.30,-3.9],g,18).rotation.z=Math.PI/2;
+    for(let i=0;i<5;i++)hdBox(.52,.38,.46,ARCH.stone,[-3.9+(i%2)*.62,.20,-2.8+Math.floor(i/2)*.52],g,0,0,(i%2)*.12,.04);
+    for(let i=0;i<4;i++){const tool=hdCyl(.035,.72, .72,ARCH.iron,[-1.2+i*.62,1.25,-4.0],g,14);tool.rotation.z=Math.PI/2;}
+    for(const x of [-2.2,-1.3])hdCyl(.20,.18,.82,ARCH.timber,[x,.41,-2.45],g,24);
+  }
+  // Chapel yard — low wall, grave rhythm and warm candles create a civic/religious threshold.
+  {
+    const g=storyGroup(-12,11);
+    for(let i=0;i<9;i++){
+      const x=-4.1+i*.95;
+      hdBox(.54,.85,.18,ARCH.stoneA,[x,.44,3.0+(i%2)*.42],g,0,(i%3)*.08,(i%2?-.08:.08),.035);
+      hdBox(.18,.16,.18,ARCH.stoneB,[x,.88,3.0+(i%2)*.42],g,0,0,0,.025);
+    }
+    for(let i=0;i<8;i++)hdBox(1.0,.32,.34,ARCH.stoneB,[-4.2+i*1.05,.18,4.15],g,0,0,(i%2)*.08,.04);
+    for(const x of [-3.8,0,3.7]){hdCyl(.035,.035,.55,ARCH.iron,[x,.55,3.75],g,12);hdSphere(.07,ARCH.warm,[x,.88,3.75],g,[1,.7,1]);}
+  }
+  // Ashwheel Mill — sacks, grain bins and a timber loading frame connect the building to production.
+  {
+    const g=storyGroup(16,-17);
+    for(let i=0;i<6;i++){
+      const sack=hdSphere(.34,HD.plasterWarm,[12.8+(i%3)*.62,.35,-20.7+Math.floor(i/3)*.52],g,[1,.92,.82]);
+      sack.rotation.z=(i%2?-.08:.06);
+    }
+    for(let i=0;i<4;i++)hdBox(.70,.62,.68,ARCH.timber,[13.0+(i%2)*.85,.32,-17.1+Math.floor(i/2)*.76],g,0,0,(i%2)*.08,.05);
+    for(const x of [12.2,15.4,18.0])hdCyl(.075,.06,2.6,ARCH.timber,[x,1.30,-20.3],g,20);
+    hdBox(6.2,.10,.12,ARCH.timber,[15.1,2.55,-20.3],g,0,0,0,.02);
+  }
+  // North Watch — defensive clutter, signal flags and a fire beacon turn the landmark into a post.
+  {
+    const g=storyGroup(16,14);
+    for(let i=0;i<6;i++)hdBox(.72,.34,.72,ARCH.stone,[10.2+(i%3)*.9,.24,11.0+Math.floor(i/3)*.72],g,0,0,(i%2)*.14,.05);
+    for(let i=0;i<5;i++)hdCyl(.07,.06,1.5,ARCH.timber,[13.2+i*.62,.75,11.0],g,18);
+    hdBox(4.2,.10,.12,ARCH.timber,[14.45,1.50,11.0],g,0,0,0,.02);
+    const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.72,5,3),new THREE.MeshStandardMaterial({color:0x7c3e3a,roughness:.9,side:THREE.DoubleSide}));
+    flag.position.set(16,7.8,14);flag.rotation.y=.15;flag.userData.windFlag=true;g.add(flag);
+  }
+  // River work edge — ropes, baskets and a pulled-up skiff make the waterway feel inhabited.
+  {
+    const g=storyGroup(24,-4);
+    hdBox(4.8,.14,1.15,ARCH.timber,[0,.65,8.7],g,0,0,0,.035);
+    for(let i=0;i<6;i++)hdBox(.10,.12,1.0,ARCH.timber,[-2.0+i*.8,.82,8.7],g,0,0,0,.015);
+    for(const x of [-1.9,1.9])hdCyl(.08,.07,1.6,ARCH.timber,[x,1.1,9.35],g,20);
+    for(let i=0;i<3;i++)hdCyl(.34,.28,.44,ARCH.timber,[2.8+i*.58,.25,8.5+(i%2)*.5],g,24);
+  }
+}
 function buildImportantLocations(){
   // Hearthmere Farm — orderly crop rows, gate posts, hay and a little tool shed.
   const farmX=-36,farmZ=-20;
@@ -2497,7 +2567,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

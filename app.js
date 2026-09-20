@@ -2674,6 +2674,21 @@ function buildBeautyLightingPass(){
   ssaoPass.kernelRadius=12;ssaoPass.minDistance=.001;ssaoPass.maxDistance=.19;
   bloomPass.strength=.075;bloomPass.radius=.32;bloomPass.threshold=.90;
 }
+\n
+// ============================================================================
+// HIGH-END ATMOSPHERE PASS — depth cues without foreground transparency sheets.
+// ============================================================================
+function buildHighEndAtmospherePass(){
+  scene.background.set(0x7e9692);
+  scene.fog.color.set(0x71837d);scene.fog.density=.00072;
+  if(sky?.material?.uniforms){
+    sky.material.uniforms.top.value.set(0x18384b);
+    sky.material.uniforms.mid.value.set(0x5f817f);
+    sky.material.uniforms.horizon.value.set(0xe1c28d);
+    sky.material.uniforms.sun.value.set(0xffd7a2);
+  }
+  sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
+}
 \nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -2878,7 +2893,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

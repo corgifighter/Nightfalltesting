@@ -1,5 +1,5 @@
-const CACHE='hearthmere-nightfalltesting-v18';
-const CORE=["./","./index.html","./app.js","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
+const CACHE='hearthmere-nightfalltesting-v19';
+const CORE=["./","./index.html","./app.js","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/controls/OrbitControls.js",

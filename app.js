@@ -77,9 +77,9 @@ function addMountainRidge(z,base,height,width,color,opacity=1){
   const m=new THREE.MeshStandardMaterial({color,roughness:1,metalness:0,transparent:opacity<1,opacity,side:THREE.DoubleSide});
   const mesh=new THREE.Mesh(geo,m);scene.add(mesh);return mesh;
 }
-addMountainRidge(118,-3,31,250,0x4b5c5b,.48);
-addMountainRidge(102,-2,23,220,0x526966,.68);
-addMountainRidge(88,-1,16,190,0x415750,.82);
+addMountainRidge(-118,-3,31,250,0x4b5c5b,.48);
+addMountainRidge(-102,-2,23,220,0x526966,.68);
+addMountainRidge(-88,-1,16,190,0x415750,.82);
 
 function cloudTexture(){
   const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,256,128);x.fillStyle='rgba(255,255,255,.72)';
@@ -87,9 +87,9 @@ function cloudTexture(){
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
 }
 const cloudMap=cloudTexture(),clouds=[];
-for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudMap,color:0xffffff,transparent:true,opacity:.13+.035*(i%4),depthWrite:false,fog:false}));sp.position.set(-95+i*16,42+(i%5)*7,78+(i%4)*22);sp.scale.set(18+(i%3)*9,6+(i%2)*3,1);sp.userData.speed=.12+(i%3)*.035;scene.add(sp);clouds.push(sp);}
+for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudMap,color:0xffffff,transparent:true,opacity:.13+.035*(i%4),depthWrite:false,fog:false}));sp.position.set(-95+i*16,42+(i%5)*7,-78-(i%4)*22);sp.scale.set(18+(i%3)*9,6+(i%2)*3,1);sp.userData.speed=.12+(i%3)*.035;scene.add(sp);clouds.push(sp);}
 const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xffe6b1,transparent:true,opacity:.86}));
-sunDisc.position.set(-152,112,180);sunDisc.renderOrder=-1;scene.add(sunDisc);
+sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
 const ASSET_BASE='https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
 const loader=new THREE.TextureLoader();
@@ -381,7 +381,7 @@ function buildWorldVisualPass(){
   const practicals=[[-14,-8,0xffb35c,2.2,11],[4,-12,0xffa14c,1.7,9],[15,-10,0xffb35c,1.6,9],[-4,-28,0xffc07a,1.5,8],[20,-24,0xffb15b,1.8,10]];
   practicals.forEach(([x,z,c,i,d])=>{const l=new THREE.PointLight(c,i,d,.8);l.position.set(x,2.3,z);scene.add(l);});
   const hazeMat=new THREE.MeshBasicMaterial({color:0xc8d5cc,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
-  const haze=new THREE.Mesh(new THREE.PlaneGeometry(170,42),hazeMat);haze.position.set(0,23,82);scene.add(haze);
+  const haze=new THREE.Mesh(new THREE.PlaneGeometry(170,42),hazeMat);haze.position.set(0,23,-82);scene.add(haze);
 }
 async function buildNaturalDressing(){
  const specs=[];

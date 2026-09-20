@@ -1622,25 +1622,87 @@ function hdSign(x,z,scale=1,rot=0){
 function hdCharacter(root,isPlayer=false){
   const g=new THREE.Group();g.position.set(0,0,0);root.add(g);
   const parts={arms:[],legs:[],cloak:null,body:g};g.userData.parts=parts;g.userData.replacementVisual=true;
-  const cloth=isPlayer?new THREE.MeshStandardMaterial({color:0x40586a,roughness:.82}):new THREE.MeshStandardMaterial({color:0x5b493e,roughness:.88});
-  const leather=new THREE.MeshStandardMaterial({color:0x3a271d,roughness:.9});
-  const skin=new THREE.MeshStandardMaterial({color:0xc89472,roughness:.88});
-  const metal=new THREE.MeshStandardMaterial({color:0x6b706d,metalness:.72,roughness:.28});
-  // A smooth, proportioned humanoid silhouette. High segment counts eliminate the faceted mannequin look.
-  hdCyl(.52,.42,1.35,cloth,[0,1.62,0],g,32);
-  hdSphere(.42,skin,[0,2.55,0],g,[1,1.05,.95]);
-  hdSphere(.22,cloth,[0,2.84,0],g,[1.7,.42,1.35]);
+
+  const cloth=isPlayer?new THREE.MeshStandardMaterial({color:0x40586a,roughness:.84}):new THREE.MeshStandardMaterial({color:0x5b493e,roughness:.90});
+  const clothLight=isPlayer?new THREE.MeshStandardMaterial({color:0x60798a,roughness:.82}):new THREE.MeshStandardMaterial({color:0x725b4c,roughness:.88});
+  const leather=new THREE.MeshStandardMaterial({color:0x35241b,roughness:.94});
+  const skin=new THREE.MeshStandardMaterial({color:0xb9785c,roughness:.88});
+  const skinLight=new THREE.MeshStandardMaterial({color:0xd09575,roughness:.84});
+  const metal=new THREE.MeshStandardMaterial({color:0x737976,metalness:.72,roughness:.30});
+  const darkMetal=new THREE.MeshStandardMaterial({color:0x363b39,metalness:.68,roughness:.34});
+  const hairMat=new THREE.MeshStandardMaterial({color:isPlayer?0x2b211d:0x3b2921,roughness:.96});
+  const bootMat=new THREE.MeshStandardMaterial({color:0x211713,roughness:.97});
+
+  // Layered torso: undershirt, shaped tunic, belt and hem. The proportions are intentionally
+  // grounded and readable rather than the old cylinder-man silhouette.
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.47,.88,8,32),cloth);
+  torso.position.set(0,1.58,0);torso.scale.set(1,.98,.82);torso.castShadow=true;torso.receiveShadow=true;g.add(torso);
+  const chest=new THREE.Mesh(new THREE.CapsuleGeometry(.39,.54,8,28),clothLight);
+  chest.position.set(0,1.76,.10);chest.scale.set(1.08,.92,.72);chest.castShadow=true;g.add(chest);
+  const hem=new THREE.Mesh(new THREE.CylinderGeometry(.54,.61,.46,32,1),cloth);
+  hem.position.set(0,1.08,0);hem.scale.z=.78;hem.castShadow=true;g.add(hem);
+  hdCyl(.045,.055,1.12,leather,[0,1.34,.41],g,20).rotation.x=Math.PI/2;
+  hdBox(1.05,.12,.20,leather,[0,1.08,.37],g,0,0,0,.018);
+
+  // Neck and head have a separate jaw/neck transition so the character no longer reads as
+  // one smooth sphere attached to one smooth cylinder.
+  hdCyl(.20,.17,.30,skin,[0,2.30,0],g,28);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.42,32,24),skinLight);
+  head.position.set(0,2.67,0);head.scale.set(.96,1.10,.90);head.castShadow=true;head.receiveShadow=true;g.add(head);
+  const jaw=new THREE.Mesh(new THREE.SphereGeometry(.34,28,20),skin);
+  jaw.position.set(0,2.50,.07);jaw.scale.set(.92,.58,.86);jaw.castShadow=true;g.add(jaw);
+  // Hairline and back hair provide a strong silhouette without requiring a full skinned head.
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.44,32,20,0,Math.PI*2,0,Math.PI*.56),hairMat);
+  hair.position.set(0,2.86,.01);hair.scale.set(1.02,.72,.98);hair.castShadow=true;g.add(hair);g.userData.heroHair=hair;
   for(const side of [-1,1]){
-    const arm=hdCyl(.18,.14,1.25,cloth,[side*.62,1.72,0],g,24);arm.rotation.z=side*.12;parts.arms.push(arm);
-    hdSphere(.18,skin,[side*.66,1.08,0],g,[1,.95,1]);
-    const leg=hdCyl(.20,.15,1.22,leather,[side*.25,.67,0],g,24);parts.legs.push(leg);
-    hdCyl(.22,.17,.34,leather,[side*.25,.12,0.05],g,24);
+    const lock=new THREE.Mesh(new THREE.SphereGeometry(.12,16,12),hairMat);
+    lock.position.set(side*.33,2.68,-.03);lock.scale.set(.7,1.35,.72);lock.castShadow=true;g.add(lock);
   }
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),skin);
+  nose.position.set(0,2.61,.39);nose.scale.set(.65,.9,.8);g.add(nose);
+  for(const side of [-1,1]){
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.028,10,8),darkMetal);
+    eye.position.set(side*.13,2.72,.382);g.add(eye);
+  }
+
+  // Articulated arms: upper arm, elbow, forearm and glove are grouped so the animation pass
+  // can move the whole limb naturally.
+  for(const side of [-1,1]){
+    const arm=new THREE.Group();arm.position.set(side*.56,1.91,0);arm.rotation.z=side*.10;g.add(arm);
+    const upper=hdCyl(.17,.135,.70,cloth,[0,-.30,0],arm,28);
+    upper.rotation.z=side*.035;
+    const elbow=hdSphere(.145,skin,[0,-.67,0],arm,[1,.92,1]);
+    const fore=hdCyl(.145,.115,.58,clothLight,[0,-.96,.01],arm,26);
+    const glove=hdSphere(.15,leather,[0,-1.29,.02],arm,[1,.85,1]);
+    parts.arms.push(arm);
+  }
+
+  // Two-piece legs with knees and substantial boots improve the lower silhouette and grounding.
+  for(const side of [-1,1]){
+    const leg=new THREE.Group();leg.position.set(side*.25,1.02,0);g.add(leg);
+    const thigh=hdCyl(.20,.16,.66,clothLight,[0,-.34,0],leg,28);
+    const knee=hdSphere(.17,leather,[0,-.70,.02],leg,[1,.82,1]);
+    const shin=hdCyl(.16,.135,.58,leather,[0,-.98,.01],leg,28);
+    const boot=hdCyl(.22,.17,.38,bootMat,[0,-1.39,.08],leg,28);
+    boot.scale.z=1.18;parts.legs.push(leg);
+  }
+
+  // A split-tail tunic and rear cloak give the silhouette a vertical, wind-responsive rhythm.
+  for(const side of [-1,1]){
+    const panel=new THREE.Mesh(new THREE.CylinderGeometry(.30,.42,.72,24,1,true),clothLight);
+    panel.position.set(side*.20,1.10,-.04);panel.rotation.z=side*.06;panel.scale.z=.72;panel.castShadow=true;g.add(panel);
+  }
+  const cloakMat=isPlayer?new THREE.MeshStandardMaterial({color:0x304b53,roughness:.91}):new THREE.MeshStandardMaterial({color:0x3f3531,roughness:.94});
+  const cloak=new THREE.Mesh(new THREE.CylinderGeometry(.42,.76,1.52,32,1,true,0,Math.PI*1.15),cloakMat);
+  cloak.position.set(0,1.48,-.28);cloak.rotation.x=Math.PI/2;cloak.scale.set(1,.95,.72);cloak.castShadow=true;g.add(cloak);parts.cloak=cloak;
+  const clasp=new THREE.Mesh(new THREE.SphereGeometry(.09,16,12),metal);clasp.position.set(0,2.14,-.32);clasp.castShadow=true;g.add(clasp);
+
   if(isPlayer){
-    hdCyl(.045,.055,1.75,metal,[.78,1.72,.05],g,18).rotation.z=-.55;
-    hdBox(.12,.12,.72,metal,[.38,2.48,.03],g,0,.0,-.55);
+    // Base weapon geometry remains separate so the equipment layer can animate it.
+    const blade=hdCyl(.045,.055,1.75,metal,[.78,1.72,.05],g,22);blade.rotation.z=-.55;g.userData.baseBlade=blade;
+    hdBox(.12,.12,.72,metal,[.38,2.48,.03],g,0,0,-.55,.018);
   }else{
-    hdBox(1.05,.13,.20,leather,[0,1.16,.35],g);
+    hdBox(1.05,.13,.20,leather,[0,1.12,.36],g,0,0,0,.018);
   }
   return g;
 }

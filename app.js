@@ -826,6 +826,30 @@ function buildLandscapeAnchors(){
   ];
   hills.forEach(([x,y,z,sx,sy,sz])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,64,32),hillMat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;scene.add(m);});
   const ridge=new THREE.Mesh(new THREE.SphereGeometry(1,64,32),ridgeMat);ridge.position.set(0,9,116);ridge.scale.set(105,22,26);scene.add(ridge);
+
+  // Atmospheric depth is layered from near woodland to distant ridges. The far trees
+  // deliberately remain visually subordinate, while still giving the eye a believable
+  // forest horizon instead of a hard map boundary.
+  addMountainRidge(-74,-1,11,190,0x3f554d,.58);
+  addMountainRidge(-63,-1,8,170,0x4b6055,.42);
+  const farTrees=[];
+  for(let i=0;i<26;i++){
+    const x=-58+(i/25)*116+Math.sin(i*2.3)*2.8;
+    const z=76+(i%5)*5.4+Math.sin(i*.71)*2.0;
+    const scale=1.15+(i%4)*.18;
+    const tree=hdTree(x,z,scale,i%5===0);
+    tree.userData.staticVisual=true;
+    tree.userData.vegetationTier='far_horizon';
+    farTrees.push(tree);
+  }
+
+  // Two broad atmospheric veils soften the transition from playable land to horizon.
+  const veilMat=new THREE.MeshBasicMaterial({color:0xb9c8c0,transparent:true,opacity:.045,depthWrite:false,side:THREE.DoubleSide,fog:false});
+  for(const [z,y,w,h,o] of [[58,18,180,30,.032],[92,24,220,38,.048]]){
+    const veil=veilMat.clone();veil.opacity=o;
+    const plane=new THREE.Mesh(new THREE.PlaneGeometry(w,h),veil);
+    plane.position.set(0,y,z);plane.rotation.x=0;scene.add(plane);
+  }
 }
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);

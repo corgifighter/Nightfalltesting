@@ -60,8 +60,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
 scene.fog=new THREE.FogExp2(0x66776f,.00134);
 
-const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.08,1800);
-camera.position.set(17.2,9.8,17.4);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
+camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
@@ -141,7 +141,7 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
-renderer.toneMappingExposure=.90;
+renderer.toneMappingExposure=1.02;
 renderer.setClearColor(0x9aaea5,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -165,9 +165,9 @@ root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-controls.minDistance=5.5;controls.maxDistance=46;controls.minPolarAngle=.34;controls.maxPolarAngle=1.06;controls.rotateSpeed=.24;
+controls.minDistance=5.5;controls.maxDistance=40;controls.minPolarAngle=.40;controls.maxPolarAngle=1.02;controls.rotateSpeed=.24;
 
-const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.86);scene.add(hemi);
+const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.02);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
 const sun=new THREE.DirectionalLight(0xffd8ad,2.35);sun.position.set(-58,86,42);sun.castShadow=true;
 // Size the orthographic shadow volume from the actual playable footprint rather than
@@ -842,14 +842,14 @@ function buildLandscapeAnchors(){
 }
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);
-  fill.intensity=.48;sun.intensity=2.35;
+  fill.intensity=.62;sun.intensity=2.55;
   const practicals=[[-14,-8,0xffb35c,2.2,11],[4,-12,0xffa14c,1.7,9],[15,-10,0xffb35c,1.6,9],[-4,-28,0xffc07a,1.5,8],[20,-24,0xffb15b,1.8,10]];
   practicals.forEach(([x,z,c,i,d])=>{const l=new THREE.PointLight(c,i,d,.8);l.position.set(x,2.3,z);scene.add(l);});
   // Atmospheric depth is handled by scene fog and distant geometry. Do not use a large
   // transparent camera-facing sheet here: on a perspective/mobile camera it becomes a
   // giant translucent rectangle across the playable scene and destroys depth readability.
   scene.fog.color.set(0x66776f);
-  scene.fog.density=.00112;
+  scene.fog.density=.00088;
 }
 
 const cinematicSpots=[];
@@ -2463,7 +2463,7 @@ function masterPlaza(x,z,r=10){
   const l=new THREE.PointLight(0xff9b4d,1.8,9,.8);l.position.copy(flame.position);scene.add(l);
 }
 function masterStreet(x,z,w,d,rot=0){
-  const path=addMesh(terrainRibbonGeometry(x,z,w,d,rot,72),MASTER.plazaDark,[0,0,0],undefined,false);path.receiveShadow=true;
+  const path=addMesh(terrainRibbonGeometry(x,z,w,d,rot,72),MASTER.plaza,[0,0,0],undefined,false);path.receiveShadow=true;
   for(const side of [-1,1])for(let i=0;i<18;i++){
     const v=(i/17-.5)*d,lx=side*w*.53,lz=v,c=Math.cos(rot),s=Math.sin(rot);
     const px=x+lx*c-lz*s,pz=z+lx*s+lz*c;box(.42,.18,.72,MASTER.curb,[px,terrainHeight(px,pz)+.16,pz],rot+(i%3)*.08);
@@ -2551,6 +2551,29 @@ function buildCivicArchitecturePass(){
     cap.position.set(x,y+4.15*s,z);cap.rotation.y=Math.PI/4;cap.castShadow=true;scene.add(cap);
     cyl(.10,.85*s,MASTER.brass,[x,y+4.75*s,z]);
   }
+}
+\n
+// ============================================================================
+// PRESENTATION MATERIAL PASS — large-value readability before micro detail.
+// ============================================================================
+function buildPresentationMaterialPass(){
+  // Pull the world out of the muddy midtones seen in early runtime frames.
+  MAT.grass.color.set(0x6d8248);MAT.road.color.set(0x9a8568);MAT.rock.color.set(0x706b61);
+  MAT.water.color.set(0x23808d);MAT.water.opacity=.96;
+  MASTER.plaza.color.set(0x91836e);MASTER.plazaDark.color.set(0x6b5e51);MASTER.curb.color.set(0x77736a);
+  MASTER.timber.color.set(0x543523);MASTER.timberLight.color.set(0x80593d);
+  HD.timber.color.set(0x4b3123);HD.timberLight.color.set(0x765038);
+  HD.plaster.color.set(0xc5b99e);HD.plasterWarm.color.set(0xd0bf9f);
+  HD.stone.color.set(0x858078);HD.stoneDark.color.set(0x5b5852);
+  HD.roof.color.set(0x403c38);HD.roofWarm.color.set(0x5b493e);
+  ARCH.timber.color.set(0x4b3022);ARCH.timberLight.color.set(0x765039);
+  ARCH.stoneA.color.set(0x817c73);ARCH.stoneB.color.set(0x66625c);
+  ARCH.roofA.color.set(0x45403b);ARCH.roofB.color.set(0x5a473d);ARCH.roofC.color.set(0x45514b);
+  // A gentle cool environment keeps shadowed facades legible while warm practicals retain focus.
+  hemi.intensity=1.08;fill.intensity=.66;sun.intensity=2.6;scene.environmentIntensity=.34;
+  renderer.toneMappingExposure=1.04;
+  scene.fog.color.set(0x72827b);scene.fog.density=.00086;
+  bloomPass.strength=.07;bloomPass.radius=.34;bloomPass.threshold=.88;
 }
 \nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
@@ -2699,7 +2722,7 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
   controls.target.lerp(tmpTarget,.11);
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
-  if(!camera.userData.followInit){camera.position.set(controls.target.x+17.2,9.8,controls.target.z+17.4);camera.userData.followInit=true;}
+  if(!camera.userData.followInit){camera.position.set(controls.target.x+14.6,8.2,controls.target.z+14.8);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
@@ -2755,7 +2778,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

@@ -9,6 +9,19 @@ import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js
 import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js';
 
 const root=document.querySelector('#scene');
+// Stage 2 engineering foundation: deterministic world generation.
+// Visual iteration must be reproducible so screenshots, performance samples, and bug reports
+// describe the same authored world instead of a new random layout on every reload.
+const WORLD_SEED=0x6e696768; // "nigh" — fixed art-direction seed
+let worldRngState=WORLD_SEED>>>0;
+function worldRandom(){
+  worldRngState=(worldRngState+0x6D2B79F5)>>>0;
+  let t=worldRngState;
+  t=Math.imul(t^(t>>>15),t|1);
+  t^=t+Math.imul(t^(t>>>7),t|61);
+  return ((t^(t>>>14))>>>0)/4294967296;
+}
+Math.random=worldRandom;
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
@@ -24,6 +37,14 @@ const autoCapture=new URLSearchParams(location.search).get('capture')==='1';
 let autoCaptureArmed=autoCapture;
 let captureReadyAt=0;
 window.__HEARTHMERE_READY=false;
+window.__HEARTHMERE_READY_STATE={
+  bootStartedAt:performance.now(),
+  requiredAssetsReady:false,
+  visualWorldReady:false,
+  shadersReady:false,
+  firstFrameRendered:false,
+  readyAt:0
+};
 if(captureMode) document.body.dataset.captureMode='true';
 const boot=document.querySelector('#boot');
 const bootProgress=document.querySelector('#boot-progress');
@@ -400,6 +421,7 @@ const assetLoader=new GLTFLoader();
 const assetCache=new Map();const assetPromises=new Map();const assetClips=new Map();
 const assetLoadStats={requested:0,loaded:0,failed:0,failedNames:[]};
 window.__HEARTHMERE_ASSET_LOAD_STATS=assetLoadStats;
+window.__HEARTHMERE_ASSET_FAILURES=assetLoadStats.failedNames;
 let loadedCount=0;const assetQueue=['inn','forge','chapel','mill','watchtower','well','cart','fence','bench','crate','sign','lantern','rock','tree_oak','tree_pine','shrub','grass_clump','bridge','barrel','character','hero','chimney_detail','door_detail','window_detail','roof_ridge_detail','timber_brace_detail','stone_foundation_detail','eave_bracket_detail','roof_eave_trim_detail'];
 async function loadAsset(name){
  if(assetPromises.has(name))return assetPromises.get(name);
@@ -516,12 +538,19 @@ const MAT_DETAIL={
  flower:new THREE.MeshStandardMaterial({color:0x8e4d55,roughness:.9}),
  leaf:new THREE.MeshStandardMaterial({color:0x496b43,roughness:1})
 };
+const rockGeometryCache=new Map();
 function rockMesh(radius=0.25){
   const material=new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:.98,metalness:0});
-  const geometry=new THREE.SphereGeometry(radius,32,20);
+  const key=radius.toFixed(3);
+  let geometry=rockGeometryCache.get(key);
+  if(!geometry){
+    geometry=new THREE.SphereGeometry(radius,32,20);
+    geometry.computeVertexNormals();
+    rockGeometryCache.set(key,geometry);
+  }
   const mesh=new THREE.Mesh(geometry,material);
   mesh.castShadow=true;mesh.receiveShadow=true;
-  mesh.rotation.set(Math.random()*1.7,Math.random()*Math.PI,Math.random()*1.4);
+  mesh.rotation.set(worldRandom()*1.7,worldRandom()*Math.PI,worldRandom()*1.4);
   return mesh;
 }
 
@@ -644,8 +673,8 @@ async function dressVillage(){
 }
 
 const foliage=[];async function buildFoliage(){
- const list=[];for(let i=0;i<100;i++){const side=i%2?-1:1;let x=side*(31+Math.random()*48),z=-58+Math.random()*112;if(Math.abs(z-6)<17&&Math.abs(x)<54)continue;list.push([i%3?'tree_oak':'tree_pine',x,z,.62+Math.random()*.68,(Math.random()-.5)*.55])}
- for(let i=0;i<26;i++)list.push([i%2?'tree_oak':'tree_pine',-45+Math.random()*92,31+Math.random()*31,.55+Math.random()*.55,(Math.random()-.5)*.6]);
+ const list=[];for(let i=0;i<100;i++){const side=i%2?-1:1;let x=side*(31+worldRandom()*48),z=-58+worldRandom()*112;if(Math.abs(z-6)<17&&Math.abs(x)<54)continue;list.push([i%3?'tree_oak':'tree_pine',x,z,.62+worldRandom()*.68,(worldRandom()-.5)*.55])}
+ for(let i=0;i<26;i++)list.push([i%2?'tree_oak':'tree_pine',-45+worldRandom()*92,31+worldRandom()*31,.55+worldRandom()*.55,(worldRandom()-.5)*.6]);
  // Preserve deliberate sightlines to the village core and its major destinations.
  // Trees still form a dense perimeter, but they no longer randomly plug the authored approaches.
  const filtered=list.filter(v=>{
@@ -688,10 +717,10 @@ function buildWorldVisualPass(){
 }
 async function buildNaturalDressing(){
  const specs=[];
- for(let i=0;i<34;i++){const x=-44+Math.random()*92,z=-49+Math.random()*104;if(Math.abs(x-31)<15)continue;if(Math.abs(z-7)<7&&x>-32&&x<25)continue;specs.push(['shrub',x,z,.42+Math.random()*.46,(Math.random()-.5)*Math.PI]);}
- for(let i=0;i<22;i++){const x=-44+Math.random()*92,z=-49+Math.random()*104;if(Math.abs(x-31)<15)continue;specs.push(['shrubAlt',x,z,.40+Math.random()*.42,(Math.random()-.5)*Math.PI]);}
- for(let i=0;i<16;i++){const x=-46+Math.random()*94,z=-51+Math.random()*108;if(Math.abs(x-31)<15)continue;specs.push(['scrub',x,z,.36+Math.random()*.48,(Math.random()-.5)*Math.PI]);}
- for(let i=0;i<88;i++){const x=-47+Math.random()*96,z=-53+Math.random()*110;if(Math.abs(x-31)<15)continue;specs.push(['grass',x,z,.30+Math.random()*.42,Math.random()*Math.PI*2]);}
+ for(let i=0;i<34;i++){const x=-44+worldRandom()*92,z=-49+worldRandom()*104;if(Math.abs(x-31)<15)continue;if(Math.abs(z-7)<7&&x>-32&&x<25)continue;specs.push(['shrub',x,z,.42+worldRandom()*.46,(worldRandom()-.5)*Math.PI]);}
+ for(let i=0;i<22;i++){const x=-44+worldRandom()*92,z=-49+worldRandom()*104;if(Math.abs(x-31)<15)continue;specs.push(['shrubAlt',x,z,.40+worldRandom()*.42,(worldRandom()-.5)*Math.PI]);}
+ for(let i=0;i<16;i++){const x=-46+worldRandom()*94,z=-51+worldRandom()*108;if(Math.abs(x-31)<15)continue;specs.push(['scrub',x,z,.36+worldRandom()*.48,(worldRandom()-.5)*Math.PI]);}
+ for(let i=0;i<88;i++){const x=-47+worldRandom()*96,z=-53+worldRandom()*110;if(Math.abs(x-31)<15)continue;specs.push(['grass',x,z,.30+worldRandom()*.42,worldRandom()*Math.PI*2]);}
  await Promise.all(specs.map(v=>placeDistilledVariant(...v)));
 }
 
@@ -707,7 +736,7 @@ function marketStall(x,z,rot=0){const g=new THREE.Group();g.position.set(x,terra
  box(2.8,.16,1.25,MAT_DETAIL.wood,[0,1.55,0],0,g);for(const px of [-1.15,1.15])cyl(.09,2.5,MAT_DETAIL.timber,[px,1.25,0],[0,0,0],g);
  box(3.0,.08,1.35,new THREE.MeshStandardMaterial({color:0x6e4f3e,roughness:.85}),[0,2.45,0],0,g);box(3.0,.06,.32,MAT_DETAIL.wood,[0,.72,0],0,g);scene.add(g);return g;
 }
-function reedPatch(x,z,rot=0){const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;for(let i=0;i<10;i++){const r=cyl(.018,.8+Math.random()*.65,new THREE.MeshStandardMaterial({color:0x60794a,roughness:1}),[(Math.random()-.5)*1.4,.4,(Math.random()-.5)*1.2],[0,(Math.random()-.5)*.5,(Math.random()-.5)*.25],g);r.userData.reed=true}scene.add(g);return g}
+function reedPatch(x,z,rot=0){const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;for(let i=0;i<10;i++){const r=cyl(.018,.8+worldRandom()*.65,new THREE.MeshStandardMaterial({color:0x60794a,roughness:1}),[(worldRandom()-.5)*1.4,.4,(worldRandom()-.5)*1.2],[0,(worldRandom()-.5)*.5,(worldRandom()-.5)*.25],g);r.userData.reed=true}scene.add(g);return g}
 function stoneBorder(x,z,count=7,rot=0){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;for(let i=0;i<count;i++){const a=(i/(count-1)-.5)*5;const r=box(.45,.28,.34,MAT_DETAIL.stone,[a,.25,Math.sin(i*1.4)*.18],i*.21,g);r.scale.set(1+(i%3)*.15,.8,1)}scene.add(g);return g}
 // Hearthmere residential quarter: three distinct cottage archetypes built from the same
 // material language. The silhouettes, rooflines, porches and facade dressing deliberately vary
@@ -860,12 +889,28 @@ function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0,bevel){
   m.position.set(...pos);m.rotation.set(rotX,rotY,rotZ);m.castShadow=true;m.receiveShadow=true;
   (parent||scene).add(m);return m;
 }
+const hdCylGeometryCache=new Map();
 function hdCyl(r1,r2,h,mat,pos,parent,segments=24){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,segments,6),mat);
+  const key=[r1.toFixed(3),r2.toFixed(3),h.toFixed(3),segments].join('|');
+  let geo=hdCylGeometryCache.get(key);
+  if(!geo){
+    geo=new THREE.CylinderGeometry(r1,r2,h,segments,6);
+    geo.computeVertexNormals();
+    hdCylGeometryCache.set(key,geo);
+  }
+  const m=new THREE.Mesh(geo,mat);
   m.position.set(...pos);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
+const hdSphereGeometryCache=new Map();
 function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(r,48,32),mat);
+  const key=r.toFixed(3);
+  let geo=hdSphereGeometryCache.get(key);
+  if(!geo){
+    geo=new THREE.SphereGeometry(r,48,32);
+    geo.computeVertexNormals();
+    hdSphereGeometryCache.set(key,geo);
+  }
+  const m=new THREE.Mesh(geo,mat);
   m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdRoof(parent,w,d,y,mat,angle=.58){
@@ -1047,7 +1092,11 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   }
   return g;
 }
+const hdTreeCanopyGeometryCache=new Map();
 function hdTreeCanopyGeometry(radius,height,pine=false){
+  const key=[radius.toFixed(3),height.toFixed(3),pine?'pine':'broadleaf'].join('|');
+  const cached=hdTreeCanopyGeometryCache.get(key);
+  if(cached)return cached;
   const geo=new THREE.SphereGeometry(1,64,40);
   const p=geo.attributes.position;
   for(let i=0;i<p.count;i++){
@@ -1066,6 +1115,7 @@ function hdTreeCanopyGeometry(radius,height,pine=false){
     }
   }
   geo.computeVertexNormals();
+  hdTreeCanopyGeometryCache.set(key,geo);
   return geo;
 }
 function hdTree(x,z,scale=1,pine=false){
@@ -1289,8 +1339,8 @@ function characterDetail(g,role){
 }
 async function spawnCharacter(x,z,cloth,name,role='villager'){
  const source=role==='player'?'hero':'character'; const g=await placeAsset(source,x,z,role==='player'?1.16:1,0,cloth);if(!g)return null;
- g.userData.baseY=0;g.userData.phase=Math.random()*Math.PI*2;g.userData.walking=false;g.userData.name=name;g.userData.role=role;
- g.userData.parts={arms:[],legs:[],cloak:null,body:g};g.userData.restRotationZ=g.rotation.z;g.userData.home=new THREE.Vector3(x,0,z);g.userData.wanderTarget=null;g.userData.nextWander=performance.now()+1800+Math.random()*4200;
+ g.userData.baseY=0;g.userData.phase=worldRandom()*Math.PI*2;g.userData.walking=false;g.userData.name=name;g.userData.role=role;
+ g.userData.parts={arms:[],legs:[],cloak:null,body:g};g.userData.restRotationZ=g.rotation.z;g.userData.home=new THREE.Vector3(x,0,z);g.userData.wanderTarget=null;g.userData.nextWander=performance.now()+1800+worldRandom()*4200;
  g.traverse(o=>{if(o.name)o.name=o.name.replace(/-?\d+$/,'');});
  g.traverse(o=>{if(o.name.startsWith('Arm_'))g.userData.parts.arms.push(o); if(o.name.startsWith('Leg_'))g.userData.parts.legs.push(o); if(o.name==='Cloak')g.userData.parts.cloak=o;});
  if(role!=='player') characterDetail(g,role);
@@ -1309,7 +1359,7 @@ async function buildCharacters(){
 // Small authored environmental effects.
 const fireLights=[];const embers=[];
 const warmWindows=[];
-function fire(x,z){const core=addMesh(new THREE.IcosahedronGeometry(.42,1),new THREE.MeshBasicMaterial({color:0xff6f31,transparent:true,opacity:.82}),[x,.85,z],undefined,false);const l=new THREE.PointLight(0xff7a32,5.5,15);l.position.set(x,2,z);scene.add(l);fireLights.push(l);for(let i=0;i<8;i++){const e=addMesh(new THREE.SphereGeometry(.055,6,6),MAT.ember,[x+(Math.random()-.5)*.6,1+Math.random()*2,z+(Math.random()-.5)*.6],undefined,false);e.userData.phase=Math.random()*6.28;embers.push(e)}}
+function fire(x,z){const core=addMesh(new THREE.IcosahedronGeometry(.42,1),new THREE.MeshBasicMaterial({color:0xff6f31,transparent:true,opacity:.82}),[x,.85,z],undefined,false);const l=new THREE.PointLight(0xff7a32,5.5,15);l.position.set(x,2,z);scene.add(l);fireLights.push(l);for(let i=0;i<8;i++){const e=addMesh(new THREE.SphereGeometry(.055,6,6),MAT.ember,[x+(worldRandom()-.5)*.6,1+worldRandom()*2,z+(worldRandom()-.5)*.6],undefined,false);e.userData.phase=worldRandom()*6.28;embers.push(e)}}
 fire(5,-10);fire(-4,-28);fire(20,-24);
 const falls=addMesh(new THREE.PlaneGeometry(9,13),new THREE.MeshBasicMaterial({color:0xbbe8e4,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),[45,7,33],[0,.42,0],false);
 
@@ -1467,7 +1517,7 @@ function buildImportantLocations(){
   // Moonwood clearing — a ring of deliberate standing stones and a central fire scar.
   const cx=36,cz=34;
   for(let i=0;i<8;i++){const a=i*Math.PI/4;const r=4.8;const s=box(.75,1.15,.62,MAT_DETAIL.stone,[cx+Math.cos(a)*r,.58,cz+Math.sin(a)*r],a*.15);s.scale.y=.7+(i%3)*.18;}
-  for(let i=0;i<9;i++) cyl(.16,.7,MAT_DETAIL.wood,[cx+(Math.random()-.5)*1.7,.35,cz+(Math.random()-.5)*1.7],[0,Math.random()*Math.PI,Math.PI/2]);
+  for(let i=0;i<9;i++) cyl(.16,.7,MAT_DETAIL.wood,[cx+(worldRandom()-.5)*1.7,.35,cz+(worldRandom()-.5)*1.7],[0,worldRandom()*Math.PI,Math.PI/2]);
   label('MOONWOOD CLEARING',[cx,3.0,cz],'#c8d1b2',.58);
 
   // Old road ruins — broken masonry, a fallen lintel and a lone marker make the distant destination tangible.
@@ -1481,7 +1531,7 @@ buildImportantLocations();
 
 // Soft atmospheric motes over the village. Sparse by design for mobile performance.
 const motes=[];const moteMat=new THREE.SpriteMaterial({color:0xf1d9a0,transparent:true,opacity:.18,depthWrite:false});
-for(let i=0;i<70;i++){const sp=new THREE.Sprite(moteMat.clone());sp.position.set(-45+Math.random()*90,1+Math.random()*9,-40+Math.random()*90);sp.scale.setScalar(.035+Math.random()*.055);sp.userData.phase=Math.random()*6.28;scene.add(sp);motes.push(sp)}
+for(let i=0;i<70;i++){const sp=new THREE.Sprite(moteMat.clone());sp.position.set(-45+worldRandom()*90,1+worldRandom()*9,-40+worldRandom()*90);sp.scale.setScalar(.035+worldRandom()*.055);sp.userData.phase=worldRandom()*6.28;scene.add(sp);motes.push(sp)}
 
 // Minimap
 const mini=document.createElement('canvas');mini.id='minimap';mini.width=220;mini.height=160;mini.style.cssText='position:fixed;right:18px;top:95px;width:220px;height:160px;border:1px solid rgba(228,200,120,.24);border-radius:12px;background:rgba(9,14,13,.72);box-shadow:0 12px 35px #0008;backdrop-filter:blur(8px);pointer-events:none';document.body.appendChild(mini);const mx=mini.getContext('2d');
@@ -1503,16 +1553,20 @@ function advanceQuest(step){
 }
 async function buildResourceNodes(){
  const specs=[];
- for(let i=0;i<14;i++) specs.push(['tree_oak',-40+Math.random()*18,-36+Math.random()*70,.42+Math.random()*.16]);
- for(let i=0;i<9;i++) specs.push(['rock',20+Math.random()*22,-36+Math.random()*68,.36+Math.random()*.12]);
- for(const [asset,x,z,scale] of specs){const g=await placeAsset(asset,x,z,scale,Math.random()*Math.PI*2);if(!g)continue;g.userData.resource={type:asset==='rock'?'stone':'wood',amount:1};interact(g,asset==='rock'?'Stone outcrop':'Young oak',asset==='rock'?'Gather a piece of clean river stone.':'Gather a fallen branch.',()=>gather(g));resourceNodes.push(g)}
+ for(let i=0;i<14;i++) specs.push(['tree_oak',-40+worldRandom()*18,-36+worldRandom()*70,.42+worldRandom()*.16]);
+ for(let i=0;i<9;i++) specs.push(['rock',20+worldRandom()*22,-36+worldRandom()*68,.36+worldRandom()*.12]);
+ for(const [asset,x,z,scale] of specs){const g=await placeAsset(asset,x,z,scale,worldRandom()*Math.PI*2);if(!g)continue;g.userData.resource={type:asset==='rock'?'stone':'wood',amount:1};interact(g,asset==='rock'?'Stone outcrop':'Young oak',asset==='rock'?'Gather a piece of clean river stone.':'Gather a fallen branch.',()=>gather(g));resourceNodes.push(g)}
 }
 function gather(g){const r=g.userData.resource;if(!r)return;if(!g.visible)return;say(r.type==='wood'?'You gather useful wood.':'You collect a smooth stone.');gameState.gathered++;gameState.inventory[r.type]=(gameState.inventory[r.type]||0)+r.amount;g.visible=false;setTimeout(()=>{g.visible=true},6500);}
 
 // Movement and targeting
-const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let dest=null;let cinematicMode=false;let hovered=null;
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+const interactionRoots=[];
+let dest=null;let cinematicMode=false;let hovered=null;
+window.__HEARTHMERE_INTERACTION_TARGETS=interactionRoots;
+function registerInteractionRoot(o){if(o&&!interactionRoots.includes(o))interactionRoots.push(o);return o}
 function setHover(o){if(hovered===o)return;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive)m.material.emissive.setHex(m.userData.baseEmissive||0x000000)});hovered=o;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive){m.userData.baseEmissive=m.material.emissive.getHex();m.material.emissive.lerp(new THREE.Color(0x9d7b39),.35)}})}
-renderer.domElement.addEventListener('pointermove',e=>{mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactables,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
+renderer.domElement.addEventListener('pointermove',e=>{mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactionRoots,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
 const destinationMarker=new THREE.Mesh(new THREE.RingGeometry(.34,.52,28),new THREE.MeshBasicMaterial({color:0xe7cb76,transparent:true,opacity:.86,side:THREE.DoubleSide,depthWrite:false}));destinationMarker.rotation.x=-Math.PI/2;destinationMarker.position.y=.18;destinationMarker.visible=false;scene.add(destinationMarker);
 function terrainHeight(x,z){return macroTerrainHeight(x,z);}
 function traversable(x,z){const riverBlocked=Math.abs(x-31)<13.4;const bridge=Math.abs(x-31)<6.2&&z>-2&&z<14;return !riverBlocked||bridge}
@@ -1528,13 +1582,35 @@ addEventListener('keydown',e=>{if(e.key==='Escape'){dest=null;destinationMarker.
 
 // Living atmosphere: soft smoke columns and distant birds keep the scene from feeling static.
 const smoke=[];
-function smokeColumn(x,z){for(let i=0;i<7;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({color:0xb8b2a2,transparent:true,opacity:.055,depthWrite:false}));sp.position.set(x+(Math.random()-.5)*.4,.9+i*.65,z+(Math.random()-.5)*.4);sp.scale.setScalar(.35+Math.random()*.28);sp.userData.phase=Math.random()*6.28;smoke.push(sp);scene.add(sp)}}
+function smokeColumn(x,z){for(let i=0;i<7;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({color:0xb8b2a2,transparent:true,opacity:.055,depthWrite:false}));sp.position.set(x+(worldRandom()-.5)*.4,.9+i*.65,z+(worldRandom()-.5)*.4);sp.scale.setScalar(.35+worldRandom()*.28);sp.userData.phase=worldRandom()*6.28;smoke.push(sp);scene.add(sp)}}
 smokeColumn(5,-10);smokeColumn(-4,-28);smokeColumn(20,-24);
 const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:THREE.DoubleSide});
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
 let last=performance.now(),time=0;
-const perfStats={frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,drawCalls:0,triangles:0,geometries:0,textures:0,qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0};
+const perfStats={
+  frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,
+  drawCalls:0,triangles:0,geometries:0,textures:0,
+  visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0,
+  qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0
+};
+const sceneBudget={visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0};
 window.__HEARTHMERE_PERF=perfStats;
+window.__HEARTHMERE_SCENE_BUDGET=sceneBudget;
+function collectSceneBudget(){
+  let visibleMeshes=0,shadowCasters=0,transparentMeshes=0,lights=0;
+  scene.traverseVisible(o=>{
+    if(o.isLight){lights++;return;}
+    if(!o.isMesh)return;
+    visibleMeshes++;
+    if(o.castShadow)shadowCasters++;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    if(mats.some(m=>m?.transparent||m?.opacity<.999))transparentMeshes++;
+  });
+  sceneBudget.visibleMeshes=visibleMeshes;
+  sceneBudget.shadowCasters=shadowCasters;
+  sceneBudget.transparentMeshes=transparentMeshes;
+  sceneBudget.lights=lights;
+}
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -1559,10 +1635,10 @@ function updateVillager(g,t,dt){
  if(g===player)return;
  const now=t;
  if(!g.userData.wanderTarget && now>g.userData.nextWander){
-   const a=Math.random()*Math.PI*2,r=2.5+Math.random()*5.5;
+   const a=worldRandom()*Math.PI*2,r=2.5+worldRandom()*5.5;
    const tx=g.userData.home.x+Math.cos(a)*r,tz=g.userData.home.z+Math.sin(a)*r;
    if(traversable(tx,tz)){g.userData.wanderTarget=new THREE.Vector3(tx,0,tz);g.userData.walking=true;}
-   g.userData.nextWander=now+6500+Math.random()*6500;
+   g.userData.nextWander=now+6500+worldRandom()*6500;
  }
  const target=g.userData.wanderTarget;if(!target)return;
  const d=tmpWanderDelta.copy(target).sub(g.position);d.y=0;const len=d.length();
@@ -1581,6 +1657,11 @@ function updatePerformanceStats(now,frameMs){
   perfStats.triangles=Math.round(perfStats.trianglesAccum/perfStats.frames);
   perfStats.geometries=renderer.info.memory.geometries;
   perfStats.textures=renderer.info.memory.textures;
+  collectSceneBudget();
+  perfStats.visibleMeshes=sceneBudget.visibleMeshes;
+  perfStats.shadowCasters=sceneBudget.shadowCasters;
+  perfStats.transparentMeshes=sceneBudget.transparentMeshes;
+  perfStats.lights=sceneBudget.lights;
   perfStats.qualityLevel=quality.level;
   perfStats.updatedAt=now;
   if(diagnosticsMode) console.table(perfStats);
@@ -1604,7 +1685,10 @@ function updateAdaptiveQuality(now){
   const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);resizeSSAO();
-  rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.qualityLevel=quality.level;rendererDiagnostics.averageFrameMs=avgFrameMs;
+  rendererDiagnostics.pixelRatio=pixelRatio;
+  rendererDiagnostics.qualityLevel=quality.level;
+  rendererDiagnostics.averageFrameMs=avgFrameMs;
+  rendererDiagnostics.shadowMapSize=sun.shadow.mapSize.x;
 }
 function frame(t){const rawDt=Math.max(0,t-last)/1000;const dt=Math.min(.05,rawDt);last=t;time+=dt;
  if(MAT.water.userData.shader)MAT.water.userData.shader.uniforms.uTime.value=time;
@@ -1641,10 +1725,34 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+24,15.2,controls.target.z+22);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
+controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;
+if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
+  captureRequested=false;
+  window.__HEARTHMERE_CAPTURE_META={
+    seed:WORLD_SEED,
+    threeRevision:THREE.REVISION,
+    viewport:[innerWidth,innerHeight],
+    pixelRatio:renderer.getPixelRatio(),
+    qualityLevel:quality.level,
+    drawCalls:renderer.info.render.calls,
+    triangles:renderer.info.render.triangles,
+    geometries:renderer.info.memory.geometries,
+    textures:renderer.info.memory.textures,
+    sceneBudget:{...sceneBudget},
+    assetFailures:[...assetLoadStats.failedNames],
+    distilledFailures:[...distilledLoadStats.failedKeys]
+  };
+  renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
+interactables.forEach(o=>registerInteractionRoot(o));
+bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.failed===0 && distilledLoadStats.failed===0);
+window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
+window.__HEARTHMERE_READY_STATE.shadersReady=true;
+window.__HEARTHMERE_READY=true;
+window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
+captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

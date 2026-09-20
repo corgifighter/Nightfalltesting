@@ -671,8 +671,57 @@ function hdProp(name,x,z,scale=1,rot=0){
   else {hdSphere(.28,HD.stone,[0,.28,0],g,[1.4,.7,1]);}
   return g;
 }
+function hdBridge(x,z,scale=1,rot=0){
+  const g=new THREE.Group();g.position.set(x,.12,z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  // Wide timber deck with individually rounded-looking high-segment support geometry.
+  for(let i=-8;i<=8;i++){const plank=hdBox(2.7,.18,.55,HD.timberLight,[i*1.0,1.15,0],g);plank.rotation.y=(i%3)*.008;}
+  for(const x0 of [-8,8]){hdCyl(.38,.46,1.2,HD.stone,[x0,0,0],g,32);hdCyl(.30,.36,1.0,HD.stone,[x0,0,2.9],g,32);hdCyl(.30,.36,1.0,HD.stone,[x0,0,-2.9],g,32);}
+  for(const z0 of [-3.1,3.1]){hdCyl(.16,.16,17,HD.timber,[0,2.0,z0],g,24).rotation.z=Math.PI/2;}
+  for(const x0 of [-7,-3.5,0,3.5,7]){hdCyl(.09,.09,1.5,HD.timber,[x0,1.85,2.75],g,20);hdCyl(.09,.09,1.5,HD.timber,[x0,1.85,-2.75],g,20);}
+  return g;
+}
+function hdCart(x,z,scale=1,rot=0){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  hdBox(2.5,.18,1.35,HD.timber,[0,.95,0],g);
+  hdBox(1.9,.12,1.1,HD.timberLight,[0,1.65,0],g);
+  for(const zz of [-.66,.66])hdCyl(.45,.45,.18,HD.iron,[0,.46,zz],g,32).rotation.x=Math.PI/2;
+  hdCyl(.08,.08,2.1,HD.timber,[-1.0,1.15,0],g,20).rotation.z=Math.PI/2;
+  return g;
+}
+function hdSign(x,z,scale=1,rot=0){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
+  hdCyl(.09,.12,2.4,HD.timber,[0,1.2,0],g,24);
+  hdBox(1.8,.72,.12,HD.timberLight,[0,2.15,0],g);
+  hdBox(1.48,.44,.035,HD.warm,[0,2.15,.08],g);
+  return g;
+}
+function hdCharacter(root,isPlayer=false){
+  const g=new THREE.Group();g.position.set(0,0,0);root.add(g);
+  const cloth=isPlayer?new THREE.MeshStandardMaterial({color:0x40586a,roughness:.82}):new THREE.MeshStandardMaterial({color:0x5b493e,roughness:.88});
+  const leather=new THREE.MeshStandardMaterial({color:0x3a271d,roughness:.9});
+  const skin=new THREE.MeshStandardMaterial({color:0xc89472,roughness:.88});
+  const metal=new THREE.MeshStandardMaterial({color:0x6b706d,metalness:.72,roughness:.28});
+  // A smooth, proportioned humanoid silhouette. High segment counts eliminate the faceted mannequin look.
+  hdCyl(.52,.42,1.35,cloth,[0,1.62,0],g,32);
+  hdSphere(.42,skin,[0,2.55,0],g,[1,1.05,.95]);
+  hdSphere(.22,cloth,[0,2.84,0],g,[1.7,.42,1.35]);
+  for(const side of [-1,1]){
+    const arm=hdCyl(.18,.14,1.25,cloth,[side*.62,1.72,0],g,24);arm.rotation.z=side*.12;
+    hdSphere(.18,skin,[side*.66,1.08,0],g,[1,.95,1]);
+    hdCyl(.20,.15,1.22,leather,[side*.25,.67,0],g,24);
+    hdCyl(.22,.17,.34,leather,[side*.25,.12,0.05],g,24);
+  }
+  if(isPlayer){
+    hdCyl(.045,.055,1.75,metal,[.78,1.72,.05],g,18).rotation.z=-.55;
+    hdBox(.12,.12,.72,metal,[.38,2.48,.03],g,0,.0,-.55);
+  }else{
+    hdBox(1.05,.13,.20,leather,[0,1.16,.35],g);
+  }
+  return g;
+}
+
 function replaceLegacyVisuals(){
-  const hideNames=new Set(['tree_oak','tree_pine','shrub','grass_clump','rock','cottage_A','cottage_B','cottage_C','inn','forge','chapel','mill','watchtower','bridge','well','barrel','bench','cart','crate','fence','lantern','sign']);
+  const hideNames=new Set(['tree_oak','tree_pine','shrub','grass_clump','rock','cottage_A','cottage_B','cottage_C','inn','forge','chapel','mill','watchtower','bridge','well','barrel','bench','cart','crate','fence','lantern','sign','hero','character']);
   const legacy=[];
   scene.traverse(o=>{if(o.userData?.assetName && hideNames.has(o.userData.assetName))legacy.push(o);});
   legacy.forEach(g=>g.traverse(o=>{if(o.isMesh)o.visible=false;}));
@@ -696,6 +745,13 @@ function replaceLegacyVisuals(){
   });
   const propNames=new Set(['well','barrel','bench','fence','lantern','crate']);
   legacy.filter(g=>propNames.has(g.userData.assetName)).forEach(g=>hdProp(g.userData.assetName,g.position.x,g.position.z,g.scale.x,g.rotation.y));
+  legacy.filter(g=>g.userData.assetName==='bridge').forEach(g=>hdBridge(g.position.x,g.position.z,g.scale.x,g.rotation.y));
+  legacy.filter(g=>g.userData.assetName==='cart').forEach(g=>hdCart(g.position.x,g.position.z,g.scale.x,g.rotation.y));
+  legacy.filter(g=>g.userData.assetName==='sign').forEach(g=>hdSign(g.position.x,g.position.z,g.scale.x,g.rotation.y));
+  legacy.filter(g=>g.userData.assetName==='hero'||g.userData.assetName==='character').forEach(g=>{
+    g.traverse(o=>{if(o.isMesh)o.visible=false;});
+    hdCharacter(g,g.userData.assetName==='hero');
+  });
 }
 
 let villageWell=null;

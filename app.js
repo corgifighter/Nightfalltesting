@@ -2575,6 +2575,48 @@ function buildPresentationMaterialPass(){
   scene.fog.color.set(0x72827b);scene.fog.density=.00086;
   bloomPass.strength=.07;bloomPass.radius=.34;bloomPass.threshold=.88;
 }
+\n
+// ============================================================================
+// LANDMARK COURTYARD PASS — integrate the five major silhouettes into believable
+// functional spaces instead of leaving them as standalone models.
+// ============================================================================
+function courtyardDeck(x,z,w,d,rot=0,mat=MASTER.plazaDark){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y+.04,z);g.rotation.y=rot;
+  box(w,.16,d,mat,[0,.08,0],0,g);
+  for(const side of [-1,1])for(let i=0;i<Math.max(2,Math.floor(w/2.4));i++)cyl(.07,.8,MASTER.timber,[-w*.42+i*(w*.84/Math.max(1,Math.floor(w/2.4)-1)),.45,side*d*.42],[],g);
+  scene.add(g);return g;
+}
+function courtyardCrates(x,z,count=5,rot=0){
+  for(let i=0;i<count;i++){
+    const px=x+Math.cos(i*2.3)*(.8+(i%3)*.22),pz=z+Math.sin(i*2.3)*(.7+(i%2)*.24);
+    const q=hdProp('crate',px,pz,.55+(i%3)*.08,rot+i*.17);
+    q.userData.staticVisual=true;
+  }
+}
+function courtyardBarrels(x,z,count=5,rot=0){
+  for(let i=0;i<count;i++)hdProp('barrel',x+Math.cos(i*2.4)*(.75+(i%2)*.18),z+Math.sin(i*2.4)*(.65+(i%3)*.16),.58,rot+i*.18);
+}
+function buildLandmarkCourtyardPass(){
+  // Warm Lantern: timber beer garden and stacked firewood.
+  courtyardDeck(-14,-8.8,7.2,3.2,-.02,MASTER.timberLight);
+  courtyardBarrels(-16.6,-7.6,4,.1);courtyardCrates(-11.4,-8.2,3,.2);masterLamp(-14,-8.0,.86);
+  // Riverside Forge: hard stone apron, ore stacks and a covered tool rack.
+  courtyardDeck(1,-11.2,6.5,3.4,.02,MASTER.curb);
+  courtyardBarrels(3.0,-11.4,4,.3);courtyardCrates(-.9,-12.0,4,-.2);
+  for(let i=0;i<5;i++)box(.12,.12,1.5,MASTER.iron,[-1.8+i*.65,1.15,-12.85],.18);
+  masterLamp(2.8,-10.2,.82);
+  // Chapel: enclosed garden with low stone edging and a ceremonial path.
+  courtyardDeck(-12,15.8,7.2,2.8,.0,MASTER.plaza);
+  for(let i=0;i<10;i++){const a=i/9*Math.PI;const px=-12+Math.cos(a)*4.0,pz=15.8+Math.sin(a)*2.0;box(.45,.22,.45,MASTER.curb,[px,terrainHeight(px,pz)+.12,pz],a);}
+  masterFlowerMeadow(-12,16.5,2.6);masterLamp(-12,15.1,.78);
+  // Ashwheel Mill: loading platform aimed toward the river.
+  courtyardDeck(20,-20.0,7.0,3.4,.04,MASTER.timberLight);
+  courtyardCrates(20,-21.2,6,.1);courtyardBarrels(17.2,-19.5,4,-.1);masterLamp(20,-18.9,.8);
+  // North Watch: patrol yard with training posts and a strong approach light.
+  courtyardDeck(16,10.2,7.0,3.1,.0,MASTER.plazaDark);
+  for(let i=0;i<4;i++){cyl(.09,1.8,MASTER.timber,[13.7+i*1.5,terrainHeight(13.7+i*1.5,10.2)+.9,10.2]);box(.48,.12,.48,MASTER.brass,[13.7+i*1.5,terrainHeight(13.7+i*1.5,10.2)+1.72,10.2]);}
+  masterLamp(12.8,12.2,.86);
+}
 \nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -2778,7 +2820,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

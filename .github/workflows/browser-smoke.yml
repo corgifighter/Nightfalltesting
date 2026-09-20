@@ -1,4 +1,5 @@
 name: Verify live Hearthmere browser render
+# Runtime parser diagnostics enabled
 
 on:
   workflow_run:

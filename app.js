@@ -33,7 +33,7 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x82958e,.00172);
+scene.fog=new THREE.FogExp2(0x66776f,.00134);
 
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
 camera.position.set(27,18,25);
@@ -109,8 +109,8 @@ composer.addPass(outputPass);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=.98;
+renderer.toneMapping=THREE.AgXToneMapping;
+renderer.toneMappingExposure=.90;
 renderer.setClearColor(0x9aaea5,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -131,9 +131,9 @@ const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
 controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;controls.maxPolarAngle=1.20;controls.rotateSpeed=.24;
 
-const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.12);scene.add(hemi);
+const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.86);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
-const sun=new THREE.DirectionalLight(0xffd8ad,3.35);sun.position.set(-58,86,42);sun.castShadow=true;
+const sun=new THREE.DirectionalLight(0xffd8ad,2.35);sun.position.set(-58,86,42);sun.castShadow=true;
 // Size the orthographic shadow volume from the actual playable footprint rather than
 // an arbitrary square. The diagonal is used because the shadow camera is rotated by
 // the light direction, so axis-aligned world extents are not sufficient coverage.
@@ -155,8 +155,8 @@ function setShadowMapSize(size){
   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
   sun.shadow.needsUpdate=true;
 }
-const fill=new THREE.DirectionalLight(0x89afc2,.82);fill.position.set(45,34,-55);scene.add(fill);
-const moon=new THREE.DirectionalLight(0x6682aa,.14);moon.position.set(30,50,-45);scene.add(moon);
+const fill=new THREE.DirectionalLight(0x89afc2,.48);fill.position.set(45,34,-55);scene.add(fill);
+const moon=new THREE.DirectionalLight(0x6682aa,.10);moon.position.set(30,50,-45);scene.add(moon);
 
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
@@ -171,7 +171,7 @@ scene.add(sky);
   sg.addColorStop(0,'rgba(255,244,194,1)');sg.addColorStop(.16,'rgba(255,211,143,.72)');sg.addColorStop(1,'rgba(255,194,120,0)');
   x.fillStyle=sg;x.fillRect(450,120,250,250);
   const src=new THREE.CanvasTexture(c);src.colorSpace=THREE.SRGBColorSpace;src.mapping=THREE.EquirectangularReflectionMapping;
-  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.44;
+  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.28;
   src.dispose();pmrem.dispose();
 })();
 
@@ -1475,7 +1475,7 @@ function frame(t){const rawDt=Math.max(0,t-last)/1000;const dt=Math.min(.05,rawD
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
- const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00158+.00052*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=1.85+2.15*day;moon.intensity=.08+.32*(1-day);hemi.intensity=.94+.54*day;renderer.toneMappingExposure=.94+.10*day;scene.environmentIntensity=.30+.12*day;
+ const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00122+.00042*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=1.65+1.85*day;moon.intensity=.06+.20*(1-day);hemi.intensity=.72+.40*day;renderer.toneMappingExposure=.86+.08*day;scene.environmentIntensity=.22+.10*day;
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;
   tmpTarget.set(player.position.x,0,player.position.z);

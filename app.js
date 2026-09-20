@@ -3403,7 +3403,8 @@ function buildGroundIntegrationPass(){
     if(nearOccupied(x,z)||worldRandom()<.68)continue;
     const y=terrainHeight(x,z);
     dummy.position.set(x,y+.10,z);dummy.rotation.set(worldRandom(),worldRandom(),worldRandom());
-    const scale=.45+worldRandom()*.85;\n    dummy.scale.set(scale,scale*(.45+worldRandom()*.55),scale);
+    const scale=.45+worldRandom()*.85;
+    dummy.scale.set(scale,scale*(.45+worldRandom()*.55),scale);
     dummy.updateMatrix();stones.setMatrixAt(count++,dummy.matrix);
   }
   stones.count=count;stones.instanceMatrix.needsUpdate=true;rootGroup.add(stones);

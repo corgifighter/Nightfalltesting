@@ -1724,8 +1724,12 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+24,15.2,controls.target.z+22);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;
-if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
+controls.update();composer.render();
+const currentDrawCalls=renderer.info.render.calls;
+const currentTriangles=renderer.info.render.triangles;
+const frameRendered=currentDrawCalls>0;
+if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;
+const frameMs=rawDt*1000;perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
@@ -1733,8 +1737,8 @@ if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;const f
     viewport:[innerWidth,innerHeight],
     pixelRatio:renderer.getPixelRatio(),
     qualityLevel:quality.level,
-    drawCalls:renderer.info.render.calls,
-    triangles:renderer.info.render.triangles,
+    drawCalls:currentDrawCalls,
+    triangles:currentTriangles,
     geometries:renderer.info.memory.geometries,
     textures:renderer.info.memory.textures,
     sceneBudget:{...sceneBudget},

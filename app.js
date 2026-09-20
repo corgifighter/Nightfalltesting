@@ -60,8 +60,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
 scene.fog=new THREE.FogExp2(0x66776f,.00134);
 
-const camera=new THREE.PerspectiveCamera(47,innerWidth/innerHeight,.08,1800);
-camera.position.set(24,15.2,22);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
+camera.position.set(20,11.8,19);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
@@ -163,7 +163,7 @@ root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-controls.minDistance=7.5;controls.maxDistance=56;controls.minPolarAngle=.46;controls.maxPolarAngle=1.16;controls.rotateSpeed=.24;
+controls.minDistance=6.5;controls.maxDistance=52;controls.minPolarAngle=.40;controls.maxPolarAngle=1.12;controls.rotateSpeed=.24;
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.86);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
@@ -316,7 +316,7 @@ async function applyCC0Materials(){
   await waitForCC0Textures();
 }
 const MAT={
- grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
+ grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,color:0x536b3f,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,color:0x8a7458,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
  water:new THREE.MeshPhysicalMaterial({color:0x176270,roughness:.08,metalness:.04,transmission:.08,clearcoat:1,clearcoatRoughness:.10,transparent:true,opacity:.92}),
  rock:new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:1}),
  foam:new THREE.MeshBasicMaterial({color:0xd6eee9,transparent:true,opacity:.23,depthWrite:false}),
@@ -893,6 +893,15 @@ const HD={
   water:new THREE.MeshPhysicalMaterial({color:0x2d8d98,roughness:.07,metalness:.05,transmission:.18,clearcoat:1,clearcoatRoughness:.08})
 };
 
+function addPlasterVariation(mat,a,b){
+  mat.onBeforeCompile=(shader)=>{
+    shader.vertexShader='varying vec3 vPlasterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vPlasterWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vPlasterWorld;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float p1=sin(vPlasterWorld.x*0.72+'+a+')*sin(vPlasterWorld.z*0.61-'+a+'); float p2=sin(vPlasterWorld.x*2.7+vPlasterWorld.z*1.9+'+b+')*.22; float plasterNoise=clamp(.5+.34*p1+p2,0.0,1.0); vec3 plasterWarm=mix(vec3(.68,.63,.52),vec3(.94,.87,.71),plasterNoise); diffuseColor.rgb*=mix(vec3(1.0),plasterWarm,.22);');
+  };
+}
+addPlasterVariation(HD.plaster,1.15,1.96);
+addPlasterVariation(HD.plasterWarm,3.35,5.69);
+
 const hdBoxGeometryCache=new Map();
 function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0,bevel){
   const b=bevel??Math.min(.12,Math.min(w,h,d)*.10);
@@ -1140,20 +1149,21 @@ function hdTreeCanopyGeometry(radius,height,pine=false){
   hdTreeCanopyGeometryCache.set(key,geo);
   return geo;
 }
+const TREE_LEAF_MATS=[
+  new THREE.MeshStandardMaterial({color:0x294d31,roughness:.98,metalness:0}),
+  new THREE.MeshStandardMaterial({color:0x3d6840,roughness:.97,metalness:0}),
+  new THREE.MeshStandardMaterial({color:0x5a7f49,roughness:.95,metalness:0}),
+  new THREE.MeshStandardMaterial({color:0x6f8f55,roughness:.96,metalness:0})
+];
 function hdTree(x,z,scale=1,pine=false){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);scene.add(g);
-  hdCyl(pine?.34:.42,pine?.18:.22,pine?5.8:5.2,HD.trunk,[0,pine?2.9:2.6,0],g,32);
-  const branchSpecs=pine
-    ? [[-.48,2.8,.08,1.45,-.55],[.42,3.25,-.06,1.28,.46],[-.28,3.72,.04,1.05,-.36],[.24,4.15,-.02,.82,.32]]
-    : [[-.58,2.35,.04,1.75,-.50],[.56,2.70,.10,1.62,.48],[-.34,3.18,.02,1.38,-.34],[.31,3.52,-.04,1.18,.30],[-.18,3.82,.05,.92,-.22]];
-  for(const [bx,by,bz,len,lean] of branchSpecs){const b=hdCyl(.14,.055,len,HD.trunk,[bx,by,bz],g,24);b.rotation.z=lean;b.rotation.x=bz*.5;}
-  const canopy=hdTreeCanopyGeometry(pine?1.48:1.72,pine?3.55:2.65,pine);
-  const crown=new THREE.Mesh(canopy,pine?HD.leaf:HD.leafLight);
-  crown.position.set(0,pine?4.55:4.65,0);crown.castShadow=true;crown.receiveShadow=true;g.add(crown);
-  const sideCanopy=hdTreeCanopyGeometry(pine?1.02:1.18,pine?2.0:1.75,pine);
-  const side=new THREE.Mesh(sideCanopy,pine?HD.leaf:HD.leafLight);
-  side.position.set(pine?.34:-.72,pine?4.15:4.18,pine?-.05:.18);side.scale.set(.82,.78,.84);side.castShadow=true;side.receiveShadow=true;g.add(side);
-  for(let i=0;i<6;i++){const a=i*Math.PI*2/6;const root=hdCyl(.18,.045,.82,HD.trunk,[Math.cos(a)*.30,.16,Math.sin(a)*.30],g,20);root.rotation.z=Math.cos(a)*.34;root.rotation.x=Math.sin(a)*.16;}
+  const trunkH=pine?6.4:5.4;
+  hdCyl(pine?.30:.42,pine?.17:.24,trunkH,HD.trunk,[0,trunkH*.5,0],g,28);
+  const branches=pine?[[ -.46,2.65,.04,1.70,-.52],[.44,3.18,-.05,1.48,.48],[-.30,3.72,.04,1.28,-.38],[.26,4.25,-.03,1.02,.31],[0,4.62,.02,.78,.16]]:[[ -.62,2.25,.05,1.90,-.56],[.58,2.65,.10,1.78,.50],[-.42,3.12,.02,1.52,-.40],[.38,3.55,-.04,1.32,.34],[-.18,3.88,.06,1.08,-.24],[.22,4.12,-.02,.92,.20]];
+  for(const [bx,by,bz,len,lean] of branches){const b=hdCyl(pine?.13:.16,pine?.055:.065,len,HD.trunk,[bx,by,bz],g,22);b.rotation.z=lean;b.rotation.x=bz*.55;}
+  const clusters=pine?[[0,5.55,0,1.55,1.28,1.45,1],[-.62,4.95,.08,1.35,1.02,1.28,0],[.66,4.78,-.02,1.30,.98,1.22,2],[-.42,5.92,.12,1.10,.92,1.08,2],[.48,5.78,.05,1.02,.88,1.04,1],[0,6.45,0,.88,.76,.92,3]]:[[0,5.28,0,1.58,1.34,1.48,1],[-.76,4.82,.12,1.30,1.02,1.24,2],[.78,4.72,-.08,1.34,1.00,1.22,0],[-.48,5.55,.10,1.20,1.04,1.18,0],[.48,5.62,.08,1.18,.98,1.14,2],[-.16,6.10,-.02,1.05,.90,1.04,1],[.24,6.28,.04,.92,.82,.94,3]];
+  for(const [cx,cy,cz,sx,sy,sz,mi] of clusters){const leaf=hdSphere(.86,TREE_LEAF_MATS[mi],[cx,cy,cz],g,[sx,sy,sz]);leaf.rotation.set(Math.sin((cx+1.3)*3.1)*.12,Math.atan2(cz,cx)+Math.PI*.12,Math.cos((cz+1.1)*2.7)*.10);leaf.castShadow=true;leaf.receiveShadow=true;}
+  for(let i=0;i<7;i++){const a=i*Math.PI*2/7;const root=hdCyl(.19,.05,.92,HD.trunk,[Math.cos(a)*.32,.18,Math.sin(a)*.32],g,18);root.rotation.z=Math.cos(a)*.34;root.rotation.x=Math.sin(a)*.16;}
   return g;
 }
 function hdRock(x,z,scale=1){
@@ -1858,7 +1868,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   controls.target.lerp(tmpTarget,.11);
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
-  if(!camera.userData.followInit){camera.position.set(controls.target.x+24,15.2,controls.target.z+22);camera.userData.followInit=true;}
+  if(!camera.userData.followInit){camera.position.set(controls.target.x+20,11.8,controls.target.z+19);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();composer.render();

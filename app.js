@@ -2718,6 +2718,179 @@ function buildBeautyLightingPass(){
 // ============================================================================
 // HIGH-END ATMOSPHERE PASS — depth cues without foreground transparency sheets.
 // ============================================================================
+
+// ============================================================================
+// GRAPHICS FOUNDATION V2 — global surface language and material hierarchy.
+// This pass is intentionally asset/material focused: it does not expand the
+// settlement footprint. It establishes one coherent stylized-PBR response for
+// the entire existing scene before any later architecture/world-design pass.
+// ============================================================================
+function installFoundationSurfaceShader(mat,seed=1,edge=.018){
+  if(!mat || !(mat.isMeshStandardMaterial||mat.isMeshPhysicalMaterial) || mat.userData.foundationShaderInstalled) return;
+  const prior=mat.onBeforeCompile;
+  mat.onBeforeCompile=(shader,renderer)=>{
+    if(prior)prior(shader,renderer);
+    const worldSeed=Number(seed)||1;
+    shader.vertexShader='varying vec3 vFoundationWorld;\\n'+
+      shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
+      );
+    shader.fragmentShader='varying vec3 vFoundationWorld;\\n'+
+      shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        '#include <color_fragment>\\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\\n diffuseColor.rgb*=1.0+fBreak;\\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);'
+      );
+  };
+  mat.userData.foundationShaderInstalled=true;
+  mat.needsUpdate=true;
+}
+function foundationPhysicalizeFoliageMaterial(mat,phase=0){
+  if(!mat || mat.userData.foundationFoliageConverted || mat.isMeshBasicMaterial) return mat;
+  const physical=new THREE.MeshPhysicalMaterial();
+  physical.name=(mat.name||'Foliage')+'_FoundationPhysical';
+  physical.color.copy(mat.color||new THREE.Color(0xffffff));
+  physical.map=mat.map||null;
+  physical.alphaMap=mat.alphaMap||null;
+  physical.normalMap=mat.normalMap||null;
+  if(physical.normalScale && mat.normalScale) physical.normalScale.copy(mat.normalScale);
+  physical.aoMap=mat.aoMap||null;
+  physical.aoMapIntensity=mat.aoMapIntensity??1;
+  physical.vertexColors=mat.vertexColors;
+  physical.side=mat.side;
+  physical.transparent=mat.transparent;
+  physical.opacity=mat.opacity;
+  physical.alphaTest=Math.max(mat.alphaTest||0,.32);
+  physical.depthWrite=mat.depthWrite;
+  physical.depthTest=mat.depthTest;
+  physical.fog=mat.fog;
+  physical.roughness=Math.min(.92,Math.max(.72,mat.roughness??.84));
+  physical.metalness=0;
+  physical.sheen=.34;
+  physical.sheenColor.set(0x8fbf8a);
+  physical.sheenRoughness=.82;
+  physical.clearcoat=.035;
+  physical.clearcoatRoughness=.78;
+  physical.envMapIntensity=.55;
+  physical.userData.foundationFoliageConverted=true;
+  physical.userData.foliagePhase=phase;
+  return physical;
+}
+function buildGraphicsFoundationV2(){
+  // Renderer/presentation: preserve a rich HDR-like response while keeping the
+  // mobile target conservative. Three.js recommends environment lighting for PBR
+  // materials, and the scene already supplies a PMREM environment.
+  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMappingExposure=1.075;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.transmissionResolutionScale=.55;
+  scene.environmentIntensity=.42;
+
+  const materials=new Set();
+  let meshCount=0,physicalCount=0,foliageCount=0;
+  scene.traverse(obj=>{
+    if(!obj.isMesh || obj===sky || obj===sunDisc) return;
+    meshCount++;
+    const list=Array.isArray(obj.material)?obj.material:[obj.material];
+    const foliageObj=!!(obj.userData?.distilled || obj.userData?.vegetationTier || obj.userData?.assetName?.startsWith('distilled_') || /leaf|foliage|grass|fern|shrub|bush/i.test(obj.name||''));
+    list.forEach((m,mi)=>{
+      if(!m)return;
+      let mat=m;
+      if(foliageObj && !m.userData.foundationFoliageConverted && (m.isMeshStandardMaterial||m.isMeshPhysicalMaterial)){
+        const phase=(obj.userData.windPhase||0)+mi*.73;
+        mat=foundationPhysicalizeFoliageMaterial(m,phase);
+        if(Array.isArray(obj.material))obj.material[mi]=mat;else obj.material=mat;
+        foliageCount++;
+      }
+      if(mat.isMeshStandardMaterial||mat.isMeshPhysicalMaterial){
+        physicalCount++;
+        const n=(obj.name||'')+' '+(mat.name||'');
+        const isMetal=/iron|steel|metal|blade|sword|buckl|brass/i.test(n);
+        const isRoof=/roof|slate|tile/i.test(n);
+        const isStone=/stone|rock|mortar|cobble|wall/i.test(n);
+        const isWood=/wood|timber|plank|bark/i.test(n);
+        const isCloth=/cloth|cape|cloak|fabric|tunic|fur/i.test(n);
+        if(isMetal){mat.metalness=Math.max(mat.metalness??0,.72);mat.roughness=Math.min(mat.roughness??.38,.42);mat.envMapIntensity=Math.max(mat.envMapIntensity??.4,.7);}
+        else if(isRoof){mat.roughness=Math.max(mat.roughness??.82,.70);mat.envMapIntensity=Math.max(mat.envMapIntensity??.3,.42);}
+        else if(isStone){mat.roughness=Math.max(mat.roughness??.9,.78);mat.envMapIntensity=Math.max(mat.envMapIntensity??.25,.36);}
+        else if(isWood){mat.roughness=Math.max(mat.roughness??.82,.68);mat.envMapIntensity=Math.max(mat.envMapIntensity??.25,.40);}
+        else if(isCloth){mat.roughness=Math.max(mat.roughness??.8,.72);mat.envMapIntensity=Math.max(mat.envMapIntensity??.25,.34);}
+        else {mat.roughness=Math.min(1,Math.max(.52,mat.roughness??.78));mat.envMapIntensity=Math.max(mat.envMapIntensity??.2,.30);}
+        if(mat.normalMap && mat.normalScale){
+          const ns=Math.min(1.0,Math.max(.16,mat.normalScale.x||.5));
+          mat.normalScale.set(ns,ns);
+        }
+        if(!mat.transparent && !mat.userData.noFoundationShader){
+          installFoundationSurfaceShader(mat,((obj.id||1)*.37)+(mi*.91),.018);
+        }
+        materials.add(mat);
+      }
+    });
+  });
+
+  // Convert the distilled foliage after all assets have been attached. This is the
+  // high-impact part of the foundation: leaves/grass now share the same physically
+  // based sheen language instead of looking like flat green cards.
+  scene.traverse(obj=>{
+    if(!obj.isMesh || !obj.material)return;
+    const foliageObj=!!(obj.userData?.distilled || obj.userData?.vegetationTier || obj.userData?.assetName?.startsWith('distilled_') || /leaf|foliage|grass|fern|shrub|bush/i.test(obj.name||''));
+    if(!foliageObj)return;
+    const list=Array.isArray(obj.material)?obj.material:[obj.material];
+    list.forEach((m,i)=>{
+      if(!m)return;
+      if(m.isMeshPhysicalMaterial){
+        m.sheen=Math.max(m.sheen||0,.34);
+        m.sheenColor.set(0x8fbf8a);
+        m.sheenRoughness=.82;
+        m.envMapIntensity=Math.max(m.envMapIntensity||0,.48);
+        m.needsUpdate=true;
+      }
+    });
+  });
+
+  // Foliage tiers are intentionally readable from the play camera: hero canopy gets
+  // stronger contact shadows; understory stays softer so it does not turn into noise.
+  scene.traverse(obj=>{
+    if(!obj.isMesh)return;
+    if(obj.userData?.vegetationTier==='hero'){
+      obj.castShadow=true;obj.receiveShadow=true;
+    }else if(obj.userData?.vegetationTier==='hero_companion'){
+      obj.castShadow=true;obj.receiveShadow=true;
+    }else if(obj.userData?.distilled && /grass|fern/.test(obj.userData?.assetName||'')){
+      obj.castShadow=false;obj.receiveShadow=true;
+    }
+  });
+
+  // Lighting hierarchy: warm key, cool fill, restrained bloom, stronger contact AO.
+  sun.color.set(0xffd7b1);sun.intensity=2.82;sun.position.set(-64,92,38);
+  fill.color.set(0x8bb8c9);fill.intensity=.62;fill.position.set(48,38,-58);
+  hemi.color.set(0xf2f6ee);hemi.groundColor.set(0x262c25);hemi.intensity=1.10;
+  ssaoPass.kernelRadius=13;
+  ssaoPass.minDistance=.001;
+  ssaoPass.maxDistance=.21;
+  bloomPass.strength=.085;
+  bloomPass.radius=.34;
+  bloomPass.threshold=.92;
+
+  // Practical lights get a little more color separation without adding a new town layer.
+  scene.traverse(obj=>{
+    if(!obj.isPointLight && !obj.isSpotLight)return;
+    if(obj.userData.foundationTuned)return;
+    obj.userData.foundationTuned=true;
+    if(obj.color.r>.7 && obj.color.g<.75)obj.intensity*=1.08;
+  });
+
+  window.__HEARTHMERE_GRAPHICS_FOUNDATION={
+    version:2,
+    meshes:meshCount,
+    materials:materials.size,
+    physicalMaterials:physicalCount,
+    foliageConverted:foliageCount,
+    environmentIntensity:scene.environmentIntensity,
+    toneMappingExposure:renderer.toneMappingExposure
+  };
+}
+
 function buildHighEndAtmospherePass(){
   scene.background.set(0x7e9692);
   scene.fog.color.set(0x71837d);scene.fog.density=.00072;
@@ -2933,7 +3106,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

@@ -28,13 +28,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p assets
-          curl -fsSL "https://api.github.com/repos/corgifighter/Test-screen/git/trees/main?recursive=1" -o /tmp/hearthmere-tree.json
-          jq -r '.tree[] | select(.type == "blob") | .path | select(test("\\.(glb|png|jpg)$"))' /tmp/hearthmere-tree.json > /tmp/hearthmere-assets.txt
-          while IFS= read -r file; do
-            echo "Downloading $file"
-            curl -fL --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/corgifighter/Test-screen/main/$file" -o "assets/$file"
-          done < /tmp/hearthmere-assets.txt
+          mkdir -p assets /tmp/test-screen
+          # Pull the reference asset repository as one archive rather than issuing
+          # hundreds of raw-file requests. This avoids raw.githubusercontent.com
+          # rate limits and makes the Pages build deterministic.
+          curl -fL --retry 5 --retry-all-errors --retry-delay 2 \
+            "https://github.com/corgifighter/Test-screen/archive/refs/heads/main.tar.gz" \
+            -o /tmp/test-screen.tar.gz
+          tar -xzf /tmp/test-screen.tar.gz -C /tmp/test-screen --strip-components=1
+          find /tmp/test-screen -type f \( -name '*.glb' -o -name '*.png' -o -name '*.jpg' \) -print0 |
+            while IFS= read -r -d '' file; do
+              rel="${file#/tmp/test-screen/}"
+              mkdir -p "assets/$(dirname "$rel")"
+              cp "$file" "assets/$rel"
+            done
           test -f assets/hero.glb
           test -f assets/character.glb
           test -f assets/inn.glb

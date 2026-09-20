@@ -3227,7 +3227,129 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();
+
+/* GRAPHICS PASS 4 — ground/vegetation integration.
+   Purpose: make the authored world feel physically rooted without expanding the
+   footprint or relying on hundreds of unique meshes. This pass uses instancing,
+   hero-camera-biased placement, and material variation instead of micro-geometry.
+*/
+function buildGroundIntegrationPass(){
+  if(window.__HEARTHMERE_GROUND_INTEGRATION?.version===1)return;
+  const rootGroup=new THREE.Group();
+  rootGroup.name='GroundIntegrationPass';
+  scene.add(rootGroup);
+
+  const grassGeo=new THREE.ConeGeometry(.055,.42,4,1);
+  const grassMat=new THREE.MeshPhysicalMaterial({
+    color:0x6d8a45,roughness:.96,metalness:0,
+    sheen:.18,sheenColor:new THREE.Color(0x9aaa62),
+    side:THREE.DoubleSide
+  });
+  const grassMesh=new THREE.InstancedMesh(grassGeo,grassMat,420);
+  grassMesh.name='GroundUnderstoryInstanced';
+  grassMesh.castShadow=false;grassMesh.receiveShadow=true;
+  const dummy=new THREE.Object3D();
+  let count=0;
+  const occupied=[
+    {x:0,z:0,r:10},{x:-16,z:-8,r:9},{x:18,z:6,r:9},{x:-26,z:19,r:8},
+    {x:24,z:-20,r:10},{x:-5,z:30,r:7},{x:34,z:22,r:7}
+  ];
+  function nearOccupied(x,z){
+    for(const p of occupied) if(Math.hypot(x-p.x,z-p.z)<p.r)return true;
+    return false;
+  }
+  for(let i=0;i<1200 && count<420;i++){
+    const x=-50+worldRandom()*100,z=-50+worldRandom()*112;
+    if(nearOccupied(x,z))continue;
+    if(Math.abs(z-10)<2.2 && x>-8 && x<27)continue;
+    if(x>20 && Math.abs(z)<27 && worldRandom()<.72)continue;
+    const y=terrainHeight(x,z);
+    dummy.position.set(x,y+.19,z);
+    dummy.rotation.set(
+      (worldRandom()-.5)*.22,
+      worldRandom()*Math.PI*2,
+      (worldRandom()-.5)*.22
+    );
+    const scale=.55+worldRandom()*1.25;
+    dummy.scale.set(scale*(.7+worldRandom()*.45),scale,scale*(.72+worldRandom()*.42));
+    dummy.updateMatrix();
+    grassMesh.setMatrixAt(count++,dummy.matrix);
+  }
+  grassMesh.count=count;grassMesh.instanceMatrix.needsUpdate=true;
+  rootGroup.add(grassMesh);
+
+  // A second, darker layer breaks the uniform lawn silhouette and visually anchors
+  // rocks, paths and building edges. It is deliberately sparse on mobile.
+  const tuftGeo=new THREE.ConeGeometry(.075,.62,5,1);
+  const tuftMat=new THREE.MeshPhysicalMaterial({
+    color:0x344f2c,roughness:1,metalness:0,sheen:.10,
+    side:THREE.DoubleSide
+  });
+  const tufts=new THREE.InstancedMesh(tuftGeo,tuftMat,190);
+  tufts.name='GroundDarkTufts';
+  const dummy2=new THREE.Object3D();
+  count=0;
+  for(let i=0;i<700 && count<190;i++){
+    const x=-51+worldRandom()*102,z=-52+worldRandom()*116;
+    if(nearOccupied(x,z))continue;
+    if(worldRandom()<.48)continue;
+    const y=terrainHeight(x,z);
+    dummy2.position.set(x,y+.25,z);
+    dummy2.rotation.set((worldRandom()-.5)*.28,worldRandom()*Math.PI*2,(worldRandom()-.5)*.28);
+    const scale=.45+worldRandom()*.85;
+    dummy2.scale.set(scale,scale*(.75+worldRandom()*.65),scale);
+    dummy2.updateMatrix();tufts.setMatrixAt(count++,dummy2.matrix);
+  }
+  tufts.count=count;tufts.instanceMatrix.needsUpdate=true;rootGroup.add(tufts);
+
+  // River-edge reeds: a low, intentional silhouette language rather than a flat
+  // texture boundary. Placement follows the existing river corridor.
+  const reedGeo=new THREE.ConeGeometry(.035,.72,4,1);
+  const reedMat=new THREE.MeshPhysicalMaterial({
+    color:0x788c4b,roughness:.94,sheen:.25,
+    sheenColor:new THREE.Color(0xb1ad69),side:THREE.DoubleSide
+  });
+  const reeds=new THREE.InstancedMesh(reedGeo,reedMat,110);
+  reeds.name='RiverbankReeds';
+  count=0;
+  for(let i=0;i<360 && count<110;i++){
+    const z=-48+worldRandom()*108;
+    const side=worldRandom()<.5?-1:1;
+    const x=27+side*(1.1+worldRandom()*1.5);
+    const y=terrainHeight(x,z);
+    dummy.position.set(x,y+.36,z);
+    dummy.rotation.set((worldRandom()-.5)*.16,worldRandom()*Math.PI*2,(worldRandom()-.5)*.16);
+    const scale=.65+worldRandom()*.8;
+    dummy.scale.set(scale*.65,scale,scale*.65);
+    dummy.updateMatrix();reeds.setMatrixAt(count++,dummy.matrix);
+  }
+  reeds.count=count;reeds.instanceMatrix.needsUpdate=true;rootGroup.add(reeds);
+
+  // Small grounding stones are instanced so building/road transitions read as
+  // authored terrain rather than a perfectly clean procedural plane.
+  const stoneGeo=new THREE.DodecahedronGeometry(.16,0);
+  const stoneMat=new THREE.MeshPhysicalMaterial({color:0x6d7060,roughness:.98,metalness:0,sheen:.06});
+  const stones=new THREE.InstancedMesh(stoneGeo,stoneMat,95);
+  stones.name='GroundingStones';
+  count=0;
+  for(let i=0;i<430 && count<95;i++){
+    const x=-50+worldRandom()*100,z=-50+worldRandom()*112;
+    if(nearOccupied(x,z)||worldRandom()<.68)continue;
+    const y=terrainHeight(x,z);
+    dummy.position.set(x,y+.10,z);dummy.rotation.set(worldRandom(),worldRandom(),worldRandom());
+    const scale=.45+worldRandom()*1.05;
+    dummy.scale.set(scale,scale*(.45+worldRandom()*.55),scale);
+    dummy.updateMatrix();stones.setMatrixAt(count++,dummy.matrix);
+  }
+  stones.count=count;stones.instanceMatrix.needsUpdate=true;rootGroup.add(stones);
+
+  window.__HEARTHMERE_GROUND_INTEGRATION={
+    version:1,grassInstances:grassMesh.count,darkTufts:tufts.count,
+    riverReeds:reeds.count,groundingStones:stones.count
+  };
+}
+
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildGroundIntegrationPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

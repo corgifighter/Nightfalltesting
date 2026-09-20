@@ -1,5 +1,9 @@
-const CACHE='hearthmere-nightfalltesting-v20';
-const CORE=["./","./index.html","./app.js","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
+const CACHE='hearthmere-nightfalltesting-v21';
+const CORE=["./","./index.html","./app.js","./capture.html","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
+const EXTERNAL_PREFIXES=[
+  "https://raw.githubusercontent.com/corgifighter/Test-screen/main/",
+  "https://dl.polyhaven.org/file/ph-assets/Textures/",
+];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/controls/OrbitControls.js",
@@ -39,7 +43,7 @@ self.addEventListener('fetch',e=>{
   e.respondWith(caches.match(e.request).then(r=>{
     if(r) return r;
     return fetch(e.request).then(res=>{
-      if(res.ok && (new URL(url).origin===location.origin || CDN.includes(url))){
+      if(res.ok && (new URL(url).origin===location.origin || CDN.includes(url) || EXTERNAL_PREFIXES.some(prefix=>url.startsWith(prefix)))){
         const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy));
       }
       return res;

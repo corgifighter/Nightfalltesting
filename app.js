@@ -21,10 +21,10 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
 scene.fog=new THREE.FogExp2(0x7f9289,.00195);
 
-const camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.1,1800);
-camera.position.set(34,31,38);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
+camera.position.set(27,18,25);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -39,7 +39,7 @@ root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-controls.minDistance=13;controls.maxDistance=72;controls.minPolarAngle=.52;controls.maxPolarAngle=1.28;controls.rotateSpeed=.28;
+controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;controls.maxPolarAngle=1.20;controls.rotateSpeed=.24;
 
 const hemi=new THREE.HemisphereLight(0xe8f2ef,0x332a24,1.35);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffd6a0,4.2);sun.position.set(-58,86,42);sun.castShadow=true;
@@ -111,8 +111,8 @@ const MAT={
 // Terrain material pass: subtle macro variation keeps the meadow from reading as a tiled texture.
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
- shader.vertexShader='varying vec3 vWorldPos;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\n float macro=sin(vWorldPos.x*.075)*sin(vWorldPos.z*.061)+sin((vWorldPos.x+vWorldPos.z)*.021);\n float variation=smoothstep(-1.0,1.0,macro)*.075;\n diffuseColor.rgb*=vec3(1.0+variation,1.0+variation*.82,1.0+variation*.48);");
+ shader.vertexShader='varying vec3 vWorldPos;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ shader.fragmentShader='varying vec3 vWorldPos;\\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\\n diffuseColor.rgb=mix(diffuseColor.rgb,natural,.34);");
  MAT.grass.userData.shader=shader;
 };
 MAT.water.onBeforeCompile=(shader)=>{
@@ -121,7 +121,7 @@ MAT.water.onBeforeCompile=(shader)=>{
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
-function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement('canvas');c.width=640;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,640,128);x.font='700 31px Georgia';x.textAlign='center';x.fillStyle='rgba(5,9,8,.78)';x.roundRect(22,20,596,88,18);x.fill();x.fillStyle=color;x.fillText(text,320,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(6.8*scale,1.36*scale,1);s.position.set(...pos);scene.add(s);return s}
+function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement('canvas');c.width=640;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,640,128);x.font='700 31px Georgia';x.textAlign='center';x.fillStyle='rgba(5,9,8,.78)';x.roundRect(22,20,596,88,18);x.fill();x.fillStyle=color;x.fillText(text,320,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(6.8*scale,1.36*scale,1);s.position.set(...pos);s.userData.worldLabel=true;scene.add(s);return s}
 
 // Ground: broad playable meadow with restrained sculpted undulation.
 const tg=new THREE.PlaneGeometry(190,190,112,112);const ta=tg.attributes.position;
@@ -1122,7 +1122,16 @@ function frame(t){const dt=Math.min(.05,(t-last)/1000);last=t;time+=dt;
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
  const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00165+.00065*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=2.05+2.65*day;moon.intensity=.10+.42*(1-day);hemi.intensity=1.02+.68*day;renderer.toneMappingExposure=.90+.27*day;scene.environmentIntensity=.40+.20*day;
- if(player){tmpTarget.set(player.position.x,0,player.position.z);controls.target.lerp(tmpTarget,.07)}controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
+ if(player){
+  const oldTarget=controls.target.clone();
+  tmpTarget.set(player.position.x,0,player.position.z);
+  controls.target.lerp(tmpTarget,.11);
+  const dx=controls.target.x-oldTarget.x,dz=controls.target.z-oldTarget.z;
+  camera.position.x+=dx;camera.position.z+=dz;
+  if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
+}
+scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
+controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});

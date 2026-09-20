@@ -5,6 +5,7 @@ import {EffectComposer} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/example
 import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {SSAOPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js';
+import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js';
 
 const root=document.querySelector('#scene');
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
@@ -43,9 +44,14 @@ const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
 ssaoPass.kernelRadius=10;
 ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
-ssaoPass.output='Default';
+ssaoPass.output=SSAOPass.OUTPUT.Default;
 composer.addPass(ssaoPass);
 composer.addPass(bloomPass);
+// EffectComposer renders into an intermediate color space. OutputPass is the
+// authoritative final presentation stage: it applies the renderer's configured
+// tone mapping and output color-space conversion to the composited image.
+const outputPass=new OutputPass();
+composer.addPass(outputPass);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;

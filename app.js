@@ -658,23 +658,30 @@ function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
   m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdRoof(parent,w,d,y,mat,angle=.58){
-  // Substantial roof planes with layered courses: broad forms first, then restrained tile/shingle rhythm.
-  const slope=Math.tan(angle);
+  // Continuous, thick roof planes establish a believable architectural surface.
+  // The restrained overlapping bands add depth without turning the roof into stacked boxes.
   const half=d*.48;
+  const run=half/Math.cos(angle);
+  const rise=half*Math.tan(angle);
   for(const side of [-1,1]){
-    const run=half/Math.cos(angle);
-    for(let i=0;i<4;i++){
-      const t=(i+.5)/4;
-      const z=side*(half*(.10+t*.90));
-      const yy=y+half*slope*(1-t)+.025;
-      const course=hdBox(w+.72,.24,run/4+.16,mat,[0,yy,z],parent,side*angle,0,0,.045);
-      course.castShadow=true;
+    const panel=hdBox(w+.86, .16, run*2.0, mat,
+      [0,y+rise*.50,side*half*.50],parent,side*angle,0,0,.035);
+    panel.receiveShadow=true;
+    // Raised fascia follows the lower eave and keeps the silhouette crisp.
+    hdBox(w+1.02,.22,.24,HD.timber,[0,y+.01,side*half],parent,side*angle,0,0,.045);
+    // Three shallow roof bands provide scale cues rather than chunky tile blocks.
+    for(let i=0;i<3;i++){
+      const t=(i+1)/4;
+      const z=side*(half*t);
+      const yy=y+rise*(1-t)+.07;
+      hdBox(w+.94,.065,.075,HD.roof,[0,yy,z],parent,side*angle,0,0,.018);
     }
-    hdBox(w+.82,.18,.18,HD.timber,[0,y+half*slope+.04,side*half],parent,side*angle,0,0,.035);
   }
-  hdBox(w+.92,.26,.34,HD.timber,[0,y+.04,0],parent,0,0,0,.055);
-  hdBox(w+.18,.22,.26,mat,[0,y+half*slope+.10,0],parent,0,0,0,.04);
+  // Heavy ridge beam and cap unify both planes.
+  hdBox(w+1.02,.26,.34,HD.timber,[0,y+rise+.08,0],parent,0,0,0,.055);
+  hdBox(w+.34,.20,.28,mat,[0,y+rise+.18,0],parent,0,0,0,.035);
 }
+
 function hdWindow(parent,x,y,z,scale=1){
   hdBox(1.05*scale,1.35*scale,.10,HD.timber,[x,y,z],parent);
   const glass=hdBox(.78*scale,1.04*scale,.055,HD.glass,[x,y,z+(z>0?.055:-.055)],parent);

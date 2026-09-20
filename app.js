@@ -308,11 +308,11 @@ async function applyCC0Materials(){
   const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
   const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35,THREE.NoColorSpace);
-  [HD.timber,HD.timberLight].forEach(m=>{m.map=wood;m.normalMap=woodN;m.normalScale.set(.28,.28);m.needsUpdate=true;});
+  [HD.timber,HD.timberLight,ARCH.timber,ARCH.timberLight].forEach(m=>{m.map=wood;m.normalMap=woodN;m.normalScale.set(.28,.28);m.needsUpdate=true;});
   const roof=loadCC0Map(CC0.roof,1.15),roofN=loadCC0Map(CC0.roofNormal,1.15,THREE.NoColorSpace);
-  [HD.roof,HD.roofWarm].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.38,.38);m.needsUpdate=true;});
+  [HD.roof,HD.roofWarm,ARCH.roofA,ARCH.roofB,ARCH.roofC].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.38,.38);m.needsUpdate=true;});
   const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05,THREE.NoColorSpace);
-  [HD.stone,HD.stoneDark].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
+  [HD.stone,HD.stoneDark,ARCH.stoneA,ARCH.stoneB,ARCH.mortar].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
   await waitForCC0Textures();
 }
 const MAT={
@@ -990,11 +990,27 @@ const HD={
   warm:new THREE.MeshStandardMaterial({color:0xffb45c,emissive:0xff6b22,emissiveIntensity:1.6,roughness:.38}),
   water:new THREE.MeshPhysicalMaterial({color:0x2d8d98,roughness:.07,metalness:.05,transmission:.18,clearcoat:1,clearcoatRoughness:.08})
 };
+function addSurfaceVariation(mat,seed=1,contrast=.12){
+  mat.onBeforeCompile=(shader)=>{
+    shader.vertexShader='varying vec3 vSurfaceWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSurfaceWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vSurfaceWorld;\n'+shader.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\n float sv1=sin(vSurfaceWorld.x*(.37+'+seed*.013+')+vSurfaceWorld.z*(.29+'+seed*.009+'))*sin(vSurfaceWorld.z*.19+vSurfaceWorld.x*.07+'+seed+'); float sv2=sin(vSurfaceWorld.x*2.8+vSurfaceWorld.z*2.1+'+seed*1.7+')*.22; float surfaceNoise=clamp(.5+sv1*.42+sv2,0.0,1.0); diffuseColor.rgb*=1.0+(surfaceNoise-.5)*'+contrast+';')
+      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n roughnessFactor=clamp(roughnessFactor+(surfaceNoise-.5)*.10,.18,1.0);');
+  };
+}
 
+
+addSurfaceVariation(HD.timber,1.7,.16);
+addSurfaceVariation(HD.timberLight,3.1,.13);
+addSurfaceVariation(HD.stone,5.4,.12);
+addSurfaceVariation(HD.stoneDark,7.8,.10);
+addSurfaceVariation(HD.roof,9.2,.13);
+addSurfaceVariation(HD.roofWarm,11.6,.14);
+addSurfaceVariation(HD.trunk,13.4,.11);
 function addPlasterVariation(mat,a,b){
   mat.onBeforeCompile=(shader)=>{
     shader.vertexShader='varying vec3 vPlasterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vPlasterWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
-    shader.fragmentShader='varying vec3 vPlasterWorld;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float p1=sin(vPlasterWorld.x*0.72+'+a+')*sin(vPlasterWorld.z*0.61-'+a+'); float p2=sin(vPlasterWorld.x*2.7+vPlasterWorld.z*1.9+'+b+')*.22; float plasterNoise=clamp(.5+.34*p1+p2,0.0,1.0); vec3 plasterWarm=mix(vec3(.68,.63,.52),vec3(.94,.87,.71),plasterNoise); diffuseColor.rgb*=mix(vec3(1.0),plasterWarm,.22);');
+    shader.fragmentShader='varying vec3 vPlasterWorld;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float p1=sin(vPlasterWorld.x*0.72+'+a+')*sin(vPlasterWorld.z*0.61-'+a+'); float p2=sin(vPlasterWorld.x*2.7+vPlasterWorld.z*1.9+'+b+')*.22; float p3=sin(vPlasterWorld.y*3.4+vPlasterWorld.x*.31)*.16; float plasterNoise=clamp(.5+.34*p1+p2+p3,0.0,1.0); vec3 plasterWarm=mix(vec3(.66,.60,.50),vec3(.95,.88,.72),plasterNoise); diffuseColor.rgb*=mix(vec3(1.0),plasterWarm,.24); roughnessFactor=clamp(roughnessFactor+(plasterNoise-.5)*.10,.45,1.0);');
   };
 }
 addPlasterVariation(HD.plaster,1.15,1.96);
@@ -1136,6 +1152,14 @@ const ARCH={
   roofC:new THREE.MeshStandardMaterial({color:0x35453f,roughness:.9,metalness:0}),
   warm:new THREE.MeshStandardMaterial({color:0xffb95e,emissive:0xff6b20,emissiveIntensity:1.45,roughness:.35})
 };
+
+addSurfaceVariation(ARCH.timber,21.1,.17);
+addSurfaceVariation(ARCH.timberLight,23.4,.13);
+addSurfaceVariation(ARCH.stoneA,25.2,.11);
+addSurfaceVariation(ARCH.stoneB,27.7,.10);
+addSurfaceVariation(ARCH.roofA,29.3,.12);
+addSurfaceVariation(ARCH.roofB,31.8,.14);
+addSurfaceVariation(ARCH.roofC,34.1,.12);
 
 function archPanel(parent,w,h,d,mat,x,y,z,rotZ=0){
   const shape=new THREE.Shape();

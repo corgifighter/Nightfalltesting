@@ -109,9 +109,13 @@ jobs:
               const out=[]; for(const u of urls){try{await import(u);out.push({u,ok:true})}catch(e){out.push({u,ok:false,name:e?.name,message:e?.message})}} return out;
             });
             let canvasData = null;
-            if (canvasCount) {
-              canvasData = await page.locator('#scene canvas').first().evaluate(canvas => canvas.toDataURL('image/png'));
-              require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
+            if (canvasCount > 0) {
+              try {
+                canvasData = await page.locator('#scene canvas').first().evaluate(canvas => canvas.toDataURL('image/png'), { timeout: 3000 });
+                require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
+              } catch (e) {
+                console.log('CANVAS_CAPTURE_ERROR=' + String(e));
+              }
             }
             const coreAssetBase = 'https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {

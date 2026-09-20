@@ -3098,6 +3098,7 @@ scene.fog.color.setHSL(.42,.10,.39+.08*day);
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
+ sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
 sun.color.setHSL(.075-.015*day,.42,.68+.08*day);
 fill.color.setHSL(.55,.28,.60);

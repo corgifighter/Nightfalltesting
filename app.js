@@ -3175,7 +3175,7 @@ function frame(t){
  window.__HEARTHMERE_FOLIAGE_SHADERS.forEach(shader=>{if(shader?.uniforms?.uFoliageTime)shader.uniforms.uFoliageTime.value=time;});
  shadowRefreshFrame++;
  if(shadowRefreshFrame>=3){sun.shadow.needsUpdate=true;shadowRefreshFrame=0;}
- updateHeroPresentation();
+ updateHeroPresentation();updateCharacterPresentation();
  foam.forEach((r,i)=>{r.position.z+=dt*(.65+(i%4)*.1);r.scale.x=1.5+Math.sin(time*1.8+i)*.22;r.material.opacity=.16+.10*(Math.sin(time*1.4+i)+1);if(r.position.z>62)r.position.z=-52;r.position.x=27+Math.sin(time*.7+i*1.8)*3.8});
  embers.forEach((e,i)=>{e.position.y+=dt*(.35+Math.sin(i)*.08);e.position.x+=Math.sin(time*2+i)*dt*.025;if(e.position.y>3)e.position.y=.9;e.material.opacity=.35+.5*(Math.sin(time*6+i)+1)/2});
  fireLights.forEach((l,i)=>l.intensity=5.1+Math.sin(time*7+i)*.75+Math.sin(time*13)*.3);warmWindows.forEach((m,i)=>m.emissiveIntensity=.10+.055*(Math.sin(time*.9+i*.73)+1)/2);
@@ -3299,6 +3299,83 @@ function strengthenMaterialGrounding(){
   });
   window.__HEARTHMERE_MATERIAL_GROUNDING={version:1,materials:installed};
 }
+/* GRAPHICS PASS 7 — character presentation and focal readability.
+   The hero is the player's visual anchor, so presentation gets a dedicated
+   lighting/contact layer rather than relying on global scene lighting alone.
+*/
+function buildCharacterPresentationPass(){
+  if(window.__HEARTHMERE_CHARACTER_PRESENTATION?.version===1)return;
+  const hero=player;
+  if(!hero)return;
+
+  const c=document.createElement('canvas');c.width=128;c.height=128;
+  const ctx=c.getContext('2d');
+  const g=ctx.createRadialGradient(64,64,3,64,64,62);
+  g.addColorStop(0,'rgba(0,0,0,.48)');
+  g.addColorStop(.34,'rgba(0,0,0,.25)');
+  g.addColorStop(.72,'rgba(0,0,0,.07)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,128,128);
+  const shadowMap=new THREE.CanvasTexture(c);
+  shadowMap.colorSpace=THREE.SRGBColorSpace;
+  const shadow=new THREE.Mesh(
+    new THREE.PlaneGeometry(1.9,1.9),
+    new THREE.MeshBasicMaterial({map:shadowMap,transparent:true,depthWrite:false,depthTest:true,opacity:.72})
+  );
+  shadow.rotation.x=-Math.PI/2;
+  shadow.name='HeroContactShadow';
+  shadow.renderOrder=-1;
+  scene.add(shadow);
+
+  const key=new THREE.SpotLight(0xffd7a1,5.2,18,Math.PI*.24,.82,1.7);
+  key.name='HeroPresentationKey';
+  key.position.set(-5.5,9.5,6.5);
+  key.castShadow=false;
+  const target=new THREE.Object3D();
+  target.name='HeroPresentationTarget';
+  target.position.set(0,1.15,30);
+  scene.add(target);scene.add(key);key.target=target;
+
+  const rim=new THREE.PointLight(0x8bc4d1,.95,9,1.8);
+  rim.name='HeroPresentationRim';
+  rim.position.set(2.6,2.7,27.8);
+  scene.add(rim);
+
+  // Role-specific accents prevent the two supporting characters from reading as
+  // recolored copies of the hero while keeping the existing character source intact.
+  const roleColors={smith:0xb85f3f,watch:0x5b8a69};
+  characters.forEach(g=>{
+    if(g===hero)return;
+    const accent=roleColors[g.userData.role]||0x6b7082;
+    const badge=new THREE.Mesh(
+      new THREE.CylinderGeometry(.13,.13,.035,16),
+      new THREE.MeshPhysicalMaterial({color:accent,roughness:.52,metalness:.08,clearcoat:.18})
+    );
+    badge.rotation.z=Math.PI/2;
+    badge.position.set(0,1.72,.16);
+    badge.userData.characterRoleAccent=true;
+    g.add(badge);
+  });
+
+  window.__HEARTHMERE_CHARACTER_PRESENTATION={
+    version:1,heroContactShadow:true,heroKey:true,heroRim:true,npcRoleAccents:Math.max(0,characters.length-1)
+  };
+  window.__HEARTHMERE_HERO_CONTACT_SHADOW=shadow;
+  window.__HEARTHMERE_HERO_PRESENTATION_KEY=key;
+}
+
+function updateCharacterPresentation(){
+  const shadow=window.__HEARTHMERE_HERO_CONTACT_SHADOW;
+  if(!shadow||!player)return;
+  shadow.position.set(player.position.x,terrainHeight(player.position.x,player.position.z)+.018,player.position.z);
+  const moving=player.userData.walking?1:0;
+  const pulse=1+Math.sin(time*2.15+player.userData.phase)*.025;
+  shadow.scale.set(1.0+moving*.08,pulse,1.0+moving*.08);
+  const key=window.__HEARTHMERE_HERO_PRESENTATION_KEY;
+  if(key)key.target.position.lerp(new THREE.Vector3(player.position.x,1.15,player.position.z),.12);
+}
+
+
 /* GRAPHICS PASS 6 — world-material integration and authored terrain transitions.
    This is a macro-readability pass: it strengthens the relationships between
    paths, meadow, river, structures and vegetation without enlarging the map.
@@ -3538,7 +3615,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

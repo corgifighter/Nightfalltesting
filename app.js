@@ -2850,6 +2850,7 @@ function upgradeArchitecturalLibraries(){
 }
 
 function buildGraphicsFoundationV2(){
+  upgradeArchitecturalLibraries();
   // Renderer/presentation: preserve a rich HDR-like response while keeping the
   // mobile target conservative. Three.js recommends environment lighting for PBR
   // materials, and the scene already supplies a PMREM environment.

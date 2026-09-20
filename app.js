@@ -322,13 +322,6 @@ function addBeautyShader(mat,seed=1,edge=.08){
       .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n roughnessFactor=clamp(roughnessFactor+abs(grain)*.8,.18,1.0);');
   };
 }
-function applyHeroSurfaceMaps(){
-  // Reuse the already-loaded high quality CC0 maps across architectural materials.
-  // This is materially cheaper than maintaining another texture family while giving
-  // the authored buildings real-scale grain, stone breakup, and roof structure.
-  if(!CC0TextureCache)return;
-}
-const CC0TextureCache={};
 \nasync function applyCC0Materials(){
   const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;

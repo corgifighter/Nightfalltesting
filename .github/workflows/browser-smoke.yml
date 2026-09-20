@@ -65,10 +65,16 @@ jobs:
               await new Promise(r => setTimeout(r, 5000));
             }
             if (!assetReady) throw new Error('GitHub Pages asset gate did not become ready before browser launch: ' + assetGate.href);
-            await page.goto(smokeUrl, {
-              waitUntil: 'domcontentloaded',
-              timeout: 120000
-            });
+            let navigationError = null;
+            try {
+              await page.goto(smokeUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000
+              });
+            } catch (e) {
+              navigationError = String(e);
+              console.log('PAGE_NAVIGATION_ERROR=' + navigationError);
+            }
             await page.waitForTimeout(8000);
             await page.waitForFunction(() => window.__HEARTHMERE_READY === true, { timeout: 60000 }).catch(() => {});
             const status = await page.locator('#boot-status').textContent().catch(() => '');
@@ -117,7 +123,7 @@ jobs:
               'hearthmere-browser-check.txt',
               JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, dependencyProbe, liveAppParse }, null, 2)
             );
-            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, dependencyProbe }, null, 2));
+            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, dependencyProbe, navigationError }, null, 2));
             if (canvasCount < 1) {
               if (!webglSupport.webgl1 && !webglSupport.webgl2) throw new Error('Browser smoke environment has no WebGL context; renderer could not create its canvas.');
               throw new Error('WebGL is available but Hearthmere did not create a Three.js canvas. Inspect errors and failedRequests above.');

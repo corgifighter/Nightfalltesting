@@ -845,8 +845,11 @@ function buildWorldVisualPass(){
   fill.intensity=.48;sun.intensity=2.35;
   const practicals=[[-14,-8,0xffb35c,2.2,11],[4,-12,0xffa14c,1.7,9],[15,-10,0xffb35c,1.6,9],[-4,-28,0xffc07a,1.5,8],[20,-24,0xffb15b,1.8,10]];
   practicals.forEach(([x,z,c,i,d])=>{const l=new THREE.PointLight(c,i,d,.8);l.position.set(x,2.3,z);scene.add(l);});
-  const hazeMat=new THREE.MeshBasicMaterial({color:0xc8d5cc,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
-  const haze=new THREE.Mesh(new THREE.PlaneGeometry(170,42),hazeMat);haze.position.set(0,23,-82);scene.add(haze);
+  // Atmospheric depth is handled by scene fog and distant geometry. Do not use a large
+  // transparent camera-facing sheet here: on a perspective/mobile camera it becomes a
+  // giant translucent rectangle across the playable scene and destroys depth readability.
+  scene.fog.color.set(0x66776f);
+  scene.fog.density=.00112;
 }
 
 const cinematicSpots=[];

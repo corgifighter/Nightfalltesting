@@ -113,6 +113,15 @@ renderer.setClearColor(0x9aaea5,1);
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
 renderer.domElement.style.touchAction='none';
+renderer.domElement.addEventListener('webglcontextlost',event=>{
+  event.preventDefault();
+  window.__HEARTHMERE_CONTEXT_LOST=true;
+  if(bootStatus) bootStatus.textContent='Graphics context lost — waiting for recovery…';
+});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{
+  window.__HEARTHMERE_CONTEXT_LOST=false;
+  location.reload();
+});
 root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
@@ -370,9 +379,12 @@ roadShoulder(23,6,24,6.2,.02);
 
 const assetLoader=new GLTFLoader();
 const assetCache=new Map();const assetPromises=new Map();const assetClips=new Map();
+const assetLoadStats={requested:0,loaded:0,failed:0,failedNames:[]};
+window.__HEARTHMERE_ASSET_LOAD_STATS=assetLoadStats;
 let loadedCount=0;const assetQueue=['inn','forge','chapel','mill','watchtower','well','cart','fence','bench','crate','sign','lantern','rock','tree_oak','tree_pine','shrub','grass_clump','bridge','barrel','character','hero','chimney_detail','door_detail','window_detail','roof_ridge_detail','timber_brace_detail','stone_foundation_detail','eave_bracket_detail','roof_eave_trim_detail'];
 async function loadAsset(name){
  if(assetPromises.has(name))return assetPromises.get(name);
+ assetLoadStats.requested++;
  const p=assetLoader.loadAsync(ASSET_BASE+`${name}.glb`).then(gltf=>{
    gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=true;if(o.material){o.material=o.material.clone();o.material.roughness=Math.min(.94,Math.max(.34,o.material.roughness??.7));const n=(o.name||'').toLowerCase();if(n.includes('roof')||n.includes('ridge')){o.material.map=roof;o.material.normalMap=roofNormal;o.material.normalScale=new THREE.Vector2(.34,.34);o.material.needsUpdate=true;}if(n.includes('window')){o.material.emissive=new THREE.Color(0x6f4925);o.material.emissiveIntensity=.18;warmWindows.push(o);}
           if(n.includes('leaf')||n.includes('foliage')||n.includes('crown')||name.includes('tree')||name.includes('shrub')){
@@ -383,8 +395,8 @@ async function loadAsset(name){
           if(n.includes('stone')||n.includes('foundation')||name==='rock'){o.material.roughness=.92;o.material.metalness=0;}
           if(n.includes('wood')||n.includes('timber')||n.includes('beam')){o.material.roughness=.82;o.material.metalness=0;}
         }}});
-   assetCache.set(name,gltf.scene);assetClips.set(name,gltf.animations||[]);loadedCount++;bootSet(.08+.57*(loadedCount/assetQueue.length),'Loading '+name+'…');return {scene:gltf.scene,clips:gltf.animations||[]};
- }).catch(err=>{console.warn('Asset failed',name,err);return null});
+   assetCache.set(name,gltf.scene);assetClips.set(name,gltf.animations||[]);loadedCount++;assetLoadStats.loaded++;bootSet(.08+.57*(loadedCount/assetQueue.length),'Loading '+name+'…');return {scene:gltf.scene,clips:gltf.animations||[]};
+ }).catch(err=>{assetLoadStats.failed++;assetLoadStats.failedNames.push(name);console.warn('Asset failed',name,err);return null});
  assetPromises.set(name,p);return p;
 }
 async function placeAsset(name,x,z,scale=1,rotation=0,tint=null){const loaded=await loadAsset(name);if(!loaded)return null;const g=loaded.scene.clone(true);g.position.set(x,name==='bridge'?0.12:terrainHeight(x,z),z);g.scale.setScalar(scale);g.rotation.y=rotation;g.userData.assetName=name;g.userData.animations=loaded.clips;if(tint){g.traverse(o=>{if(o.isMesh&&o.material?.color){o.material=o.material.clone();o.material.color.lerp(new THREE.Color(tint),.18)}})}scene.add(g);return g}
@@ -1359,6 +1371,8 @@ smokeColumn(5,-10);smokeColumn(-4,-28);smokeColumn(20,-24);
 const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:THREE.DoubleSide});
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
 let last=performance.now(),time=0;
+const perfStats={frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,drawCalls:0,triangles:0,geometries:0,textures:0,qualityLevel:0,updatedAt:0};
+window.__HEARTHMERE_PERF=perfStats;
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -1393,6 +1407,22 @@ function updateVillager(g,t,dt){
  if(len<.28){g.userData.wanderTarget=null;g.userData.walking=false;return;}
  d.normalize();g.position.x+=d.x*dt*1.15;g.position.z+=d.z*dt*1.15;g.position.y=terrainHeight(g.position.x,g.position.z)+.02;
  g.rotation.y=THREE.MathUtils.lerp(g.rotation.y,Math.atan2(d.x,d.z),Math.min(1,dt*7));
+}
+function updatePerformanceStats(now,frameMs){
+  perfStats.frames++;
+  perfStats.frameMs+=frameMs;
+  perfStats.minFrameMs=Math.min(perfStats.minFrameMs,frameMs);
+  perfStats.maxFrameMs=Math.max(perfStats.maxFrameMs,frameMs);
+  if(perfStats.frames<60)return;
+  perfStats.frameMs/=perfStats.frames;
+  perfStats.drawCalls=renderer.info.render.calls;
+  perfStats.triangles=renderer.info.render.triangles;
+  perfStats.geometries=renderer.info.memory.geometries;
+  perfStats.textures=renderer.info.memory.textures;
+  perfStats.qualityLevel=quality.level;
+  perfStats.updatedAt=now;
+  if(diagnosticsMode) console.table(perfStats);
+  perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;
 }
 function updateAdaptiveQuality(now){
   if(captureMode) return;
@@ -1449,7 +1479,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
+controls.update();composer.render();const frameMs=dt*1000;updatePerformanceStats(t,frameMs);updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && performance.now()-captureReadyAt>1200 && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY=true;captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});

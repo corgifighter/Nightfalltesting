@@ -326,10 +326,8 @@ function addBeautyShader(mat,seed=1,edge=.08){
   const prior=mat.onBeforeCompile;
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
-    shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
-    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\n'+shader.fragmentShader
-      .replace('#include <map_fragment>','#include <map_fragment>\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+';')
-      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n roughnessFactor=clamp(roughnessFactor+abs(grain)*.8,.18,1.0);');
+    shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
+    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+');
   };
 }
 async function applyCC0Materials(){
@@ -366,7 +364,7 @@ MAT.grass.onBeforeCompile=(shader)=>{
 MAT.water.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
- shader.fragmentShader='varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); float sunSpark=pow(max(dot(reflect(normalize(-vViewPosition),normalize(vNormal)),normalize(vec3(-.52,.74,.42))),0.0),72.0); diffuseColor.rgb+=vec3(1.0,.78,.48)*sunSpark*.20; diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
+ shader.fragmentShader='uniform float uTime; varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); float sunSpark=pow(max(dot(reflect(normalize(-vViewPosition),normalize(vNormal)),normalize(vec3(-.52,.74,.42))),0.0),72.0); diffuseColor.rgb+=vec3(1.0,.78,.48)*sunSpark*.20; diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
@@ -2785,15 +2783,15 @@ function installFoundationSurfaceShader(mat,seed=1,edge=.018){
   mat.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
     const worldSeed=Number(seed)||1;
-    shader.vertexShader='varying vec3 vFoundationWorld;\n'+
+    shader.vertexShader='varying vec3 vFoundationWorld; varying vec3 vFoundationNormal;\n'+
       shader.vertexShader.replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'
+        '#include <begin_vertex>\n vFoundationWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vFoundationNormal=normalize(mat3(modelMatrix)*objectNormal);'
       );
-    shader.fragmentShader='varying vec3 vFoundationWorld;\n'+
+    shader.fragmentShader='varying vec3 vFoundationWorld; varying vec3 vFoundationNormal;\n'+
       shader.fragmentShader.replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);\n float fUp=clamp(dot(normalize(normal),vec3(0.0,1.0,0.0)),0.0,1.0);\n float fCrease=1.0-fUp;\n diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);\n diffuseColor.rgb*=1.0-fCrease*.045;\n float fSpec=pow(1.0-max(dot(normalize(normal),normalize(-vViewPosition)),0.0),4.0);\n diffuseColor.rgb*=1.0+fSpec*.012;'
+        '#include <color_fragment>\n float fMacroA=sin(vFoundationWorld.x*(.071+'+(worldSeed*.0031).toFixed(5)+')+vFoundationWorld.z*(.053+'+(worldSeed*.0023).toFixed(5)+'));\n float fMacroB=sin(vFoundationWorld.x*.019-vFoundationWorld.z*.031+'+(worldSeed*1.37).toFixed(4)+');\n float fBreak=clamp(fMacroA*.045+fMacroB*.025,-.065,.065);\n diffuseColor.rgb*=1.0+fBreak;\n float fWarm=sin(vFoundationWorld.x*.011+vFoundationWorld.z*.008)*.5+.5;\n diffuseColor.rgb*=mix(vec3(.985,.99,.98),vec3(1.012,1.004,.988),fWarm);\n float fUp=clamp(dot(normalize(vFoundationNormal),vec3(0.0,1.0,0.0)),0.0,1.0);\n float fCrease=1.0-fUp;\n diffuseColor.rgb*=mix(vec3(.925,.91,.88),vec3(1.018,1.012,1.0),fUp*.34);\n diffuseColor.rgb*=1.0-fCrease*.045;\n float fSpec=pow(1.0-max(dot(normalize(vFoundationNormal),normalize(-vViewPosition)),0.0),4.0);\n diffuseColor.rgb*=1.0+fSpec*.012;'
       );
   };
   mat.userData.foundationShaderInstalled=true;

@@ -631,8 +631,21 @@ const HD={
   water:new THREE.MeshPhysicalMaterial({color:0x2d8d98,roughness:.07,metalness:.05,transmission:.18,clearcoat:1,clearcoatRoughness:.08})
 };
 
-function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0){
-  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d,3,2,3),mat);
+const hdBoxGeometryCache=new Map();
+function hdBox(w,h,d,mat,pos,parent,rotX=0,rotY=0,rotZ=0,bevel){
+  const b=bevel??Math.min(.12,Math.min(w,h,d)*.10);
+  const key=[w.toFixed(3),h.toFixed(3),d.toFixed(3),b.toFixed(3)].join('|');
+  let geo=hdBoxGeometryCache.get(key);
+  if(!geo){
+    const s=new THREE.Shape();
+    s.moveTo(-w/2+b,-h/2);s.lineTo(w/2-b,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+b);
+    s.lineTo(w/2,h/2-b);s.quadraticCurveTo(w/2,h/2,w/2-b,h/2);
+    s.lineTo(-w/2+b,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-b);
+    s.lineTo(-w/2,-h/2+b);s.quadraticCurveTo(-w/2,-h/2,-w/2+b,-h/2);
+    geo=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:true,bevelThickness:Math.min(b*.45,.055),bevelSize:Math.min(b*.55,.065),bevelSegments:2,curveSegments:3,steps:1});
+    geo.translate(0,0,-d/2);geo.computeVertexNormals();hdBoxGeometryCache.set(key,geo);
+  }
+  const m=new THREE.Mesh(geo,mat);
   m.position.set(...pos);m.rotation.set(rotX,rotY,rotZ);m.castShadow=true;m.receiveShadow=true;
   (parent||scene).add(m);return m;
 }
@@ -645,10 +658,22 @@ function hdSphere(r,mat,pos,parent,scale=[1,1,1]){
   m.position.set(...pos);m.scale.set(...scale);m.castShadow=true;m.receiveShadow=true;(parent||scene).add(m);return m;
 }
 function hdRoof(parent,w,d,y,mat,angle=.58){
-  const depth=Math.sqrt(2)*d;
-  hdBox(w,.28,depth,mat,[0,y,d*.23],parent,angle,0,0);
-  hdBox(w,.28,depth,mat,[0,y,-d*.23],parent,-angle,0,0);
-  hdBox(w+.15,.22,.32,HD.timber,[0,y+.72,0],parent,0,0,0);
+  // Substantial roof planes with layered courses: broad forms first, then restrained tile/shingle rhythm.
+  const slope=Math.tan(angle);
+  const half=d*.48;
+  for(const side of [-1,1]){
+    const run=half/Math.cos(angle);
+    for(let i=0;i<4;i++){
+      const t=(i+.5)/4;
+      const z=side*(half*(.10+t*.90));
+      const yy=y+half*slope*(1-t)+.025;
+      const course=hdBox(w+.72,.24,run/4+.16,mat,[0,yy,z],parent,side*angle,0,0,.045);
+      course.castShadow=true;
+    }
+    hdBox(w+.82,.18,.18,HD.timber,[0,y+half*slope+.04,side*half],parent,side*angle,0,0,.035);
+  }
+  hdBox(w+.92,.26,.34,HD.timber,[0,y+.04,0],parent,0,0,0,.055);
+  hdBox(w+.18,.22,.26,mat,[0,y+half*slope+.10,0],parent,0,0,0,.04);
 }
 function hdWindow(parent,x,y,z,scale=1){
   hdBox(1.05*scale,1.35*scale,.10,HD.timber,[x,y,z],parent);
@@ -670,57 +695,73 @@ function hdChimney(parent,x,z,height=1.7){
 }
 function hdBuilding(type,x,z,scale=1,rot=0){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.rotation.y=rot;g.scale.setScalar(scale);scene.add(g);
-  const w=type==='chapel'?7.2:type==='inn'?8.0:type==='forge'?6.4:type==='mill'?7.2:5.9;
-  const d=type==='chapel'?8.8:type==='inn'?6.8:type==='forge'?6.2:type==='mill'?7.0:5.5;
-  const h=type==='chapel'?4.8:3.7;
-  hdBox(w,.48,d,HD.stone,[0,.28,0],g);
-  hdBox(w-.38,h,d-.38,type==='chapel'?HD.plasterWarm:HD.plaster,[0,.48+h/2,0],g);
-  // timber frame gives the facade a real construction language
-  for(const px of [-w*.42,w*.42])hdBox(.16,h-.15,.16,HD.timber,[px,.55+h/2,d*.51],g);
-  for(const py of [1.25,2.45])hdBox(w*.88,.13,.18,HD.timber,[0,py,d*.51],g);
-  hdDoor(g,0,1.55,d*.51,.95);
-  hdWindow(g,-w*.28,2.15,d*.51,.92);hdWindow(g,w*.28,2.15,d*.51,.92);
-  hdRoof(g,w+.6,d+.8,h+.45,type==='chapel'?HD.roof:HD.roofWarm,type==='chapel'?.66:.57);
-  hdChimney(g,w*.25,-d*.18,type==='chapel'?.9:1.65);
-  hdChimney(g,-w*.28,-d*.18,type==='forge'?2.0:1.25);
-  // Side timber bracing and foundation courses.
+  const chapel=type==='chapel', inn=type==='inn', forge=type==='forge', mill=type==='mill', tower=type==='watchtower';
+  const w=chapel?7.6:inn?8.6:forge?6.8:mill?7.4:tower?5.2:6.2;
+  const d=chapel?9.2:inn?7.4:forge?6.5:mill?7.2:tower?5.2:5.8;
+  const lowerH=chapel?3.65:tower?7.2:3.05;
+  const upperW=chapel?w*.94:tower?w*.78:w*.84;
+  const upperD=chapel?d*.94:tower?d*.78:d*.86;
+  const upperH=chapel?1.55:tower?1.15:1.0;
+  // Deep stone plinth and an overhanging structural body create real mass instead of a single block.
+  hdBox(w+.34,.62,d+.34,HD.stone,[0,.31,0],g,0,0,0,.16);
+  hdBox(w,lowerH,d,type==='chapel'?HD.plasterWarm:HD.plaster,[0,.62+lowerH/2,0],g,0,0,0,.13);
+  hdBox(upperW,upperH,upperD,type==='chapel'?HD.plasterWarm:HD.plasterWarm,[0,.62+lowerH+upperH/2-.08,0],g,0,0,0,.13);
+  // A pronounced timber skeleton ties the volumes together.
   for(const sx of [-1,1]){
-    hdBox(.11,1.45,.14,HD.timber,[sx*w*.28,1.62,d*.525],g,0,0,sx*.42);
-    hdBox(.11,1.45,.14,HD.timber,[sx*w*.08,1.62,d*.525],g,0,0,-sx*.42);
+    hdBox(.19,lowerH-.18,.22,HD.timber,[sx*(w*.43),.72+lowerH/2,d*.505],g,0,0,0,.055);
+    hdBox(.19,upperH+.10,.22,HD.timber,[sx*(upperW*.43),.62+lowerH+upperH/2-.08,upperD*.505],g,0,0,0,.055);
   }
-  if(type==='inn'){
-    hdBox(2.7,.16,1.35,HD.timber,[0,1.0,d*.62],g);hdBox(2.7,.12,.10,HD.roofWarm,[0,2.15,d*.62],g);
-    for(const px of [-1.15,1.15])hdCyl(.075,.075,1.55,HD.timber,[px,1.0,d*.64],g,18);
-    hdBox(2.0,.58,.10,HD.timber,[0,2.8,d*.54],g);
-    hdBox(1.6,.34,.04,HD.warm,[0,2.8,d*.60],g);
+  for(const yy of [1.05,2.20,3.12]) if(yy<lowerH+.7)
+    hdBox(w*.91,.14,.22,HD.timber,[0,yy,d*.51],g,0,0,0,.045);
+  // Broad diagonal braces add structural depth and a handcrafted facade rhythm.
+  for(const sx of [-1,1]){
+    const b1=hdBox(.13,1.55,.20,HD.timber,[sx*w*.27,1.72,d*.525],g,0,0,sx*.45,.045);
+    const b2=hdBox(.13,1.55,.20,HD.timber,[sx*w*.08,1.72,d*.525],g,0,0,-sx*.45,.045);
+    b1.castShadow=b2.castShadow=true;
   }
-  if(type==='forge'){
-    hdBox(2.6,1.2,1.2,HD.stoneDark,[w*.34,1.1,-d*.25],g);
-    hdCyl(.36,.28,1.5,HD.iron,[w*.34,2.15,-d*.25],g,24);
-    const anvil=hdBox(.85,.25,.45,HD.iron,[w*.12,1.05,d*.57],g);anvil.rotation.z=-.08;
-    hdBox(3.0,.12,1.0,HD.timber,[-w*.2,2.35,d*.62],g);
+  // Deeply recessed entrance and windows.
+  hdDoor(g,0,1.56,d*.518,.98);
+  hdWindow(g,-w*.28,2.18,d*.523,.92);hdWindow(g,w*.28,2.18,d*.523,.92);
+  hdWindow(g,-upperW*.27,3.78,upperD*.515,.68);hdWindow(g,upperW*.27,3.78,upperD*.515,.68);
+  hdRoof(g,w+1.05,d+1.15,lowerH+upperH+.34,chapel?HD.roof:HD.roofWarm,chapel?.66:.57);
+  hdChimney(g,w*.25,-d*.18,forge?2.15:chapel?.95:1.65);
+  if(!chapel&&!tower) hdChimney(g,-w*.28,-d*.18,forge?1.9:1.25);
+
+  if(inn){
+    // A generous covered entry gives the inn a recognizable civic silhouette.
+    hdBox(3.25,.22,1.55,HD.timber,[0,1.03,d*.66],g,0,0,0,.07);
+    for(const px of [-1.34,1.34]) hdCyl(.085,.07,1.65,HD.timber,[px,1.02,d*.70],g,24);
+    hdRoof(g,3.55,1.55,2.05,HD.roofWarm,.46);
+    hdBox(2.5,.72,.14,HD.timber,[0,2.76,d*.535],g,0,0,0,.05);
+    hdBox(2.05,.38,.04,HD.warm,[0,2.76,d*.615],g,0,0,0,.02);
   }
-  if(type==='mill'){
-    // Mill wheel with real radial detail rather than the flat placeholder silhouette.
-    const wheel=new THREE.Group();wheel.position.set(w*.62,.9,d*.55);g.add(wheel);
-    const rim=hdCyl(1.35,1.35,.22,HD.timber,[0,0,0],wheel,40);rim.rotation.x=Math.PI/2;
-    for(let i=0;i<12;i++){const a=i*Math.PI/6;const spoke=hdBox(.12,1.15,.10,HD.timber,[Math.cos(a)*.58,Math.sin(a)*.58,.12],wheel,0,0,a);spoke.castShadow=true;}
-    hdCyl(.18,.18,.34,HD.iron,[0,0,.16],wheel,24).rotation.x=Math.PI/2;
+  if(forge){
+    // Forge has a heavier masonry base and a taller chimney mass.
+    hdBox(2.85,1.45,1.35,HD.stoneDark,[w*.34,1.16,-d*.25],g,0,0,0,.12);
+    hdCyl(.39,.29,1.7,HD.iron,[w*.34,2.55,-d*.25],g,28);
+    const anvil=hdBox(.9,.27,.48,HD.iron,[w*.12,1.10,d*.56],g,0,0,-.08,.05);
+    hdBox(3.25,.14,1.05,HD.timber,[-w*.20,2.38,d*.64],g,0,0,0,.05);
   }
-  if(type==='chapel'){
-    hdBox(1.35,4.0,1.35,HD.stone,[0,2.5,d*.42],g);
-    hdRoof(g,1.65,1.8,4.55,HD.roof,.52);
-    hdBox(.72,1.35,.10,HD.glass,[0,2.7,d*.70],g);
+  if(mill){
+    const wheel=new THREE.Group();wheel.position.set(w*.62,.95,d*.55);g.add(wheel);
+    const rim=hdCyl(1.42,1.42,.25,HD.timber,[0,0,0],wheel,48);rim.rotation.x=Math.PI/2;
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;const spoke=hdBox(.13,1.18,.12,HD.timber,[Math.cos(a)*.60,Math.sin(a)*.60,.14],wheel,0,0,a,.035);}
+    hdCyl(.19,.19,.36,HD.iron,[0,0,.17],wheel,28).rotation.x=Math.PI/2;
   }
-  if(type==='watchtower'){
-    // replace generic house shell with a taller timber watch structure
+  if(chapel){
+    hdBox(1.55,4.35,1.55,HD.stone,[0,2.72,d*.43],g,0,0,0,.12);
+    hdRoof(g,1.92,1.95,4.78,HD.roof,.52);
+    hdBox(.76,1.45,.10,HD.glass,[0,2.85,d*.71],g,0,0,0,.025);
+  }
+  if(tower){
+    // Tower is deliberately a vertical landmark, with recessed plaster and heavy timber framing.
     g.clear();
-    hdBox(5.0,.55,5.0,HD.stone,[0,.28,0],g);
-    hdBox(3.9,8.0,3.9,HD.timber,[0,4.25,0],g);
-    hdBox(3.55,7.5,3.55,HD.plaster,[0,4.1,0],g);
-    for(const y of [2.1,4.2,6.3])for(const sx of [-1,1])hdBox(.12,1.7,.14,HD.timber,[sx*1.25,y,1.8],g,0,0,sx*.38);
-    hdRoof(g,5.2,5.2,8.25,HD.roof,.74);
-    hdWindow(g,0,5.1,1.84,1.0);hdWindow(g,0,7.0,1.84,.8);
+    hdBox(5.35,.65,5.35,HD.stone,[0,.33,0],g,0,0,0,.16);
+    hdBox(4.18,7.8,4.18,HD.plaster,[0,4.30,0],g,0,0,0,.14);
+    for(const y of [2.1,4.1,6.1]) for(const sx of [-1,1])
+      hdBox(.15,1.72,.20,HD.timber,[sx*1.34,y,2.03],g,0,0,sx*.40,.04);
+    hdRoof(g,5.65,5.65,8.28,HD.roof,.74);
+    hdWindow(g,0,5.15,2.10,1.02);hdWindow(g,0,7.0,2.10,.82);
   }
   return g;
 }

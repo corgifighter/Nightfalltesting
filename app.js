@@ -44,6 +44,11 @@ window.__HEARTHMERE_READY_STATE={
   firstFrameRendered:false,
   readyAt:0
 };
+const runtimeDiagnostics={errors:[],unhandledRejections:[],contextLost:false,contextRestoreCount:0,visibilityState:document.visibilityState};
+window.__HEARTHMERE_RUNTIME_DIAGNOSTICS=runtimeDiagnostics;
+function recordRuntimeIssue(kind,payload){const entry={time:performance.now(),...payload};runtimeDiagnostics[kind].push(entry);if(runtimeDiagnostics[kind].length>24)runtimeDiagnostics[kind].shift();}
+addEventListener('error',e=>recordRuntimeIssue('errors',{message:e.message||'Unknown runtime error',source:e.filename||'',line:e.lineno||0,column:e.colno||0}));
+addEventListener('unhandledrejection',e=>recordRuntimeIssue('unhandledRejections',{message:e.reason?.message||String(e.reason||'Unknown rejection')}));
 if(captureMode) document.body.dataset.captureMode='true';
 const boot=document.querySelector('#boot');
 const bootProgress=document.querySelector('#boot-progress');
@@ -64,10 +69,13 @@ const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')===
 const gl=renderer.getContext();
 const rendererDiagnostics={
   threeRevision:THREE.REVISION,
+  webgl2:!!renderer.capabilities.isWebGL2,
   webglVersion:String(gl.getParameter(gl.VERSION)||''),
   shadingLanguage:String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)||''),
   vendor:String(gl.getParameter(gl.VENDOR)||''),
   renderer:String(gl.getParameter(gl.RENDERER)||''),
+  maxRenderbufferSize:gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)||0,
+  contextAttributes:renderer.getContextAttributes(),
   maxTextureSize:renderer.capabilities.maxTextureSize,
   maxTextures:renderer.capabilities.maxTextures,
   maxAttributes:renderer.capabilities.maxAttributes,
@@ -108,6 +116,7 @@ const quality={
   ssaoScale:.75,
   level:0,
   frameCount:0,
+  frameSamples:[],
   sampleStarted:performance.now()
 };
 function resizeSSAO(){
@@ -136,14 +145,19 @@ renderer.setClearColor(0x9aaea5,1);
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
 renderer.domElement.style.touchAction='none';
+renderer.domElement.addEventListener('webglcontextcreationerror',event=>{
+  const message=event.statusMessage||'WebGL context creation failed';
+  recordRuntimeIssue('errors',{message,source:'webglcontextcreationerror',line:0,column:0});
+  if(bootStatus) bootStatus.textContent='Graphics initialization failed — reload to retry.';
+});
 renderer.domElement.addEventListener('webglcontextlost',event=>{
   event.preventDefault();
-  window.__HEARTHMERE_CONTEXT_LOST=true;
+  window.__HEARTHMERE_CONTEXT_LOST=true;runtimeDiagnostics.contextLost=true;
+  recordRuntimeIssue('errors',{message:'WebGL context lost',source:'webglcontextlost',line:0,column:0});
   if(bootStatus) bootStatus.textContent='Graphics context lost — waiting for recovery…';
 });
 renderer.domElement.addEventListener('webglcontextrestored',()=>{
-  window.__HEARTHMERE_CONTEXT_LOST=false;
-  location.reload();
+  window.__HEARTHMERE_CONTEXT_LOST=false;runtimeDiagnostics.contextLost=false;runtimeDiagnostics.contextRestoreCount++;location.reload();
 });
 root.appendChild(renderer.domElement);
 
@@ -262,13 +276,19 @@ configureTexture(meadowTexture,[3.8,3.8]);
 // Remote maps are optional enhancement layers; local/procedural materials remain the fallback.
 const cc0Loader=new THREE.TextureLoader();cc0Loader.setCrossOrigin('anonymous');
 const cc0LoadStats={pending:0,loaded:0,failed:0,failedUrls:[]};
+const cc0ReadyPromises=[];
 window.__HEARTHMERE_CC0_LOAD_STATS=cc0LoadStats;
 function loadCC0Map(url,repeat=1,colorSpace=THREE.SRGBColorSpace){
   cc0LoadStats.pending++;
-  const map=cc0Loader.load(url,()=>{configureTexture(map,[repeat,repeat],colorSpace);cc0LoadStats.loaded++;cc0LoadStats.pending--;},undefined,()=>{cc0LoadStats.failed++;cc0LoadStats.failedUrls.push(url);cc0LoadStats.pending--;});
-  configureTexture(map,[repeat,repeat],colorSpace);
-  return map;
+  let settle;cc0ReadyPromises.push(new Promise(resolve=>{settle=resolve}));
+  const map=cc0Loader.load(url,()=>{
+    configureTexture(map,[repeat,repeat],colorSpace);
+    try{renderer.initTexture(map)}catch(err){recordRuntimeIssue('errors',{message:err?.message||String(err),source:'renderer.initTexture',line:0,column:0})}
+    cc0LoadStats.loaded++;cc0LoadStats.pending--;settle();
+  },undefined,()=>{cc0LoadStats.failed++;cc0LoadStats.failedUrls.push(url);cc0LoadStats.pending--;settle()});
+  configureTexture(map,[repeat,repeat],colorSpace);return map;
 }
+async function waitForCC0Textures(){await Promise.all(cc0ReadyPromises);}
 const CC0={
   meadow:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_diff_2k.jpg',
   meadowNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_ground/grass_ground_nor_gl_2k.jpg',
@@ -279,7 +299,7 @@ const CC0={
   stone:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_diff_2k.jpg',
   stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_nor_gl_2k.jpg'
 };
-function applyCC0Materials(){
+async function applyCC0Materials(){
   const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
   const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35,THREE.NoColorSpace);
@@ -288,6 +308,7 @@ function applyCC0Materials(){
   [HD.roof,HD.roofWarm].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.38,.38);m.needsUpdate=true;});
   const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05,THREE.NoColorSpace);
   [HD.stone,HD.stoneDark].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
+  await waitForCC0Textures();
 }
 const MAT={
  grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
@@ -1600,7 +1621,7 @@ const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:TH
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
 let last=performance.now(),time=0;
 const perfStats={
-  frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,
+  frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,lastFrameMs:0,
   drawCalls:0,triangles:0,geometries:0,textures:0,
   visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0,
   qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0
@@ -1705,29 +1726,35 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode) return;
-  quality.frameCount++;
-  if(quality.frameCount<90) return;
-  const elapsed=now-quality.sampleStarted;
-  const avgFrameMs=elapsed/quality.frameCount;
-  quality.frameCount=0;quality.sampleStarted=now;
+  if(captureMode||document.hidden)return;
+  quality.frameSamples.push(perfStats.lastFrameMs);
+  if(quality.frameSamples.length<120)return;
+  const samples=quality.frameSamples.splice(0);
+  const sorted=samples.slice().sort((a,b)=>a-b);
+  const avgFrameMs=samples.reduce((a,b)=>a+b,0)/samples.length;
+  const p95FrameMs=sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))];
   let next=quality.level;
-  if(avgFrameMs>24 && quality.level<3) next=quality.level+1;
-  else if(avgFrameMs<15 && quality.level>0) next=quality.level-1;
+  if(p95FrameMs>28 && quality.level<3) next=quality.level+1;
+  else if(p95FrameMs<18 && avgFrameMs<15 && quality.level>0) next=quality.level-1;
   if(next===quality.level) return;
   quality.level=next;
   quality.pixelRatioCap=[1.55,1.40,1.25,1.10][quality.level];
   quality.ssaoScale=[.75,.70,.64,.58][quality.level];
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
-  const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);
+  const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);resizeSSAO();
   rendererDiagnostics.pixelRatio=pixelRatio;
   rendererDiagnostics.qualityLevel=quality.level;
   rendererDiagnostics.averageFrameMs=avgFrameMs;
+  rendererDiagnostics.p95FrameMs=p95FrameMs;
   rendererDiagnostics.shadowMapSize=sun.shadow.mapSize.x;
 }
-function frame(t){const rawDt=Math.max(0,t-last)/1000;const dt=Math.min(.05,rawDt);last=t;time+=dt;
+function frame(t){
+ if(document.hidden)return;
+ const rawDt=Math.max(0,t-last)/1000;
+ const dt=Math.min(.05,rawDt);
+ last=t;time+=dt;
  if(MAT.water.userData.shader)MAT.water.userData.shader.uniforms.uTime.value=time;
  if(dest&&player){const d=tmpMove.copy(dest).sub(player.position);d.y=0;const len=d.length();if(len<.25){dest=null;player.userData.walking=false;destinationMarker.visible=false}else{d.normalize();const next=tmpNext.copy(player.position).addScaledVector(d,dt*5.5);if(traversable(next.x,next.z)){player.position.copy(next);player.position.y=terrainHeight(next.x,next.z)+.02;player.rotation.y=Math.atan2(d.x,d.z);player.userData.walking=true}else{dest=null;player.userData.walking=false;destinationMarker.visible=false;say('You cannot cross the river here.')}}}
  characters.forEach((g,i)=>{
@@ -1767,7 +1794,10 @@ const currentDrawCalls=renderer.info.render.calls;
 const currentTriangles=renderer.info.render.triangles;
 const frameRendered=currentDrawCalls>0;
 if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;
-const frameMs=rawDt*1000;perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
+const frameMs=rawDt*1000;
+perfStats.lastFrameMs=frameMs;
+perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
+updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
@@ -1782,14 +1812,23 @@ const frameMs=rawDt*1000;perfStats.drawCallsAccum+=currentDrawCalls;perfStats.tr
     sceneBudget:{...sceneBudget},
     textureBudget:{...textureBudget},
     assetFailures:[...assetLoadStats.failedNames],
-    distilledFailures:[...distilledLoadStats.failedKeys]
+    distilledFailures:[...distilledLoadStats.failedKeys],
+    cc0Failures:[...cc0LoadStats.failedUrls],
+    runtimeErrors:runtimeDiagnostics.errors.slice(-8),
+    unhandledRejections:runtimeDiagnostics.unhandledRejections.slice(-8),
+    contextLost:runtimeDiagnostics.contextLost
   };
   renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);
+document.addEventListener('visibilitychange',()=>{
+  runtimeDiagnostics.visibilityState=document.visibilityState;
+  quality.frameSamples.length=0;quality.frameCount=0;quality.sampleStarted=performance.now();last=performance.now();
+});
+window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
-bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.failed===0 && distilledLoadStats.failed===0);
+bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested===assetQueue.length && assetLoadStats.failed===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;
 window.__HEARTHMERE_READY=true;
@@ -1797,4 +1836,4 @@ window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

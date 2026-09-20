@@ -2500,6 +2500,58 @@ function buildMasterArtDirectionPass(){
   const plazaLight=new THREE.PointLight(0xffc27a,2.2,16,.75);plazaLight.position.set(-5,5,-8);scene.add(plazaLight);
   const gateLight=new THREE.PointLight(0xff9c52,1.8,12,.8);gateLight.position.set(-5,4,-31);scene.add(gateLight);
 }
+\n
+// ============================================================================
+// CIVIC ARCHITECTURE PASS — second macro construction layer.
+// Adds a coherent settlement silhouette rather than isolated asset drops.
+// ============================================================================
+function civicTower(x,z,s=1){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);
+  box(2.8*s,5.4*s,2.8*s,MASTER.curb,[0,2.7*s,0],0,g);
+  box(3.25*s,.42*s,3.25*s,MASTER.timberLight,[0,5.2*s,0],0,g);
+  for(let i=0;i<4;i++){const a=i*Math.PI/2;box(.52*s,.72*s,.78*s,MASTER.curb,[Math.cos(a)*1.15*s,5.72*s,Math.sin(a)*1.15*s],a,g);}
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.25*s,2.1*s,6),MASTER.roof);roof.position.y=6.55*s;roof.rotation.y=Math.PI/6;roof.castShadow=true;g.add(roof);
+  masterLamp(x+1.8*s,z-1.8*s,.78);scene.add(g);return g;
+}
+function civicWall(x,z,length,rot=0){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  const seg=Math.max(2,Math.floor(length/3));
+  for(let i=0;i<seg;i++){
+    const px=(i-(seg-1)/2)*3.0;
+    box(2.75,2.4,.55,MASTER.curb,[px,1.2,0],0,g);
+    if(i<seg-1)box(.20,2.65,.72,MASTER.timber,[px+1.45,1.32,0],0,g);
+  }
+  box(length+.35,.20,.72,MASTER.timberLight,[0,2.42,0],0,g);
+  scene.add(g);return g;
+}
+function marketPavilion(x,z,rot=0){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  box(7.6,.24,4.5,MASTER.curb,[0,.18,0],0,g);
+  for(const px of [-3.15,3.15])for(const pz of [-1.65,1.65])cyl(.13,4.2,MASTER.timber,[px,2.1,pz],[],g);
+  box(7.9,.18,4.8,MASTER.timberLight,[0,4.25,0],0,g);
+  const roofL=new THREE.Mesh(new THREE.ConeGeometry(4.9,2.15,4),MASTER.roof);roofL.position.y=5.35;roofL.rotation.y=Math.PI/4;roofL.scale.z=.82;roofL.castShadow=true;g.add(roofL);
+  for(const px of [-2.3,0,2.3]){box(1.7,.12,1.25,MASTER.plaster,[px,2.05,2.32],0,g);box(1.8,.10,1.35,MASTER.banner,[px,3.2,2.32],0,g);}
+  scene.add(g);return g;
+}
+function buildCivicArchitecturePass(){
+  // A compact market pavilion becomes the social heart immediately south of the square.
+  marketPavilion(-5,-18,-.03);
+  // Perimeter construction frames the village without becoming a fortress.
+  civicWall(-39,8,24,Math.PI/2);civicWall(-3,38,62,0);civicWall(27,29,22,Math.PI/2);
+  civicTower(-39,-5,.92);civicTower(-39,28,.86);civicTower(27,28,.84);
+  // Forge and mill receive heavier working-yard silhouettes.
+  civicWall(1,-12,10,.0);civicWall(18,-24,10,.12);
+  // Chapel garden: a low wall and gate make the civic landmark feel placed in a town.
+  civicWall(-12,17,13,.0);
+  masterArch(-12,14,4.4,3.0);
+  // Roofline accents give the core skyline a richer vertical rhythm.
+  for(const [x,z,s] of [[-22,-4,.72],[-23,5,.7],[-20,15,.72],[-8,20,.68],[-1,22,.66],[7,17,.68],[10,-28,.72]]) {
+    const y=terrainHeight(x,z);
+    const cap=new THREE.Mesh(new THREE.ConeGeometry(1.35*s,.95*s,4),MASTER.roof);
+    cap.position.set(x,y+4.15*s,z);cap.rotation.y=Math.PI/4;cap.castShadow=true;scene.add(cap);
+    cyl(.10,.85*s,MASTER.brass,[x,y+4.75*s,z]);
+  }
+}
 \nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -2703,7 +2755,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

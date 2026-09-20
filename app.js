@@ -101,8 +101,20 @@ const grassNormal=tex('./assets/grass_normal.jpg',[27,27]);
 const cobbleNormal=tex('./assets/cobble_normal.jpg',[5.5,5.5]);
 const roofNormal=tex('./assets/roof_normal.jpg',[1.7,1.7]);
 grassNormal.colorSpace=THREE.NoColorSpace;cobbleNormal.colorSpace=THREE.NoColorSpace;roofNormal.colorSpace=THREE.NoColorSpace;
+function makeMeadowTexture(){
+ const c=document.createElement('canvas');c.width=768;c.height=768;const x=c.getContext('2d');
+ x.fillStyle='#263d22';x.fillRect(0,0,c.width,c.height);
+ const grad=x.createRadialGradient(380,350,20,380,350,500);grad.addColorStop(0,'#4f6630');grad.addColorStop(.55,'#3e5929');grad.addColorStop(1,'#243b22');x.fillStyle=grad;x.fillRect(0,0,768,768);
+ let seed=918273;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+ for(let i=0;i<5200;i++){const px=rnd()*768,py=rnd()*768;const r=1+rnd()*7;const palette=['rgba(91,112,45,.18)','rgba(31,55,28,.18)','rgba(133,130,65,.10)','rgba(177,151,79,.06)'];x.fillStyle=palette[i%palette.length];x.beginPath();x.ellipse(px,py,r,r*(.35+rnd()*.9),rnd()*Math.PI,0,Math.PI*2);x.fill();}
+ x.lineCap='round';
+ for(let i=0;i<1900;i++){const px=rnd()*768,py=rnd()*768,h=2+rnd()*9;x.strokeStyle=i%4===0?'rgba(143,151,73,.34)':'rgba(91,125,55,.38)';x.lineWidth=.6+rnd()*1.2;x.beginPath();x.moveTo(px,py);x.lineTo(px+(rnd()-.5)*2,py-h);x.stroke();}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.8,3.8);t.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);return t;
+}
+const meadowTexture=makeMeadowTexture();
+
 const MAT={
- grass:new THREE.MeshStandardMaterial({map:grass,normalMap:grassNormal,normalScale:new THREE.Vector2(.32,.32),roughness:.98}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
+ grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
  water:new THREE.MeshPhysicalMaterial({color:0x176270,roughness:.08,metalness:.04,transmission:.08,clearcoat:1,clearcoatRoughness:.10,transparent:true,opacity:.92}),
  rock:new THREE.MeshStandardMaterial({color:0x5e5a50,roughness:1}),
  foam:new THREE.MeshBasicMaterial({color:0xd6eee9,transparent:true,opacity:.23,depthWrite:false}),
@@ -127,6 +139,20 @@ function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement(
 const tg=new THREE.PlaneGeometry(190,190,112,112);const ta=tg.attributes.position;
 for(let i=0;i<ta.count;i++){const x=ta.getX(i),z=ta.getY(i);let h=Math.sin(x*.075)*.62+Math.cos(z*.082)*.48+Math.sin((x-z)*.035)*.72;h*=Math.max(0,1-Math.abs(x)/112);ta.setZ(i,h)}
 tg.rotateX(-Math.PI/2);tg.computeVertexNormals();addMesh(tg,MAT.grass,[0,0,0],undefined,false);
+
+// Sculpted ground layers: soft meadow clearings and worn earth around the settlement.
+function groundPatch(x,z,w,d,mat,rot=0){
+ const g=new THREE.CircleGeometry(1,64);g.scale(w,d,1);
+ const m=new THREE.Mesh(g,mat);m.rotation.x=-Math.PI/2;m.rotation.z=rot;m.position.set(x,terrainHeight(x,z)+.035,z);m.receiveShadow=true;scene.add(m);return m;
+}
+const earthMat=new THREE.MeshStandardMaterial({color:0x765f43,roughness:1,transparent:true,opacity:.76});
+const meadowMat=new THREE.MeshStandardMaterial({color:0x4e6631,roughness:.98,transparent:true,opacity:.34});
+groundPatch(-13,-8,11,8,earthMat,-.12);groundPatch(-19,-1,8,6,meadowMat,.18);
+groundPatch(-6,-18,12,5.5,earthMat,.06);groundPatch(2,-6,7,4,meadowMat,-.22);
+groundPatch(-14,14,9,5,meadowMat,.15);groundPatch(17,-18,9,6,earthMat,.12);
+groundPatch(-30,22,14,8,meadowMat,-.08);
+
+
 
 // River with a shallow bank lip and moving highlights.
 const river=addMesh(new THREE.PlaneGeometry(27,190,1,16),MAT.water,[31,.05,4],[-Math.PI/2,.02,.08],false);
@@ -375,6 +401,17 @@ const foliage=[];async function buildFoliage(){
 }
 
 // Major world cohesion pass: practical lights and atmospheric depth.
+function buildLandscapeAnchors(){
+  // Smooth, large-form terrain masses make the playable slice feel surrounded by land.
+  const hillMat=new THREE.MeshStandardMaterial({color:0x445941,roughness:1,metalness:0});
+  const ridgeMat=new THREE.MeshStandardMaterial({color:0x354b43,roughness:1,metalness:0,transparent:true,opacity:.92});
+  const hills=[
+    [-72,10,-58,38,12,20],[72,8,-42,42,14,24],[-76,4,30,46,12,28],[72,7,34,40,13,26],
+    [-34,5,70,56,15,24],[36,6,72,58,16,26]
+  ];
+  hills.forEach(([x,y,z,sx,sy,sz])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,64,32),hillMat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;scene.add(m);});
+  const ridge=new THREE.Mesh(new THREE.SphereGeometry(1,64,32),ridgeMat);ridge.position.set(0,9,116);ridge.scale.set(105,22,26);scene.add(ridge);
+}
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);
   fill.intensity=1.15;sun.intensity=4.35;
@@ -1134,7 +1171,7 @@ scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
 controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

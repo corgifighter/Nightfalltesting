@@ -1284,6 +1284,12 @@ async function replaceLegacyVisuals(){
     g.userData.heroMeshes=[];
     g.traverse(o=>{if(o.isMesh&&o.userData.replacementVisual!==true&&o.userData.legacyVisual)o.userData.legacyVisual=true;if(o.isMesh&&o.userData.replacementVisual===true)g.userData.heroMeshes.push(o);});
   });
+  const legacyCharacterRoots=legacy.filter(g=>g.userData.assetName==='hero'||g.userData.assetName==='character');
+  legacyCharacterRoots.forEach(g=>{
+    const stale=[];
+    g.traverse(o=>{if(o.isMesh&&o.userData.legacyVisual)stale.push(o);});
+    stale.forEach(o=>o.removeFromParent());
+  });
   const legacyRoots=legacy.filter(g=>g.userData.assetName!=='hero'&&g.userData.assetName!=='character');
   legacyRoots.forEach(g=>g.removeFromParent());
   const disposeSceneResources=(root)=>{
@@ -1637,7 +1643,7 @@ const birds=[];const birdMat=new THREE.MeshBasicMaterial({color:0x1e2825,side:TH
 for(let i=0;i<5;i++){const b=new THREE.Mesh(new THREE.PlaneGeometry(.7,.22),birdMat);b.position.set(-30+i*11,13+i*.7,15+i*9);b.userData.phase=i*1.7;scene.add(b);birds.push(b)}
 let last=performance.now(),time=0;
 const perfStats={
-  frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,lastFrameMs:0,
+  frames:0,frameMs:0,minFrameMs:Infinity,maxFrameMs:0,lastFrameMs:0,geometryBytes:0,textureBytes:0,programs:0,
   drawCalls:0,triangles:0,geometries:0,textures:0,
   visibleMeshes:0,shadowCasters:0,transparentMeshes:0,lights:0,
   qualityLevel:0,updatedAt:0,drawCallsAccum:0,trianglesAccum:0,
@@ -1771,6 +1777,9 @@ function updatePerformanceStats(now,frameMs){
   perfStats.triangles=Math.round(perfStats.trianglesAccum/perfStats.frames);
   perfStats.geometries=renderer.info.memory.geometries;
   perfStats.textures=renderer.info.memory.textures;
+  perfStats.geometryBytes=renderer.info.memory.attributesSize||0;
+  perfStats.textureBytes=renderer.info.memory.texturesSize||0;
+  perfStats.programs=renderer.info.programs?.length||0;
   collectSceneBudget();
   perfStats.visibleMeshes=sceneBudget.visibleMeshes;
   perfStats.shadowCasters=sceneBudget.shadowCasters;
@@ -1877,7 +1886,8 @@ updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t)
     unhandledRejections:runtimeDiagnostics.unhandledRejections.slice(-8),
     contextLost:runtimeDiagnostics.contextLost,
     shadowPolicy:{...shadowPolicy},
-    staticFrozen:window.__HEARTHMERE_STATIC_FROZEN||0
+    staticFrozen:window.__HEARTHMERE_STATIC_FROZEN||0,
+    gpuMemory:{geometryBytes:renderer.info.memory.attributesSize||0,textureBytes:renderer.info.memory.texturesSize||0,programs:renderer.info.programs?.length||0}
   };
   renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}
 renderer.setAnimationLoop(frame);

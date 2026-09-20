@@ -3299,6 +3299,129 @@ function strengthenMaterialGrounding(){
   });
   window.__HEARTHMERE_MATERIAL_GROUNDING={version:1,materials:installed};
 }
+/* GRAPHICS PASS 6 — world-material integration and authored terrain transitions.
+   This is a macro-readability pass: it strengthens the relationships between
+   paths, meadow, river, structures and vegetation without enlarging the map.
+*/
+function buildWorldMaterialIntegrationPass(){
+  if(window.__HEARTHMERE_WORLD_MATERIAL_INTEGRATION?.version===1)return;
+  const root=new THREE.Group();
+  root.name='WorldMaterialIntegration';
+  scene.add(root);
+
+  // Road-to-meadow transition: irregular shoulder stones and dark soil pockets
+  // soften the hard ribbon boundary while preserving the readable road silhouette.
+  const shoulderGeo=new THREE.DodecahedronGeometry(.15,0);
+  const shoulderMat=new THREE.MeshPhysicalMaterial({
+    color:0x766b57,roughness:.98,metalness:0,sheen:.06
+  });
+  const shoulders=new THREE.InstancedMesh(shoulderGeo,shoulderMat,240);
+  shoulders.name='RoadShoulderStones';
+  const dummy=new THREE.Object3D();
+  let count=0;
+  const roadSegments=[
+    [0,7,11.5,120,0],[-13,-1,50,7.5,0],[17,7,8,65,.18],[23,6,24,6.2,.02]
+  ];
+  for(const [cx,cz,w,d,rot] of roadSegments){
+    const c=Math.min(54,Math.max(12,Math.round(d*.55)));
+    for(let i=0;i<c && count<240;i++){
+      const t=(i+.37)/c-.5;
+      const side=i%2?-1:1;
+      const edge=w*.5+.38+(i%4)*.17;
+      const along=t*d;
+      const localX=side*edge,localZ=along;
+      const cs=Math.cos(rot),sn=Math.sin(rot);
+      const x=cx+localX*cs-localZ*sn;
+      const z=cz+localX*sn+localZ*cs;
+      const y=terrainHeight(x,z);
+      dummy.position.set(x,y+.10,z);
+      dummy.rotation.set(worldRandom()*.55,worldRandom()*Math.PI*2,worldRandom()*.55);
+      const sc=.62+worldRandom()*.95;
+      dummy.scale.set(sc,sc*(.55+worldRandom()*.45),sc*(.72+worldRandom()*.45));
+      dummy.updateMatrix();shoulders.setMatrixAt(count++,dummy.matrix);
+    }
+  }
+  shoulders.count=count;shoulders.instanceMatrix.needsUpdate=true;root.add(shoulders);
+
+  // Moisture language at the river: darker stones, low vegetation and a subtle
+  // wetness response make the water corridor grow out of the terrain.
+  const wetMat=new THREE.MeshPhysicalMaterial({
+    color:0x56685c,roughness:.72,metalness:0,clearcoat:.16,clearcoatRoughness:.38
+  });
+  const wetStones=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(.19,1),wetMat,150);
+  wetStones.name='RiverWetBankStones';
+  count=0;
+  for(let i=0;i<430 && count<150;i++){
+    const z=-51+worldRandom()*112;
+    const side=i%2?-1:1;
+    const x=NAV.river.centerX+side*(NAV.river.halfWidth*.72+worldRandom()*3.4);
+    if(Math.abs(z-7)<8)continue;
+    const y=terrainHeight(x,z);
+    dummy.position.set(x,y+.13,z);
+    dummy.rotation.set(worldRandom(),worldRandom(),worldRandom());
+    const sc=.55+worldRandom()*1.05;
+    dummy.scale.set(sc,sc*(.42+worldRandom()*.46),sc*(.75+worldRandom()*.55));
+    dummy.updateMatrix();wetStones.setMatrixAt(count++,dummy.matrix);
+  }
+  wetStones.count=count;wetStones.instanceMatrix.needsUpdate=true;root.add(wetStones);
+
+  // Building contact collars: low irregular stone courses stop buildings from
+  // appearing pasted onto the meadow. These are intentionally broad rather than
+  // tiny trim pieces.
+  const foundationMat=new THREE.MeshPhysicalMaterial({
+    color:0x68665f,roughness:.96,metalness:0,sheen:.05
+  });
+  const foundationGeo=new THREE.BoxGeometry(1,1,1);
+  let collars=0;
+  const buildingNames=/Inn|Forge|Chapel|Mill|Watchtower|cottage_/i;
+  scene.traverse(obj=>{
+    if(!obj.isGroup||!buildingNames.test(obj.name||''))return;
+    if(obj.userData.worldMaterialCollar)return;
+    const box3=new THREE.Box3().setFromObject(obj);
+    if(!isFinite(box3.min.x)||box3.isEmpty())return;
+    const sx=Math.min(9,Math.max(2.2,(box3.max.x-box3.min.x)*.78));
+    const sz=Math.min(9,Math.max(2.0,(box3.max.z-box3.min.z)*.78));
+    const cx=(box3.min.x+box3.max.x)*.5,cz=(box3.min.z+box3.max.z)*.5;
+    const y=terrainHeight(cx,cz)+.045;
+    const collar=new THREE.Mesh(foundationGeo,foundationMat.clone());
+    collar.name='FoundationCollar';
+    collar.scale.set(sx,.12,sz);
+    collar.position.set(cx,y,cz);
+    collar.rotation.y=obj.rotation.y||0;
+    collar.receiveShadow=true;
+    root.add(collar);
+    obj.userData.worldMaterialCollar=true;
+    collars++;
+  });
+
+  // Controlled authored variation keeps repeated timber/stone assets from reading
+  // as exact duplicates. Variation is material-level, not geometry noise.
+  let varied=0;
+  const seen=new Set();
+  scene.traverse(obj=>{
+    if(!obj.isMesh||obj===sky||obj===sunDisc)return;
+    const name=((obj.name||'')+' '+(obj.userData?.assetName||'')).toLowerCase();
+    if(!/cottage|inn|forge|chapel|mill|watchtower|timber|plaster|roof|stone|wall/.test(name))return;
+    const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+    mats.forEach((mat,mi)=>{
+      if(!mat?.color||seen.has(mat.uuid))return;
+      seen.add(mat.uuid);
+      const seed=(obj.id*17+mi*31)%9;
+      const lift=1+(seed-4)*.012;
+      mat.color.multiplyScalar(lift);
+      if(/roof/.test(name))mat.roughness=Math.min(1,Math.max(.72,(mat.roughness??.82)+(seed%3)*.018));
+      if(/stone|wall/.test(name))mat.roughness=Math.min(1,Math.max(.82,(mat.roughness??.9)+(seed%4)*.012));
+      varied++;
+    });
+  });
+
+  window.__HEARTHMERE_WORLD_MATERIAL_INTEGRATION={
+    version:1,roadShoulderStones:shoulders.count,riverWetBankStones:wetStones.count,
+    foundationCollars:collars,variedMaterials:varied
+  };
+}
+
+
 function buildGroundIntegrationPass(){
   if(window.__HEARTHMERE_GROUND_INTEGRATION?.version===1)return;
   const rootGroup=new THREE.Group();
@@ -3415,7 +3538,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildGroundIntegrationPass();strengthenMaterialGrounding();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

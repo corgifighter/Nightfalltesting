@@ -321,12 +321,7 @@ const MAT={
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='varying vec3 vWorldPos;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;\\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;
- vec3 soil=vec3(.24,.20,.13);
- vec3 richMeadow=vec3(.20,.34,.13);
- vec3 meadowBright=vec3(.32,.46,.19);
- natural=mix(soil,richMeadow,smoothstep(-.4,.55,biome));
- natural=mix(natural,meadowBright,smoothstep(.55,1.0,biome));
+ shader.fragmentShader='varying vec3 vWorldPos;\\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;\\n vec3 soil=vec3(.24,.20,.13);\\n vec3 richMeadow=vec3(.20,.34,.13);\\n vec3 meadowBright=vec3(.32,.46,.19);\\n natural=mix(soil,richMeadow,smoothstep(-.4,.55,biome));\\n natural=mix(natural,meadowBright,smoothstep(.55,1.0,biome));\\n diffuseColor.rgb=mix(diffuseColor.rgb,natural,.66);");
  diffuseColor.rgb=mix(diffuseColor.rgb,natural,.66);");
  MAT.grass.userData.shader=shader;
 };

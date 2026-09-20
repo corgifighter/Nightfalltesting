@@ -722,7 +722,7 @@ const motes=[];const moteMat=new THREE.SpriteMaterial({color:0xf1d9a0,transparen
 for(let i=0;i<70;i++){const sp=new THREE.Sprite(moteMat.clone());sp.position.set(-45+Math.random()*90,1+Math.random()*9,-40+Math.random()*90);sp.scale.setScalar(.035+Math.random()*.055);sp.userData.phase=Math.random()*6.28;scene.add(sp);motes.push(sp)}
 
 // Minimap
-const mini=document.createElement('canvas');mini.width=220;mini.height=160;mini.style.cssText='position:fixed;right:18px;top:95px;width:220px;height:160px;border:1px solid rgba(228,200,120,.24);border-radius:12px;background:rgba(9,14,13,.72);box-shadow:0 12px 35px #0008;backdrop-filter:blur(8px);pointer-events:none';document.body.appendChild(mini);const mx=mini.getContext('2d');
+const mini=document.createElement('canvas');mini.id='minimap';mini.width=220;mini.height=160;mini.style.cssText='position:fixed;right:18px;top:95px;width:220px;height:160px;border:1px solid rgba(228,200,120,.24);border-radius:12px;background:rgba(9,14,13,.72);box-shadow:0 12px 35px #0008;backdrop-filter:blur(8px);pointer-events:none';document.body.appendChild(mini);const mx=mini.getContext('2d');
 function minimap(){mx.clearRect(0,0,220,160);mx.fillStyle='#15201d';mx.fillRect(0,0,220,160);mx.strokeStyle='#28757b';mx.lineWidth=20;mx.beginPath();mx.moveTo(170,0);mx.lineTo(150,160);mx.stroke();mx.strokeStyle='#79664e';mx.lineWidth=9;mx.beginPath();mx.moveTo(110,160);mx.lineTo(110,0);mx.stroke();mx.fillStyle='#8a755b';for(const p of [[62,35],[155,55],[55,100],[155,119],[112,24]])mx.fillRect(p[0],p[1],22,15);if(player){mx.fillStyle='#e4c878';mx.beginPath();mx.arc(110+(player.position.x/80)*70,80+(player.position.z/80)*65,4.5,0,Math.PI*2);mx.fill()}}
 
 // Gameplay layer: small, tactile gathering loop and quest progression.
@@ -758,6 +758,9 @@ function say(s){toast.textContent=s;toast.classList.add('show');clearTimeout(say
 function pick(e){mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactables,true);if(hits.length){let o=hits[0].object;while(o&&!o.userData.interaction)o=o.parent;if(o){say(`${o.userData.interaction.name} — ${o.userData.interaction.msg}`);if(o.userData.interaction.action)o.userData.interaction.action();return}}const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),p=new THREE.Vector3();if(ray.ray.intersectPlane(plane,p)){p.x=THREE.MathUtils.clamp(p.x,-52,55);p.z=THREE.MathUtils.clamp(p.z,-58,64);if(!traversable(p.x,p.z)){say('The river is too deep here. Cross at the stone bridge.');return}dest=p.clone();destinationMarker.position.set(p.x,.2,p.z);destinationMarker.visible=true}}
 renderer.domElement.addEventListener('pointerdown',pick);
 cinematic.addEventListener('click',()=>{cinematicMode=!cinematicMode;document.body.classList.toggle('cinematic',cinematicMode);cinematic.textContent=cinematicMode?'RETURN':'CINEMATIC';say(cinematicMode?'Cinematic world view':'Interactive world view')});
+const hudMenu=document.querySelector('#hud-menu');
+const inventoryPanel=document.querySelector('.panel');
+hudMenu?.addEventListener('click',()=>{const open=inventoryPanel.classList.toggle('mobile-open');hudMenu.textContent=open?'CLOSE':'MENU';});
 addEventListener('keydown',e=>{if(e.key==='Escape'){dest=null;destinationMarker.visible=false;cinematicMode=false;document.body.classList.remove('cinematic');cinematic.textContent='CINEMATIC'}if(e.key.toLowerCase()==='m')say('Map — Ashenvale Crossing')});
 
 // Living atmosphere: soft smoke columns and distant birds keep the scene from feeling static.

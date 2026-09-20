@@ -29,20 +29,23 @@ const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
 camera.position.set(27,18,25);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
+renderer.info.autoReset=true;
 renderer.setSize(innerWidth,innerHeight);
 const composer=new EffectComposer(renderer);
 const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
+// Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
+// rather than having the occlusion pass darken already-bloomed pixels.
 const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.10,.42,.86);
-composer.addPass(bloomPass);
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
-ssaoPass.kernelRadius=7;
-ssaoPass.minDistance=.0015;
-ssaoPass.maxDistance=.085;
+ssaoPass.kernelRadius=10;
+ssaoPass.minDistance=.0012;
+ssaoPass.maxDistance=.14;
 ssaoPass.output='Default';
 composer.addPass(ssaoPass);
+composer.addPass(bloomPass);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -61,7 +64,7 @@ controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;contro
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.12);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffd8ad,3.35);sun.position.set(-58,86,42);sun.castShadow=true;
-sun.shadow.mapSize.set(3072,3072);sun.shadow.camera.left=-78;sun.shadow.camera.right=78;sun.shadow.camera.top=78;sun.shadow.camera.bottom=-78;sun.shadow.bias=-.00012;sun.shadow.normalBias=.025;scene.add(sun);
+sun.shadow.mapSize.set(3072,3072);sun.shadow.camera.left=-62;sun.shadow.camera.right=62;sun.shadow.camera.top=62;sun.shadow.camera.bottom=-62;sun.shadow.bias=-.00008;sun.shadow.normalBias=.018;scene.add(sun);
 const fill=new THREE.DirectionalLight(0x89afc2,.82);fill.position.set(45,34,-55);scene.add(fill);
 const moon=new THREE.DirectionalLight(0x6682aa,.14);moon.position.set(30,50,-45);scene.add(moon);
 

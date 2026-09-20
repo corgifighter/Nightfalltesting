@@ -390,42 +390,98 @@ groundPatch(-30,22,14,8,meadowMat,-.08);
 
 
 
-// River with a shallow bank lip and moving highlights.
-const river=addMesh(new THREE.PlaneGeometry(27,190,1,16),MAT.water,[31,.05,4],[-Math.PI/2,.02,.08],false);
-const riverGlow=addMesh(new THREE.PlaneGeometry(26.2,188,1,1),new THREE.MeshBasicMaterial({color:0x2a8990,transparent:true,opacity:.10,depthWrite:false}),[31,.08,4],[-Math.PI/2,.02,.08],false);
-const bankMat=new THREE.MeshStandardMaterial({color:0x4e553e,roughness:1});
-addMesh(new THREE.PlaneGeometry(4.5,188,1,8),bankMat,[16.9,.16,4],[-Math.PI/2,.02,.08],false);
-addMesh(new THREE.PlaneGeometry(4.5,188,1,8),bankMat,[45.1,.16,4],[-Math.PI/2,.02,.08],false);
-const bankSoil=new THREE.MeshStandardMaterial({color:0x5b503e,roughness:.98});
-for(const side of [-1,1])for(let i=0;i<26;i++){
-  const z=-50+i*3.8,x=31+side*(13.0+Math.sin(i*1.73)*.9);
-  const patch=new THREE.Mesh(new THREE.CircleGeometry(.95+(i%4)*.22,18),bankSoil);
-  patch.scale.set(1.45,.72,1);patch.rotation.x=-Math.PI/2;patch.rotation.z=i*.37;
-  patch.position.set(x,.19,z);patch.receiveShadow=true;scene.add(patch);
+// ============================================================================
+// DEEP RIVER RECONSTRUCTION — WATERWAY AS LANDSCAPE
+// The river is no longer a rectangular blue strip. Its centerline, width, banks,
+// wet soil and vegetation are all authored from one shared path field.
+// ============================================================================
+function riverCenterX(z){
+  return 31+Math.sin(z*.058)*1.75+Math.sin(z*.17+1.4)*.48;
 }
-const foam=[];for(let i=0;i<34;i++){const r=addMesh(new THREE.RingGeometry(.18,.34,12),MAT.foam,[27.3+Math.sin(i*1.7)*3.8,.22,-49+i*3.2],[-Math.PI/2,0,0],false);r.scale.set(1.5,.55,1);foam.push(r)}
-// Irregular shoreline highlights visually connect the river to its banks.
-const shorelineGlints=[];for(let i=0;i<46;i++){const z=-50+i*2.35;const side=i%2?-1:1;const x=31+side*(11.9+Math.sin(i*2.7)*.75);const g=addMesh(new THREE.PlaneGeometry(.7+.35*(i%3),.18),MAT.foam,[x,.22,z],[-Math.PI/2,0,(i%2)*.18],false);shorelineGlints.push(g)}
-// River-edge transition detail: irregular wet soil, exposed stones, and reed clumps break the straight shoreline.
-const wetBankMat=new THREE.MeshStandardMaterial({color:0x514b3d,roughness:.96});
-const reedMat=new THREE.MeshStandardMaterial({color:0x536447,roughness:1});
-for(let i=0;i<54;i++){
-  const z=-51+i*1.92;
-  const side=i%2?-1:1;
-  const wav=Math.sin(i*1.91)*.72+Math.sin(i*.43)*.38;
-  const edgeX=31+side*(11.65+wav);
-  const mud=addMesh(new THREE.PlaneGeometry(.75+(i%4)*.18,.55+(i%3)*.14),wetBankMat,[edgeX+side*.34,.205,z],[-Math.PI/2,0,(i%5)*.23],false);
-  mud.rotation.z+=(side<0?0:Math.PI);
-  if(i%2===0){
-    const stone=rockMesh(.16+(i%3)*.055);
-    stone.position.set(edgeX+side*(.55+(i%3)*.12),.28,z+.32*Math.sin(i));
-    stone.scale.y=.55;stone.rotation.y=i*.61;scene.add(stone);
-  }
-  if(i%5===0){
-    for(let r=0;r<3;r++){
-      const reed=box(.035,.55+(r%2)*.18,.035,reedMat,[edgeX+side*(.15+r*.10),.48,z+r*.12],(r-1)*.12);
-      reed.rotation.z=(r-1)*.12;reed.castShadow=false;
+function riverHalfWidth(z){
+  return 13.2+Math.sin(z*.043-.7)*1.05+Math.sin(z*.11)*.42;
+}
+function riverRibbonGeometry(depth=0,edgeInset=0,segments=96){
+  const verts=[],indices=[];
+  for(let j=0;j<=segments;j++){
+    const t=j/segments,z=-55+t*120;
+    const cx=riverCenterX(z),hw=Math.max(4,riverHalfWidth(z)-edgeInset);
+    for(let i=0;i<=4;i++){
+      const across=(i/4*2-1)*hw;
+      const x=cx+across;
+      const bankBlend=Math.abs(across)/hw;
+      const y=depth+Math.sin(z*.17+across*.08)*.012+bankBlend*.025;
+      verts.push(x,y,z);
     }
+  }
+  for(let j=0;j<segments;j++)for(let i=0;i<4;i++){
+    const a=j*5+i,b=a+1,c=a+5,d=c+1;indices.push(a,c,b,b,c,d);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();return geo;
+}
+function riverBankRibbon(side,segments=96){
+  const verts=[],indices=[];
+  for(let j=0;j<=segments;j++){
+    const t=j/segments,z=-55+t*120,cx=riverCenterX(z),hw=riverHalfWidth(z);
+    const inner=cx+side*hw,outer=cx+side*(hw+4.6+Math.sin(z*.09+side)*.55);
+    verts.push(inner,.10,z,outer,macroTerrainHeight(outer,z)+.055,z);
+  }
+  for(let j=0;j<segments;j++){
+    const a=j*2,b=a+1,c=a+2,d=c+2;indices.push(a,c,b,b,c,d);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(indices);geo.computeVertexNormals();geo.computeBoundingSphere();return geo;
+}
+const river=addMesh(riverRibbonGeometry(.055,.25),MAT.water,[0,0,0],undefined,false);
+river.userData.waterway=true;
+const riverGlowMat=new THREE.MeshBasicMaterial({color:0x3aa5a5,transparent:true,opacity:.12,depthWrite:false});
+const riverGlow=addMesh(riverRibbonGeometry(.09,1.05),riverGlowMat,[0,0,0],undefined,false);
+const bankMat=new THREE.MeshStandardMaterial({color:0x4d5942,roughness:.98});
+for(const side of [-1,1]){
+  const bank=addMesh(riverBankRibbon(side),bankMat,[0,0,0],undefined,false);
+  bank.userData.riverBank=true;
+}
+const bankSoil=new THREE.MeshStandardMaterial({color:0x5b4b37,roughness:1});
+const wetBankMat=new THREE.MeshStandardMaterial({color:0x413d31,roughness:.98});
+const riverStones=[];
+for(let i=0;i<74;i++){
+  const z=-53+worldRandom()*116,side=i%2?-1:1,cx=riverCenterX(z),hw=riverHalfWidth(z);
+  const x=cx+side*(hw+.35+worldRandom()*3.2);
+  const y=macroTerrainHeight(x,z);
+  const mud=new THREE.Mesh(new THREE.CircleGeometry(.55+worldRandom()*.72,20),wetBankMat);
+  mud.scale.set(1.5+worldRandom()*.8,.72,1);mud.rotation.x=-Math.PI/2;mud.rotation.z=worldRandom()*Math.PI;
+  mud.position.set(x,y+.065,z);mud.receiveShadow=true;scene.add(mud);
+  if(i%2===0){
+    const stone=rockMesh(.18+worldRandom()*.30);
+    stone.position.set(x-side*(.35+worldRandom()*.55),Math.max(.12,macroTerrainHeight(x,z)+.10),z+(.2+worldRandom()*.65)*(i%3?-1:1));
+    stone.scale.y=.52+worldRandom()*.42;scene.add(stone);riverStones.push(stone);
+  }
+}
+const foam=[];
+for(let i=0;i<54;i++){
+  const z=-52+i*2.05,side=i%2?-1:1,cx=riverCenterX(z),hw=riverHalfWidth(z);
+  const x=cx+side*(hw-.55+Math.sin(i*1.8)*.45);
+  const r=addMesh(new THREE.RingGeometry(.15,.30,14),MAT.foam,[x,.16,z],[-Math.PI/2,0,worldRandom()*Math.PI],false);
+  r.scale.set(1.8+worldRandom()*.8,.5+worldRandom()*.3,1);foam.push(r);
+}
+const shorelineGlints=[];
+for(let i=0;i<66;i++){
+  const z=-53+i*1.82,side=i%2?-1:1,cx=riverCenterX(z),hw=riverHalfWidth(z);
+  const x=cx+side*(hw-.28+Math.sin(i*2.7)*.42);
+  const g=addMesh(new THREE.PlaneGeometry(.55+worldRandom()*.5,.12+worldRandom()*.16),MAT.foam,[x,.18,z],[-Math.PI/2,0,worldRandom()*Math.PI],false);
+  shorelineGlints.push(g);
+}
+const reedMat=new THREE.MeshStandardMaterial({color:0x4f6747,roughness:1});
+for(let i=0;i<32;i++){
+  const z=-48+worldRandom()*105,side=i%2?-1:1,cx=riverCenterX(z),hw=riverHalfWidth(z);
+  const x=cx+side*(hw+.10+worldRandom()*1.4);
+  const y=macroTerrainHeight(x,z);
+  for(let r=0;r<4;r++){
+    const reed=box(.025,.65+worldRandom()*.75,.025,reedMat,[x+(worldRandom()-.5)*.45,y+.38,z+(worldRandom()-.5)*.45],[(worldRandom()-.5)*.35]);
+    reed.rotation.z=(worldRandom()-.5)*.24;reed.castShadow=false;
   }
 }
 

@@ -3275,6 +3275,30 @@ window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='page
    footprint or relying on hundreds of unique meshes. This pass uses instancing,
    hero-camera-biased placement, and material variation instead of micro-geometry.
 */
+
+/* GRAPHICS PASS 5 — material grounding. */
+function strengthenMaterialGrounding(){
+  let installed=0;
+  scene.traverse(obj=>{
+    if(!obj.isMesh||obj===sky||obj===sunDisc||obj.userData?.noFoundationShader)return;
+    const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+    mats.forEach(mat=>{
+      if(!mat || !(mat.isMeshStandardMaterial||mat.isMeshPhysicalMaterial))return;
+      if(mat.userData.groundingPassInstalled)return;
+      const prior=mat.onBeforeCompile;
+      mat.onBeforeCompile=(shader,renderer)=>{
+        if(prior)prior(shader,renderer);
+        shader.vertexShader='varying vec3 vGroundingWorld;\\n'+
+          shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vGroundingWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+        shader.fragmentShader='varying vec3 vGroundingWorld;\\n'+
+          shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\\n float groundBand=1.0-smoothstep(-.10,.72,vGroundingWorld.y);\\n float groundNoise=sin(vGroundingWorld.x*.83+vGroundingWorld.z*.61)*.5+.5;\\n diffuseColor.rgb*=1.0-groundBand*(.035+groundNoise*.028);');
+      };
+      mat.userData.groundingPassInstalled=true;
+      mat.needsUpdate=true;installed++;
+    });
+  });
+  window.__HEARTHMERE_MATERIAL_GROUNDING={version:1,materials:installed};
+}
 function buildGroundIntegrationPass(){
   if(window.__HEARTHMERE_GROUND_INTEGRATION?.version===1)return;
   const rootGroup=new THREE.Group();
@@ -3379,8 +3403,7 @@ function buildGroundIntegrationPass(){
     if(nearOccupied(x,z)||worldRandom()<.68)continue;
     const y=terrainHeight(x,z);
     dummy.position.set(x,y+.10,z);dummy.rotation.set(worldRandom(),worldRandom(),worldRandom());
-    const scale=.45+worldRandom()*1.05;
-    dummy.scale.set(scale,scale*(.45+worldRandom()*.55),scale);
+    const scale=.45+wobuildGroundIntegrationPass();strengthenMaterialGrounding();cale.set(scale,scale*(.45+worldRandom()*.55),scale);
     dummy.updateMatrix();stones.setMatrixAt(count++,dummy.matrix);
   }
   stones.count=count;stones.instanceMatrix.needsUpdate=true;rootGroup.add(stones);

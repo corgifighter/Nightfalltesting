@@ -2789,8 +2789,8 @@ function foundationPhysicalizeFoliageMaterial(mat,phase=0){
   physical.onBeforeCompile=(shader,renderer)=>{
     if(prior)prior(shader,renderer);
     shader.uniforms.uLeafPhase={value:phase};
-    shader.vertexShader='uniform float uLeafPhase;varying vec3 vLeafWorld;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vLeafWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
-    shader.fragmentShader='varying vec3 vLeafWorld;\\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\\n float leafBreak=sin(vLeafWorld.x*1.9+vLeafWorld.z*1.37+uLeafPhase)*sin(vLeafWorld.z*.73-vLeafWorld.x*.41+uLeafPhase*.71); diffuseColor.rgb*=1.0+leafBreak*.028; float backLight=pow(max(dot(normalize(vNormal),normalize(vec3(-.52,.74,.42))),0.0),2.2); diffuseColor.rgb+=vec3(.055,.075,.038)*backLight;');
+    shader.vertexShader='uniform float uLeafPhase;varying vec3 vLeafWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vLeafWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vLeafWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float leafBreak=sin(vLeafWorld.x*1.9+vLeafWorld.z*1.37+uLeafPhase)*sin(vLeafWorld.z*.73-vLeafWorld.x*.41+uLeafPhase*.71); diffuseColor.rgb*=1.0+leafBreak*.028; float backLight=pow(max(dot(normalize(vNormal),normalize(vec3(-.52,.74,.42))),0.0),2.2); diffuseColor.rgb+=vec3(.055,.075,.038)*backLight;');
   };
   physical.needsUpdate=true;
   physical.userData.foliagePhase=phase;

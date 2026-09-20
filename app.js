@@ -13,9 +13,15 @@ const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
 let captureRequested=false;
-function captureRealFrame(){captureRequested=true;}
+function captureRealFrame(){
+  const url=new URL('./capture.html',location.href);
+  url.searchParams.set('capture','1');
+  const win=window.open(url.href,'_blank','noopener');
+  if(!win) location.href=url.href;
+}
 const autoCapture=new URLSearchParams(location.search).get('capture')==='1';
 let autoCaptureArmed=autoCapture;
+if(captureMode) document.body.dataset.captureMode='true';
 const boot=document.querySelector('#boot');
 const bootProgress=document.querySelector('#boot-progress');
 const bootStatus=document.querySelector('#boot-status');
@@ -1259,6 +1265,7 @@ function traversable(x,z){const riverBlocked=Math.abs(x-31)<13.4;const bridge=Ma
 function say(s){toast.textContent=s;toast.classList.add('show');clearTimeout(say.t);say.t=setTimeout(()=>toast.classList.remove('show'),2600)}
 function pick(e){mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactables,true);if(hits.length){let o=hits[0].object;while(o&&!o.userData.interaction)o=o.parent;if(o){say(`${o.userData.interaction.name} — ${o.userData.interaction.msg}`);if(o.userData.interaction.action)o.userData.interaction.action();return}}const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),p=new THREE.Vector3();if(ray.ray.intersectPlane(plane,p)){p.x=THREE.MathUtils.clamp(p.x,-52,55);p.z=THREE.MathUtils.clamp(p.z,-58,64);if(!traversable(p.x,p.z)){say('The river is too deep here. Cross at the stone bridge.');return}dest=p.clone();destinationMarker.position.set(p.x,.2,p.z);destinationMarker.visible=true}}
 renderer.domElement.addEventListener('pointerdown',pick);
+captureButton?.addEventListener('click',captureRealFrame);
 cinematic.addEventListener('click',()=>{cinematicMode=!cinematicMode;document.body.classList.toggle('cinematic',cinematicMode);cinematic.textContent=cinematicMode?'RETURN':'CINEMATIC';say(cinematicMode?'Cinematic world view':'Interactive world view')});
 const hudMenu=document.querySelector('#hud-menu');
 const inventoryPanel=document.querySelector('.panel');

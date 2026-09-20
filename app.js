@@ -1088,7 +1088,8 @@ const HD={
 HD.leaf=new THREE.MeshPhysicalMaterial({color:0x3f7044,roughness:.88,metalness:0,clearcoat:.08,clearcoatRoughness:.72,sheen:.12,sheenColor:new THREE.Color(0x7eaa72),sheenRoughness:.72});
 HD.leafLight=new THREE.MeshPhysicalMaterial({color:0x679052,roughness:.86,metalness:0,clearcoat:.06,clearcoatRoughness:.74,sheen:.14,sheenColor:new THREE.Color(0xa4c28e),sheenRoughness:.70});
 HD.trunk=new THREE.MeshPhysicalMaterial({color:0x4a3323,roughness:.91,metalness:0,clearcoat:.04,clearcoatRoughness:.82});
-\nfunction addSurfaceVariation(mat,seed=1,contrast=.12){
+
+function addSurfaceVariation(mat,seed=1,contrast=.12){
   mat.onBeforeCompile=(shader)=>{
     shader.vertexShader='varying vec3 vSurfaceWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSurfaceWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
     shader.fragmentShader='varying vec3 vSurfaceWorld;\n'+shader.fragmentShader

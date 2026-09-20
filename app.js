@@ -35,8 +35,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
 scene.fog=new THREE.FogExp2(0x66776f,.00134);
 
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
-camera.position.set(27,18,25);
+const camera=new THREE.PerspectiveCamera(47,innerWidth/innerHeight,.08,1800);
+camera.position.set(24,15.2,22);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
@@ -129,7 +129,7 @@ root.appendChild(renderer.domElement);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;controls.maxPolarAngle=1.20;controls.rotateSpeed=.24;
+controls.minDistance=7.5;controls.maxDistance=56;controls.minPolarAngle=.46;controls.maxPolarAngle=1.16;controls.rotateSpeed=.24;
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.86);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
@@ -1638,7 +1638,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   controls.target.lerp(tmpTarget,.11);
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
-  if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
+  if(!camera.userData.followInit){camera.position.set(controls.target.x+24,15.2,controls.target.z+22);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();composer.render();const frameRendered=renderer.info.render.calls>0;const frameMs=rawDt*1000;perfStats.drawCallsAccum+=renderer.info.render.calls;perfStats.trianglesAccum+=renderer.info.render.triangles;updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}}

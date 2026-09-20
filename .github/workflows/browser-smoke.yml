@@ -73,6 +73,7 @@ jobs:
             const resourceSnapshot = await page.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /app\\.js|three|postprocessing|shader/i.test(n)).slice(-80));
             const appProbe = await page.request.get(new URL('app.js?build=52', page.url()).href).then(async res => ({ status: res.status(), contentType: res.headers()['content-type'] || '', length: (await res.body()).length })).catch(e => ({ error: String(e) }));
             const moduleProbe = await page.evaluate(async () => { try { await import('./app.js?module-probe=' + Date.now()); return { ok:true }; } catch(e) { return { ok:false, name:e?.name, message:e?.message, stack:e?.stack || '' }; } });
+            const strippedProbe = await page.evaluate(async () => { try { const src=await (await fetch('./app.js?stripped-probe='+Date.now())).text(); const stripped=src.replace(/^import[^;]+;\s*/gm,''); const blob=new Blob([stripped],{type:'text/javascript'}); const u=URL.createObjectURL(blob); try{await import(u+'#probe');return {ok:true}}finally{URL.revokeObjectURL(u)}} catch(e){return {ok:false,name:e?.name,message:e?.message,stack:e?.stack||''}} });
             const dependencyProbe = await page.evaluate(async () => { const urls=['https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/controls/OrbitControls.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/EffectComposer.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js']; const out=[]; for(const u of urls){try{await import(u);out.push({u,ok:true})}catch(e){out.push({u,ok:false,name:e?.name,message:e?.message})}} return out; });
             let canvasData = null;
             if (canvasCount) {
@@ -86,7 +87,7 @@ jobs:
             }));
             require('fs').writeFileSync(
               'hearthmere-browser-check.txt',
-              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe, dependencyProbe }, null, 2)
+              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe, dependencyProbe, strippedProbe }, null, 2)
             );
             console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe, moduleProbe, dependencyProbe }, null, 2));
             if (canvasCount < 1) {

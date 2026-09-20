@@ -22,6 +22,9 @@ jobs:
         with:
           ref: main
 
+      - name: Parse runtime JavaScript before browser launch
+        run: node --check app.js
+
       - name: Render the live GitHub Pages game
         shell: bash
         run: |

@@ -73,7 +73,7 @@ jobs:
               require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
             }
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
-              const u = 'https://raw.githubusercontent.com/corgifighter/Test-screen/main/' + name;
+              const u = new URL('assets/' + name, page.url()).href;
               const res = await page.request.get(u);
               return { name, status: res.status() };
             }));

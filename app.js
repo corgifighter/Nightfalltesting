@@ -192,7 +192,19 @@ sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
 const ASSET_BASE='https://raw.githubusercontent.com/corgifighter/Test-screen/main/';
 const loader=new THREE.TextureLoader();
-function tex(path,repeat){const t=loader.load(ASSET_BASE+path.replace('./assets/',''));t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);t.colorSpace=THREE.SRGBColorSpace;return t}
+const MAX_TEXTURE_ANISOTROPY=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
+function configureTexture(t,repeat=[1,1],colorSpace=THREE.SRGBColorSpace){
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  t.repeat.set(...repeat);
+  t.colorSpace=colorSpace;
+  t.anisotropy=MAX_TEXTURE_ANISOTROPY;
+  t.needsUpdate=true;
+  return t;
+}
+function tex(path,repeat,colorSpace=THREE.SRGBColorSpace){
+  const t=loader.load(ASSET_BASE+path.replace('./assets/',''));
+  return configureTexture(t,repeat,colorSpace);
+}
 const grass=tex('./assets/grass.png',[27,27]);
 const cobble=tex('./assets/cobble.png',[5.5,5.5]);
 const roof=tex('./assets/roof.png',[1.7,1.7]);
@@ -211,13 +223,15 @@ function makeMeadowTexture(){
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.8,3.8);t.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);return t;
 }
 const meadowTexture=makeMeadowTexture();
+configureTexture(meadowTexture,[3.8,3.8]);
 
 
 // High-fidelity CC0 material library integration.
 // Remote maps are optional enhancement layers; local/procedural materials remain the fallback.
-function loadCC0Map(url,repeat=1){
-  const t=new THREE.TextureLoader(); t.setCrossOrigin('anonymous');
-  const map=t.load(url,()=>{map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;map.repeat.set(repeat,repeat);map.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);},undefined,()=>{});
+const cc0Loader=new THREE.TextureLoader();cc0Loader.setCrossOrigin('anonymous');
+function loadCC0Map(url,repeat=1,colorSpace=THREE.SRGBColorSpace){
+  const map=cc0Loader.load(url,()=>configureTexture(map,[repeat,repeat],colorSpace),undefined,()=>{});
+  configureTexture(map,[repeat,repeat],colorSpace);
   return map;
 }
 const CC0={

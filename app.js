@@ -683,22 +683,39 @@ function hdRoof(parent,w,d,y,mat,angle=.58){
 }
 
 function hdWindow(parent,x,y,z,scale=1){
-  hdBox(1.05*scale,1.35*scale,.10,HD.timber,[x,y,z],parent);
-  const glass=hdBox(.78*scale,1.04*scale,.055,HD.glass,[x,y,z+(z>0?.055:-.055)],parent);
-  glass.material=HD.glass;
-  hdBox(.07*scale,1.04*scale,.07,HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
-  hdBox(.78*scale,.07*scale,.07,HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
-  const glow=hdBox(.56*scale,.82*scale,.03,HD.warm,[x,y,z+(z>0?.095:-.095)],parent);
-  glow.castShadow=false;
+  const front = z >= 0 ? 1 : -1;
+  const depth = .34*scale;
+  // A real recess: cavity first, then jambs, sill, lintel and glazing set inside the wall.
+  hdBox(1.22*scale,1.48*scale,depth,HD.stoneDark,[x,y,z],parent,0,0,0,.045);
+  hdBox(.96*scale,1.20*scale,.08*scale,HD.timber,[x,y,z-front*.16*scale],parent,0,0,0,.025);
+  hdBox(.78*scale,.98*scale,.035*scale,HD.glass,[x,y,z-front*.205*scale],parent,0,0,0,.018);
+  const interior=hdBox(.68*scale,.88*scale,.018*scale,HD.warm,[x,y,z-front*.224*scale],parent,0,0,0,.012);
+  interior.castShadow=false;
+  interior.material.emissiveIntensity=.62;
+  // Four independent frame members create depth instead of a floating rectangle.
+  hdBox(.08*scale,1.22*scale,.09*scale,HD.timber,[x-.46*scale,y,z-front*.25*scale],parent,0,0,0,.018);
+  hdBox(.08*scale,1.22*scale,.09*scale,HD.timber,[x+.46*scale,y,z-front*.25*scale],parent,0,0,0,.018);
+  hdBox(1.00*scale,.08*scale,.09*scale,HD.timber,[x,y+.59*scale,z-front*.25*scale],parent,0,0,0,.018);
+  hdBox(1.00*scale,.08*scale,.09*scale,HD.timber,[x,y-.59*scale,z-front*.25*scale],parent,0,0,0,.018);
+  // Cross mullions catch the light and make the opening legible at mobile scale.
+  hdBox(.055*scale,.98*scale,.065*scale,HD.timber,[x,y,z-front*.29*scale],parent,0,0,0,.012);
+  hdBox(.78*scale,.055*scale,.065*scale,HD.timber,[x,y,z-front*.29*scale],parent,0,0,0,.012);
 }
 function hdDoor(parent,x,y,z,scale=1){
-  hdBox(1.0*scale,2.1*scale,.14*scale,HD.timber,[x,y,z],parent);
-  hdBox(.72*scale,1.7*scale,.035,HD.wood||HD.timber,[x,y,z+(z>0?.09:-.09)],parent);
-  hdCyl(.055*scale,.055*scale,.08,HD.iron,[x+.28*scale,y-.08*scale,z+(z>0?.12:-.12)],parent,16).rotation.x=Math.PI/2;
+  const front = z >= 0 ? 1 : -1;
+  hdBox(1.32*scale,2.48*scale,.42*scale,HD.stoneDark,[x,y,z],parent,0,0,0,.055);
+  hdBox(1.08*scale,2.26*scale,.12*scale,HD.timber,[x,y,z-front*.22*scale],parent,0,0,0,.035);
+  hdBox(.78*scale,1.92*scale,.045*scale,HD.timberLight,[x,y,z-front*.285*scale],parent,0,0,0,.025);
+  hdBox(.58*scale,1.72*scale,.028*scale,HD.warm,[x,y,z-front*.31*scale],parent,0,0,0,.018).castShadow=false;
+  hdBox(.07*scale,1.68*scale,.045*scale,HD.timber,[x,y,z-front*.335*scale],parent,0,0,0,.012);
+  hdBox(.58*scale,.07*scale,.045*scale,HD.timber,[x,y+.82*scale,z-front*.335*scale],parent,0,0,0,.012);
+  hdCyl(.055*scale,.055*scale,.10*scale,HD.iron,[x+.30*scale,y-.06*scale,z-front*.38*scale],parent,18).rotation.x=Math.PI/2;
 }
-function hdChimney(parent,x,z,height=1.7){
-  hdBox(.62,height,.62,HD.stone,[x,4.15,z],parent);
-  hdBox(.78,.14,.78,HD.stoneDark,[x,4.15+height/2,z],parent);
+function hdChimney(parent,x,z,height=1.7,baseY=4.15){
+  const y=baseY+height/2;
+  hdBox(.68,height,.68,HD.stone,[x,y,z],parent,0,0,0,.06);
+  hdBox(.82,.16,.82,HD.stoneDark,[x,baseY+height+.05,z],parent,0,0,0,.055);
+  hdBox(.46,.10,.46,HD.iron,[x,baseY+height+.135,z],parent,0,0,0,.025);
 }
 function hdGable(parent,w,h,d,mat,z,bevel=.04){
   const s=new THREE.Shape();
@@ -714,7 +731,7 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   const d=chapel?9.5:inn?7.8:forge?6.7:mill?7.3:tower?5.4:5.9;
   const lowerH=chapel?3.45:tower?7.6:3.15, upperH=chapel?1.35:tower?1.0:1.15;
   const upperW=chapel?w*.92:tower?w*.78:w*.84, upperD=chapel?d*.93:tower?d*.78:d*.84;
-  const plinth=hdBox(w+.46,.72,d+.46,HD.stone,[0,.36,0],g,0,0,0,.18);
+  hdBox(w+.46,.72,d+.46,HD.stone,[0,.36,0],g,0,0,0,.18);
   // Irregular stepped base and a slightly offset upper mass create believable construction rather than a perfect block.
   hdBox(w,.18,d+.06,HD.stoneDark,[.04,.80,-.02],g,0,0,0,.07);
   hdBox(w,lowerH, d, chapel?HD.plasterWarm:HD.plaster,[0,.90+lowerH/2,0],g,0,0,0,.15);
@@ -743,11 +760,17 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   // Gabled roof is now a real architectural mass with thick eaves and a visible triangular end.
   const roofY=.92+lowerH+upperH;
   hdRoof(g,w+1.15,d+1.28,roofY,chapel?HD.roof:HD.roofWarm,chapel?.66:.57);
-  hdGable(g,w*.92,1.52,.20,chapel?HD.stone:HD.plasterWarm,d*.53,.045);
+  // Integrated front gable: inset plaster field, timber triangle and roof-edge overlap.
+  const gableZ=d*.505;
+  hdGable(g,w*.92,1.52,.34,chapel?HD.stone:HD.plasterWarm,gableZ,.045);
+  hdGable(g,w*.76,1.16,.055,HD.plaster,gableZ-.19,.025);
+  hdBox(.16,1.25,.10,HD.timber,[-w*.19,roofY+.30,gableZ-.24],g,0,0,-.42,.02);
+  hdBox(.16,1.25,.10,HD.timber,[w*.19,roofY+.30,gableZ-.24],g,0,0,.42,.02);
   hdBox(w+1.28,.22,.42,HD.timber,[0,roofY+.02,-(d+1.28)*.48],g,0,0,0,.055);
   hdBox(w+1.20,.18,.34,HD.timber,[0,roofY+.02,(d+1.28)*.48],g,0,0,0,.045);
-  hdChimney(g,w*.24,-d*.16,forge?2.35:chapel?.95:1.7);
-  if(!chapel&&!tower)hdChimney(g,-w*.28,-d*.16,forge?2.0:1.3);
+  const chimneyBase=roofY+0.05;
+  hdChimney(g,w*.24,-d*.16,forge?2.35:chapel?.95:1.7,chimneyBase);
+  if(!chapel&&!tower)hdChimney(g,-w*.28,-d*.16,forge?2.0:1.3,chimneyBase);
 
   if(inn){
     // Offset two-storey entrance bay and deep porch make the inn read as a specific building.
@@ -886,7 +909,20 @@ function replaceLegacyVisuals(){
   legacy.filter(g=>g.userData.assetName?.startsWith('cottage_')).forEach(g=>{
     const variant=g.userData.assetName==='cottage_A'?0:g.userData.assetName==='cottage_B'?1:2;
     const h=hdBuilding('cottage',g.position.x,g.position.z,g.scale.x,g.rotation.y);
-    if(variant===1){h.scale.y*=1.12;} if(variant===2){h.scale.x*=1.12;h.scale.z*=.9;}
+    // Three genuinely different cottage silhouettes, not merely scaled copies.
+    if(variant===1){
+      h.scale.y*=1.12;
+      hdBox(2.45,2.15,2.1,HD.plasterWarm,[1.72,1.35,-.15],h,0,0,0,.12);
+      hdRoof(h,2.8,2.45,2.42,HD.roofWarm,.50);
+      hdWindow(h,1.72,1.45,1.02,.72);
+    }
+    if(variant===2){
+      h.scale.x*=1.12; h.scale.z*=.90;
+      hdBox(1.72,2.55,2.0,HD.plasterWarm,[-1.48,1.60,.05],h,0,0,0,.10);
+      hdRoof(h,2.05,2.35,2.88,HD.roof,.56);
+      hdWindow(h,-1.48,1.52,1.08,.70);
+      hdBox(1.9,.16,.26,HD.timber,[-1.48,2.72,1.08],h,0,0,0,.03);
+    }
   });
   legacy.filter(g=>g.userData.assetName==='tree_oak'||g.userData.assetName==='tree_pine').forEach(g=>{
     const x=g.position.x,z=g.position.z,sc=g.scale.x;hdTree(x,z,sc,g.userData.assetName==='tree_pine');

@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v34';
+const CACHE='hearthmere-nightfalltesting-v35';
 const CORE=["./","./index.html","./app.js","./capture.html","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
 const EXTERNAL_PREFIXES=[
   "https://raw.githubusercontent.com/corgifighter/Test-screen/main/",

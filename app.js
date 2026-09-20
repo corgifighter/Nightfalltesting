@@ -2495,6 +2495,14 @@ function buildWorldLifeAndInteractionPass(){
   window.__HEARTHMERE_FRAME_OPTIMIZATION={version:1,cachedWindFlags:worldLife.windFlags.length,sceneTraversalRemoved:true};
 }
 function updateWorldLife(dt){
+  const banners=window.__HEARTHMERE_BANNERS?.banners||[];
+  banners.forEach((b,i)=>{
+    const p=b.userData.bannerPhase||i;
+    b.rotation.y=Math.PI+Math.sin(time*1.55+p)*.055;
+    b.rotation.z=Math.sin(time*1.9+p)*.035;
+    b.scale.y=.98+Math.sin(time*1.25+p)*.025;
+  });
+
   const t=time;
   worldLife.windFlags.forEach((o,i)=>{o.rotation.z=Math.sin(t*.85+i*.37)*.055;o.rotation.x=Math.cos(t*.57+i*.29)*.025});
   worldLife.smoke.forEach((p,i)=>{const q=p.userData.smoke;const phase=(q.life+t*q.speed)%1;p.position.y=q.baseY+phase*2.15;p.position.x=q.baseX+Math.sin(t*.35+q.phase)*(.18+.25*phase);p.position.z=q.baseZ+Math.cos(t*.29+q.phase)*(.12+.18*phase);p.material.opacity=Math.sin(Math.PI*phase)*.18*(1-phase*.35);p.scale.setScalar((1+phase*.9)*(.55+i%3*.08));});
@@ -3123,6 +3131,31 @@ function buildGraphicsMasterPass(){
   }
   window.__HEARTHMERE_GRAPHICS_MASTER={version:1,gradePass:true,heroRig:!!player?.userData.graphicsMasterRig,canopyAccents:[...scene.children].filter(o=>o.userData?.graphicsCanopyDetail).length,landmarkRims:rigs.length};
 }
+function buildLandmarkBannerPass(){
+  if(window.__HEARTHMERE_BANNERS?.version===1)return;
+  const specs=[
+    ['InnBanner',-10,6.1,-7,0xc06a3d,.92],
+    ['ForgeBanner',4.7,5.3,-9,0x9b4a35,.78],
+    ['ChapelBanner',-7,6.8,15,0x6d8290,.68],
+    ['MillBanner',22.5,5.7,-13.5,0xb07a43,.82],
+    ['WatchBanner',20.5,8.3,17.5,0x58776e,.64]
+  ];
+  const banners=[];
+  specs.forEach(([name,x,y,z,color,scale],i)=>{
+    const g=new THREE.Group();g.name=name;g.position.set(x,y,z);
+    const poleMat=new THREE.MeshPhysicalMaterial({color:0x4b3425,roughness:.86,metalness:0});
+    const clothMat=new THREE.MeshPhysicalMaterial({color,roughness:.76,metalness:0,sheen:.18,sheenColor:new THREE.Color(0xf0c89a),side:THREE.DoubleSide});
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.2,8),poleMat);
+    pole.position.y=-.65;pole.castShadow=true;g.add(pole);
+    const top=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshPhysicalMaterial({color:0xc59a58,roughness:.42,metalness:.58}));
+    top.position.y=.48;g.add(top);
+    const cloth=new THREE.Mesh(new THREE.PlaneGeometry(.82*scale,.58*scale,4,2),clothMat);
+    cloth.position.set(.39*scale,.08,0);cloth.rotation.y=Math.PI;
+    cloth.userData.landmarkBanner=true;cloth.userData.bannerPhase=i*1.31;
+    g.add(cloth);scene.add(g);banners.push(cloth);
+  });
+  window.__HEARTHMERE_BANNERS={version:1,count:banners.length,banners};
+}
 function buildHighEndAtmospherePass(){
   scene.background.set(0x7e9692);
   scene.fog.color.set(0x71837d);scene.fog.density=.00072;
@@ -3727,7 +3760,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

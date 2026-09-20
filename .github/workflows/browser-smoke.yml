@@ -57,12 +57,12 @@ jobs:
             // a perfectly good build can be falsely judged as an asset failure.
             const assetGate = new URL('https://raw.githubusercontent.com/corgifighter/Test-screen/main/hero.glb');
             let assetReady = false;
-            for (let attempt = 0; attempt < 24; attempt++) {
+            for (let attempt = 0; attempt < 4; attempt++) {
               try {
                 const probe = await page.request.get(assetGate.href, { timeout: 10000 });
                 if (probe.ok()) { assetReady = true; break; }
               } catch (_) {}
-              await new Promise(r => setTimeout(r, 5000));
+              await new Promise(r => setTimeout(r, 2500));
             }
             if (!assetReady) throw new Error('GitHub Pages asset gate did not become ready before browser launch: ' + assetGate.href);
             let navigationError = null;

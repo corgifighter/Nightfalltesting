@@ -1057,10 +1057,12 @@ function hdTreeCanopyGeometry(radius,height,pine=false){
     if(pine){
       const taper=.24+.76*((y+1)/2);
       const r=Math.max(.001,(ring+wave)*taper);
-      p.setXYZ(i,x/ring*r,y,z/ring*r);
+      if(ring<1e-5)p.setXYZ(i,0,y,0);
+      else p.setXYZ(i,x/ring*r,y,z/ring*r);
     }else{
       const r=Math.max(.001,radius*(ring+wave)*(1+.12*Math.sin((y+1)*Math.PI)));
-      p.setXYZ(i,x/ring*r,y*height*(.92+.08*(1-Math.abs(y))),(z/ring*r));
+      if(ring<1e-5)p.setXYZ(i,0,y*height,0);
+      else p.setXYZ(i,x/ring*r,y*height*(.92+.08*(1-Math.abs(y))),z/ring*r);
     }
   }
   geo.computeVertexNormals();

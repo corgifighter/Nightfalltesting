@@ -700,7 +700,10 @@ function rockMesh(radius=0.25){
 
 function box(w,h,d,m,pos=[0,0,0],rotY=0,parent=null){const q=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);q.position.set(...pos);q.rotation.y=rotY;q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
 function cyl(r,h,m,pos=[0,0,0],rot=[0,0,0],parent=null){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.94,h,10),m);q.position.set(...pos);q.rotation.set(...rot);q.castShadow=true;q.receiveShadow=true;(parent||scene).add(q);return q}
-function windowUnit(x,y,z,rot=0,w=1.15,h=1.45){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;const warm=new THREE.MeshPhysicalMaterial({color:0xb7c7bd,roughness:.22,metalness:.02,transmission:.12,transparent:true,opacity:.84,emissive:0x2a1b10,emissiveIntensity:.18});warmWindows.push(warm);box(w,h,.10,warm,[0,0,0],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[-w*.5,0,.08],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[w*.5,0,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,-h*.5,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,h*.5,.08],0,g);box(.06,h,.18,MAT_DETAIL.timber,[0,0,.10],0,g);box(w,.06,.18,MAT_DETAIL.timber,[0,0,.10],0,g);scene.add(g);return g}
+function windowUnit(x,y,z,rot=0,w=1.15,h=1.45){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;const cavity=new THREE.MeshStandardMaterial({color:0x151a18,roughness:1,metalness:0});
+const warm=new THREE.MeshPhysicalMaterial({color:0xb7c7bd,roughness:.20,metalness:.02,transmission:.12,transparent:true,opacity:.82,emissive:0x4b2814,emissiveIntensity:.24});
+warmWindows.push(warm);box(w+.16,h+.16,.16,cavity,[0,0,-.025],0,g);box(w,h,.10,warm,[0,0,.055],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[-w*.5,0,.08],0,g);box(.08,h+.12,.16,MAT_DETAIL.timber,[w*.5,0,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,-h*.5,.08],0,g);box(w+.12,.08,.16,MAT_DETAIL.timber,[0,h*.5,.08],0,g);box(.06,h,.18,MAT_DETAIL.timber,[0,0,.10],0,g);box(w,.06,.18,MAT_DETAIL.timber,[0,0,.10],0,g);
+box(w+.18,.10,.28,MAT_DETAIL.stone,[0,-h*.53,.16],0,g);scene.add(g);return g}
 function doorUnit(x,y,z,rot=0,w=1.35,h=2.65){const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;box(w,h,.16,MAT_DETAIL.wood,[0,0,0],0,g);for(let i=-1;i<=1;i++)box(.08,h*.92,.2,MAT_DETAIL.timber,[i*w*.28,0,.12],0,g);box(w+.08,.10,.2,MAT_DETAIL.timber,[0,h*.44,.12],0,g);cyl(.07,.12,MAT_DETAIL.iron,[w*.24,0,.18],[Math.PI/2,0,0],g);scene.add(g);return g}
 function chimney(x,y,z,scale=1){const g=new THREE.Group();g.position.set(x,y,z);for(let i=0;i<4;i++)box(.58*scale,.72*scale,.58*scale,MAT_DETAIL.stone,[0,i*.62*scale,0]);box(.82*scale,.18*scale,.82*scale,MAT_DETAIL.stone,[0,2.45*scale,0]);scene.add(g);return g}
 function flowerBed(x,z,rot=0){const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.03,z);g.rotation.y=rot;box(2.8,.22,.8,MAT_DETAIL.wood,[0,.12,0],0,g);for(let i=0;i<8;i++){const px=-1.15+(i%4)*.75,pz=-.24+(i%2)*.48;cyl(.10,.28,i%3?MAT_DETAIL.flower:new THREE.MeshStandardMaterial({color:0xd0ad59,roughness:.9}),[px,.35,pz],[],g)}scene.add(g);return g}
@@ -937,14 +940,14 @@ function stoneBorder(x,z,count=7,rot=0){const g=new THREE.Group();g.position.set
 // material language. The silhouettes, rooflines, porches and facade dressing deliberately vary
 // so the village no longer reads as one repeated house dropped around the landmarks.
 const cottageMats={
-  stone:new THREE.MeshStandardMaterial({color:0x777269,roughness:.96}),
-  timber:new THREE.MeshStandardMaterial({color:0x3a2920,roughness:.88}),
-  plasterA:new THREE.MeshStandardMaterial({color:0xb9ad92,roughness:.94}),
-  plasterB:new THREE.MeshStandardMaterial({color:0x9eaa96,roughness:.94}),
-  plasterC:new THREE.MeshStandardMaterial({color:0xc3a987,roughness:.94}),
-  roofA:new THREE.MeshStandardMaterial({color:0x4b4542,roughness:.92}),
-  roofB:new THREE.MeshStandardMaterial({color:0x5c4034,roughness:.92}),
-  roofC:new THREE.MeshStandardMaterial({color:0x3f514a,roughness:.92})
+  stone:new THREE.MeshPhysicalMaterial({color:0x777269,roughness:.92,metalness:0,sheen:.08}),
+  timber:new THREE.MeshPhysicalMaterial({color:0x3a2920,roughness:.82,metalness:0,clearcoat:.08,clearcoatRoughness:.48}),
+  plasterA:new THREE.MeshPhysicalMaterial({color:0xb9ad92,roughness:.88,metalness:0,sheen:.04}),
+  plasterB:new THREE.MeshPhysicalMaterial({color:0x9eaa96,roughness:.88,metalness:0,sheen:.04}),
+  plasterC:new THREE.MeshPhysicalMaterial({color:0xc3a987,roughness:.88,metalness:0,sheen:.04}),
+  roofA:new THREE.MeshPhysicalMaterial({color:0x4b4542,roughness:.82,metalness:0,clearcoat:.12,clearcoatRoughness:.52}),
+  roofB:new THREE.MeshPhysicalMaterial({color:0x5c4034,roughness:.82,metalness:0,clearcoat:.12,clearcoatRoughness:.52}),
+  roofC:new THREE.MeshPhysicalMaterial({color:0x3f514a,roughness:.82,metalness:0,clearcoat:.12,clearcoatRoughness:.52})
 };
 function roofRidge(g,w,d,h,m){
   const shape=new THREE.Shape();shape.moveTo(-w/2,0);shape.lineTo(0,h);shape.lineTo(w/2,0);shape.lineTo(-w/2,0);
@@ -968,6 +971,19 @@ function cottage(x,z,variant=0,rot=0){
   windowUnit(-w*.29,2.05,d/2+.08,0,.92,1.12);windowUnit(w*.29,2.05,d/2+.08,0,.92,1.12);
   for(const px of [-w*.29,w*.29]){box(.14,1.22,.10,cottageMats.timber,[px-.56,2.05,d/2+.02],0,g);box(.14,1.22,.10,cottageMats.timber,[px+.56,2.05,d/2+.02],0,g)}
   chimney(-w*.24,3.35,-d*.16,.62);
+  // Strong authored facade language: diagonal braces, a stone plinth, deep eaves
+  // and a slightly irregular roof cap keep cottages from reading as textureless boxes.
+  for(const side of [-1,1]){
+    const brace=box(.13,2.65,.20,cottageMats.timber,[side*w*.30,2.0,d/2+.03],side>0?-.34:.34,g);
+    brace.scale.x=1.0;
+  }
+  box(w+.72,.20,.42,cottageMats.timber,[0,h+.02,d/2+.12],0,g);
+  box(w+.72,.20,.42,cottageMats.timber,[0,h+.02,-d/2-.12],0,g);
+  // Gable framing and a small ridge cap create a more intentional roof silhouette.
+  box(.14,1.55,.20,cottageMats.timber,[0,h+.72,d/2-.02],0,g);
+  box(w*.52,.13,.20,cottageMats.timber,[-w*.23,h+.52,d/2-.02],-.18,g);
+  box(w*.52,.13,.20,cottageMats.timber,[w*.23,h+.52,d/2-.02],.18,g);
+  cyl(.10,w+.95,cottageMats.timber,[0,h+1.78,0],[0,0,Math.PI/2],g);
   // Variant-specific porch/balcony treatment.
   if(variant===0){
     box(2.8,.16,1.15,cottageMats.timber,[0,.92,d/2+.62],0,g);for(const px of [-1.15,1.15])cyl(.08,1.85,cottageMats.timber,[px,.92,d/2+.96],[],g);

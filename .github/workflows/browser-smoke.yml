@@ -47,7 +47,8 @@ jobs:
             page.on('response', r => { if (r.status() >= 400) failedRequests.push(r.status() + ' ' + r.url()); });
             page.on('pageerror', e => errors.push('pageerror: ' + e.message));
             page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-            await page.goto('https://corgifighter.github.io/Nightfalltesting/?browser-smoke=1&capture=1', {
+            const smokeUrl = 'https://corgifighter.github.io/Nightfalltesting/?browser-smoke=1&capture=1&build=' + process.env.GITHUB_SHA;
+            await page.goto(smokeUrl, {
               waitUntil: 'domcontentloaded',
               timeout: 120000
             });

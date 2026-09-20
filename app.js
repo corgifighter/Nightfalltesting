@@ -1577,11 +1577,24 @@ function hdTreeCanopyGeometry(radius,height,pine=false){
   return geo;
 }
 const TREE_LEAF_MATS=[
-  new THREE.MeshStandardMaterial({color:0x294d31,roughness:.98,metalness:0}),
-  new THREE.MeshStandardMaterial({color:0x3d6840,roughness:.97,metalness:0}),
-  new THREE.MeshStandardMaterial({color:0x5a7f49,roughness:.95,metalness:0}),
-  new THREE.MeshStandardMaterial({color:0x6f8f55,roughness:.96,metalness:0})
+  new THREE.MeshPhysicalMaterial({color:0x294d31,roughness:.86,metalness:0,clearcoat:.08,clearcoatRoughness:.72,sheen:.18,sheenColor:new THREE.Color(0x6f9665),sheenRoughness:.72}),
+  new THREE.MeshPhysicalMaterial({color:0x3d6840,roughness:.84,metalness:0,clearcoat:.07,clearcoatRoughness:.74,sheen:.20,sheenColor:new THREE.Color(0x86aa76),sheenRoughness:.70}),
+  new THREE.MeshPhysicalMaterial({color:0x5a7f49,roughness:.82,metalness:0,clearcoat:.06,clearcoatRoughness:.76,sheen:.22,sheenColor:new THREE.Color(0x9dbb83),sheenRoughness:.68}),
+  new THREE.MeshPhysicalMaterial({color:0x6f8f55,roughness:.84,metalness:0,clearcoat:.06,clearcoatRoughness:.74,sheen:.20,sheenColor:new THREE.Color(0xb0c58d),sheenRoughness:.70})
 ];
+function upgradeFoliageMaterial(mat,phase){
+  const prior=mat.onBeforeCompile;
+  mat.onBeforeCompile=(shader)=>{
+    if(prior)prior(shader);
+    shader.uniforms.uFoliageTime={value:0};
+    shader.uniforms.uFoliagePhase={value:phase};
+    shader.vertexShader='uniform float uFoliageTime; uniform float uFoliagePhase; varying vec3 vFoliageWorld;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vFoliageWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float sway=sin(uFoliageTime*1.25+uFoliagePhase+transformed.y*1.7+transformed.x*1.1)*.035; transformed.x+=sway*max(0.0,transformed.y); transformed.z+=cos(uFoliageTime*1.05+uFoliagePhase+transformed.y*1.3)*.018*max(0.0,transformed.y);');
+    shader.fragmentShader='varying vec3 vFoliageWorld;\\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\\n float leafNoise=fract(sin(dot(vFoliageWorld.xz,vec2(17.13,41.77)))*43758.5453); diffuseColor.rgb*=mix(.93,1.07,leafNoise);');
+    mat.userData.foliageShader=shader;
+  };
+}
+TREE_LEAF_MATS.forEach((m,i)=>upgradeFoliageMaterial(m,i*.83));
+
 function hdTree(x,z,scale=1,pine=false){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);scene.add(g);
   const trunkH=pine?6.4:5.4;

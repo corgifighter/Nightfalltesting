@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v29';
+const CACHE='hearthmere-nightfalltesting-v30';
 const CORE=["./","./index.html","./app.js","./capture.html","./manifest.webmanifest","./assets/cc0/polyhaven/rock_moss_set_01.glb","./assets/cc0/polyhaven/shrub_02.glb","./assets/cc0/polyhaven/shrub_04.glb","./assets/cc0/polyhaven/wild_rooibos_bush.glb","./assets/cc0/polyhaven/fern_02.glb","./assets/cc0/polyhaven/grass_medium_01.glb"];
 const EXTERNAL_PREFIXES=[
   "https://raw.githubusercontent.com/corgifighter/Test-screen/main/",
@@ -14,6 +14,7 @@ const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/MaskPass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/OutputShader.js",

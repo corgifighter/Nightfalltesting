@@ -2813,6 +2813,42 @@ function foundationPhysicalizeFoliageMaterial(mat,phase=0){
   physical.userData.foliagePhase=phase;
   return physical;
 }
+function upgradeArchitecturalLibraries(){
+  const libraries=[MASTER,HD,ARCH];
+  const sourceMats=new Set();
+  libraries.forEach(lib=>Object.values(lib||{}).forEach(m=>{if(m?.isMeshStandardMaterial)sourceMats.add(m);}));
+  const replacements=new Map();
+  sourceMats.forEach(mat=>{
+    const p=new THREE.MeshPhysicalMaterial();
+    p.name=(mat.name||'Architecture')+'_Physical';
+    p.color.copy(mat.color);
+    p.map=mat.map||null;p.normalMap=mat.normalMap||null;p.normalScale?.copy(mat.normalScale||new THREE.Vector2(1,1));
+    p.roughness=mat.roughness;p.metalness=mat.metalness;
+    p.aoMap=mat.aoMap||null;p.aoMapIntensity=mat.aoMapIntensity??1;
+    p.emissive.copy(mat.emissive||new THREE.Color(0,0,0));p.emissiveMap=mat.emissiveMap||null;p.emissiveIntensity=mat.emissiveIntensity??1;
+    p.alphaMap=mat.alphaMap||null;p.transparent=mat.transparent;p.opacity=mat.opacity;p.side=mat.side;p.depthWrite=mat.depthWrite;p.depthTest=mat.depthTest;
+    p.envMapIntensity=mat.envMapIntensity??.4;
+    const n=(mat.name||'').toLowerCase();
+    const wood=/wood|timber|plank/.test(n),roof=/roof|tile|slate/.test(n),stone=/stone|curb|plaza/.test(n),metal=/iron|brass/.test(n);
+    if(wood){p.clearcoat=.10;p.clearcoatRoughness=.50;p.roughness=Math.max(.68,p.roughness);}
+    if(roof){p.clearcoat=.13;p.clearcoatRoughness=.52;p.roughness=Math.max(.70,p.roughness);}
+    if(stone){p.sheen=.055;p.sheenColor.set(0xb5aa98);p.sheenRoughness=.86;p.roughness=Math.max(.78,p.roughness);}
+    if(metal){p.metalness=Math.max(.72,p.metalness);p.roughness=Math.min(.44,p.roughness);p.envMapIntensity=Math.max(.65,p.envMapIntensity);}
+    if(!wood&&!roof&&!stone&&!metal){p.sheen=.035;p.sheenRoughness=.88;}
+    p.userData.architecturePhysicalized=true;
+    p.onBeforeCompile=mat.onBeforeCompile;
+    p.needsUpdate=true;
+    replacements.set(mat,p);
+  });
+  scene.traverse(obj=>{
+    if(!obj.isMesh||!obj.material)return;
+    if(Array.isArray(obj.material))obj.material=obj.material.map(m=>replacements.get(m)||m);
+    else if(replacements.has(obj.material))obj.material=replacements.get(obj.material);
+  });
+  libraries.forEach(lib=>Object.keys(lib||{}).forEach(k=>{const m=lib[k];if(replacements.has(m))lib[k]=replacements.get(m);}));
+  window.__HEARTHMERE_ARCHITECTURE_PHYSICAL={sourceMaterials:sourceMats.size,replaced:replacements.size};
+}
+
 function buildGraphicsFoundationV2(){
   // Renderer/presentation: preserve a rich HDR-like response while keeping the
   // mobile target conservative. Three.js recommends environment lighting for PBR

@@ -280,7 +280,13 @@ const MAT={
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='varying vec3 vWorldPos;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;\\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\\n diffuseColor.rgb=mix(diffuseColor.rgb,natural,.34);");
+ shader.fragmentShader='varying vec3 vWorldPos;\\n'+shader.fragmentShader.replace('#include <map_fragment>',"#include <map_fragment>\\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;
+ vec3 soil=vec3(.24,.20,.13);
+ vec3 richMeadow=vec3(.20,.34,.13);
+ vec3 meadowBright=vec3(.32,.46,.19);
+ natural=mix(soil,richMeadow,smoothstep(-.4,.55,biome));
+ natural=mix(natural,meadowBright,smoothstep(.55,1.0,biome));
+ diffuseColor.rgb=mix(diffuseColor.rgb,natural,.66);");
  MAT.grass.userData.shader=shader;
 };
 MAT.water.onBeforeCompile=(shader)=>{
@@ -325,9 +331,16 @@ groundPatch(-30,22,14,8,meadowMat,-.08);
 // River with a shallow bank lip and moving highlights.
 const river=addMesh(new THREE.PlaneGeometry(27,190,1,16),MAT.water,[31,.05,4],[-Math.PI/2,.02,.08],false);
 const riverGlow=addMesh(new THREE.PlaneGeometry(26.2,188,1,1),new THREE.MeshBasicMaterial({color:0x2a8990,transparent:true,opacity:.10,depthWrite:false}),[31,.08,4],[-Math.PI/2,.02,.08],false);
-const bankMat=new THREE.MeshStandardMaterial({color:0x5d654b,roughness:1});
+const bankMat=new THREE.MeshStandardMaterial({color:0x4e553e,roughness:1});
 addMesh(new THREE.PlaneGeometry(4.5,188,1,8),bankMat,[16.9,.16,4],[-Math.PI/2,.02,.08],false);
 addMesh(new THREE.PlaneGeometry(4.5,188,1,8),bankMat,[45.1,.16,4],[-Math.PI/2,.02,.08],false);
+const bankSoil=new THREE.MeshStandardMaterial({color:0x5b503e,roughness:.98});
+for(const side of [-1,1])for(let i=0;i<26;i++){
+  const z=-50+i*3.8,x=31+side*(13.0+Math.sin(i*1.73)*.9);
+  const patch=new THREE.Mesh(new THREE.CircleGeometry(.95+(i%4)*.22,18),bankSoil);
+  patch.scale.set(1.45,.72,1);patch.rotation.x=-Math.PI/2;patch.rotation.z=i*.37;
+  patch.position.set(x,.19,z);patch.receiveShadow=true;scene.add(patch);
+}
 const foam=[];for(let i=0;i<34;i++){const r=addMesh(new THREE.RingGeometry(.18,.34,12),MAT.foam,[27.3+Math.sin(i*1.7)*3.8,.22,-49+i*3.2],[-Math.PI/2,0,0],false);r.scale.set(1.5,.55,1);foam.push(r)}
 // Irregular shoreline highlights visually connect the river to its banks.
 const shorelineGlints=[];for(let i=0;i<46;i++){const z=-50+i*2.35;const side=i%2?-1:1;const x=31+side*(11.9+Math.sin(i*2.7)*.75);const g=addMesh(new THREE.PlaneGeometry(.7+.35*(i%3),.18),MAT.foam,[x,.22,z],[-Math.PI/2,0,(i%2)*.18],false);shorelineGlints.push(g)}
@@ -416,6 +429,8 @@ async function placeAsset(name,x,z,scale=1,rotation=0,tint=null){const loaded=aw
 const DISTILLED_ASSETS=Object.freeze({
   rock:'./assets/cc0/polyhaven/rock_moss_set_01.glb',
   shrub:'./assets/cc0/polyhaven/shrub_02.glb',
+  shrubAlt:'./assets/cc0/polyhaven/shrub_04.glb',
+  scrub:'./assets/cc0/polyhaven/wild_rooibos_bush.glb',
   fern:'./assets/cc0/polyhaven/fern_02.glb',
   grass:'./assets/cc0/polyhaven/grass_medium_01.glb'
 });
@@ -436,8 +451,14 @@ async function loadDistilledAsset(key){
         o.material=o.material.clone();
         o.material.roughness=Math.min(.96,Math.max(.38,o.material.roughness??.82));
         o.material.metalness=0;
-        if('alphaTest' in o.material)o.material.alphaTest=Math.max(o.material.alphaTest||0,.28);
         if(o.material.color)o.material.color.multiplyScalar(.98);
+        if(key==='shrub'||key==='shrubAlt'||key==='scrub'||key==='fern'||key==='grass'){
+          o.material.transparent=false;
+          o.material.alphaTest=Math.max(o.material.alphaTest||0,.38);
+          o.material.side=THREE.DoubleSide;
+          o.material.depthWrite=true;
+          o.material.shadowSide=THREE.DoubleSide;
+        }
       }
     });
     distilledAssetCache.set(key,gltf.scene);
@@ -449,13 +470,34 @@ async function loadDistilledAsset(key){
   distilledAssetPromises.set(key,p);
   return p;
 }
+const distilledVariantCache=new Map();
+function distilledVariants(source,key){
+  if(distilledVariantCache.has(key))return distilledVariantCache.get(key);
+  const roots=source.children.length?source.children.filter(o=>o.visible!==false):[source];
+  const variants=roots.map(root=>{
+    const g=root.clone(true);
+    g.updateMatrixWorld(true);
+    const bb=new THREE.Box3().setFromObject(g);
+    if(bb.isEmpty())return null;
+    const center=bb.getCenter(new THREE.Vector3());
+    const holder=new THREE.Group();
+    holder.add(g);
+    holder.position.set(-center.x,-bb.min.y,-center.z);
+    holder.updateMatrixWorld(true);
+    return holder;
+  }).filter(Boolean);
+  distilledVariantCache.set(key,variants);
+  return variants;
+}
 async function placeDistilledVariant(key,x,z,scale=1,rotation=0,variant=0){
   const source=await loadDistilledAsset(key);if(!source)return null;
-  const roots=source.children.filter(o=>o.visible!==false);
-  const base=roots.length?roots[variant%roots.length]:source;
-  const g=base.clone(true);
-  g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);g.rotation.y=rotation;
-  g.userData.assetName='distilled_'+key;g.userData.distilled=true;g.userData.variant=variant%Math.max(1,roots.length);
+  const variants=distilledVariants(source,key);
+  if(!variants.length)return null;
+  const g=variants[variant%variants.length].clone(true);
+  g.position.set(x,terrainHeight(x,z)+.015,z);
+  g.scale.setScalar(scale);
+  g.rotation.y=rotation;
+  g.userData.assetName='distilled_'+key;g.userData.distilled=true;g.userData.variant=variant%variants.length;
   scene.add(g);return g;
 }
 
@@ -646,18 +688,11 @@ function buildWorldVisualPass(){
 }
 async function buildNaturalDressing(){
  const specs=[];
- for(let i=0;i<42;i++){
-  const x=-44+Math.random()*92,z=-49+Math.random()*104;
-  if(Math.abs(x-31)<15) continue;
-  if(Math.abs(z-7)<7 && x>-32 && x<25) continue;
-  specs.push(['shrub',x,z,.45+Math.random()*.5,(Math.random()-.5)*.8]);
- }
- for(let i=0;i<68;i++){
-  const x=-47+Math.random()*96,z=-53+Math.random()*110;
-  if(Math.abs(x-31)<15) continue;
-  specs.push(['grass_clump',x,z,.38+Math.random()*.48,Math.random()*Math.PI*2]);
- }
- await Promise.all(specs.map(v=>placeAsset(...v)));
+ for(let i=0;i<34;i++){const x=-44+Math.random()*92,z=-49+Math.random()*104;if(Math.abs(x-31)<15)continue;if(Math.abs(z-7)<7&&x>-32&&x<25)continue;specs.push(['shrub',x,z,.42+Math.random()*.46,(Math.random()-.5)*Math.PI]);}
+ for(let i=0;i<22;i++){const x=-44+Math.random()*92,z=-49+Math.random()*104;if(Math.abs(x-31)<15)continue;specs.push(['shrubAlt',x,z,.40+Math.random()*.42,(Math.random()-.5)*Math.PI]);}
+ for(let i=0;i<16;i++){const x=-46+Math.random()*94,z=-51+Math.random()*108;if(Math.abs(x-31)<15)continue;specs.push(['scrub',x,z,.36+Math.random()*.48,(Math.random()-.5)*Math.PI]);}
+ for(let i=0;i<88;i++){const x=-47+Math.random()*96,z=-53+Math.random()*110;if(Math.abs(x-31)<15)continue;specs.push(['grass',x,z,.30+Math.random()*.42,Math.random()*Math.PI*2]);}
+ await Promise.all(specs.map(v=>placeDistilledVariant(...v)));
 }
 
 // High-frequency environmental dressing: small authored clusters that break repetition
@@ -1012,52 +1047,41 @@ function hdBuilding(type,x,z,scale=1,rot=0){
   }
   return g;
 }
+function hdTreeCanopyGeometry(radius,height,pine=false){
+  const geo=new THREE.SphereGeometry(1,64,40);
+  const p=geo.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+    const az=Math.atan2(z,x),ring=Math.sqrt(x*x+z*z);
+    const wave=Math.sin(az*3.0+1.7)*.075+Math.sin(az*7.0-.6)*.045+Math.cos(y*5.0+az*2.0)*.035;
+    if(pine){
+      const taper=.24+.76*((y+1)/2);
+      const r=Math.max(.001,(ring+wave)*taper);
+      p.setXYZ(i,x/ring*r,y,z/ring*r);
+    }else{
+      const r=Math.max(.001,radius*(ring+wave)*(1+.12*Math.sin((y+1)*Math.PI)));
+      p.setXYZ(i,x/ring*r,y*height*(.92+.08*(1-Math.abs(y))),(z/ring*r));
+    }
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
 function hdTree(x,z,scale=1,pine=false){
-  const g=new THREE.Group();
-  g.position.set(x,terrainHeight(x,z),z);
-  g.scale.setScalar(scale);
-  scene.add(g);
-  // Organic trunk with visible taper and a small set of asymmetric branches.
-  hdCyl(.38,.18,4.6,HD.trunk,[0,2.3,0],g,32);
-  for(const [bx,by,bz,len,lean] of [
-    [-.52,2.15,.02,1.55,-.48],[.46,2.55,.08,1.45,.46],
-    [-.28,3.05,.05,1.15,-.34],[.25,3.42,-.03,.95,.30]
-  ]){
-    const b=hdCyl(.13,.075,len,HD.trunk,[bx,by,bz],g,24);
-    b.rotation.z=lean;
-    b.rotation.x=(bz*.55);
-  }
-  if(pine){
-    // A continuous, tapered conifer silhouette with overlapping soft foliage masses.
-    const tiers=[
-      [0,3.15,2.35,1.55,HD.leaf],
-      [0,4.35,1.95,1.35,HD.leafLight],
-      [0,5.35,1.52,1.12,HD.leaf],
-      [0,6.20,1.02,.90,HD.leafLight],
-      [0,6.82,.52,.62,HD.leaf]
-    ];
-    for(const [px,py,r,sy,mat] of tiers) hdSphere(r,mat,[px,py,0],g,[1.0,sy/r,1.0]);
-  }else{
-    // Broad deciduous crown: overlapping irregular lobes avoid the old stacked/topiary profile.
-    const lobes=[
-      [-.95,3.75,.18,1.28,1.00,.92,HD.leaf],
-      [-.38,4.28,.30,1.30,1.08,.96,HD.leafLight],
-      [.48,3.72,-.18,1.34,1.02,1.00,HD.leaf],
-      [1.00,4.10,.12,1.12,.96,.88,HD.leafLight],
-      [-.18,4.95,.08,1.18,1.02,.90,HD.leaf],
-      [.68,4.78,-.12,.94,.86,.82,HD.leafLight],
-      [-.82,4.68,-.10,.82,.80,.76,HD.leaf]
-    ];
-    for(const [px,py,pz,r,sx,sy,mat] of lobes) hdSphere(r,mat,[px,py,pz],g,[sx,sy,1.0]);
-  }
-  // Root flare gives the trunk a grounded transition instead of a stick entering the soil.
-  for(let i=0;i<5;i++){
-    const a=i*Math.PI*2/5;
-    hdCyl(.16,.045,.72,HD.trunk,[Math.cos(a)*.28,.16,Math.sin(a)*.28],g,20).rotation.z=Math.cos(a)*.34;
-  }
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);g.scale.setScalar(scale);scene.add(g);
+  hdCyl(pine?.34:.42,pine?.18:.22,pine?5.8:5.2,HD.trunk,[0,pine?2.9:2.6,0],g,32);
+  const branchSpecs=pine
+    ? [[-.48,2.8,.08,1.45,-.55],[.42,3.25,-.06,1.28,.46],[-.28,3.72,.04,1.05,-.36],[.24,4.15,-.02,.82,.32]]
+    : [[-.58,2.35,.04,1.75,-.50],[.56,2.70,.10,1.62,.48],[-.34,3.18,.02,1.38,-.34],[.31,3.52,-.04,1.18,.30],[-.18,3.82,.05,.92,-.22]];
+  for(const [bx,by,bz,len,lean] of branchSpecs){const b=hdCyl(.14,.055,len,HD.trunk,[bx,by,bz],g,24);b.rotation.z=lean;b.rotation.x=bz*.5;}
+  const canopy=hdTreeCanopyGeometry(pine?1.48:1.72,pine?3.55:2.65,pine);
+  const crown=new THREE.Mesh(canopy,pine?HD.leaf:HD.leafLight);
+  crown.position.set(0,pine?4.55:4.65,0);crown.castShadow=true;crown.receiveShadow=true;g.add(crown);
+  const sideCanopy=hdTreeCanopyGeometry(pine?1.02:1.18,pine?2.0:1.75,pine);
+  const side=new THREE.Mesh(sideCanopy,pine?HD.leaf:HD.leafLight);
+  side.position.set(pine?.34:-.72,pine?4.15:4.18,pine?-.05:.18);side.scale.set(.82,.78,.84);side.castShadow=true;side.receiveShadow=true;g.add(side);
+  for(let i=0;i<6;i++){const a=i*Math.PI*2/6;const root=hdCyl(.18,.045,.82,HD.trunk,[Math.cos(a)*.30,.16,Math.sin(a)*.30],g,20);root.rotation.z=Math.cos(a)*.34;root.rotation.x=Math.sin(a)*.16;}
   return g;
 }
-
 function hdRock(x,z,scale=1){
   const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.08,z);g.scale.setScalar(scale);scene.add(g);
   const m=new THREE.Mesh(new THREE.SphereGeometry(.72,40,24),HD.stone);

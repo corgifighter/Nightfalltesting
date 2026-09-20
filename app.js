@@ -1848,7 +1848,8 @@ applyShadowPolicy();
 bootSet(.975,'Preparing materials and shaders…');await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested>0 && assetLoadStats.pending===0 && assetLoadStats.failed===0 && distilledLoadStats.pending===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;
-window.__HEARTHMERE_READY=true;
+window.__HEARTHMERE_READY=window.__HEARTHMERE_READY_STATE.requiredAssetsReady && window.__HEARTHMERE_READY_STATE.visualWorldReady && window.__HEARTHMERE_READY_STATE.shadersReady;
+if(!window.__HEARTHMERE_READY)bootStatus.textContent='World loaded with asset failures — capture disabled.';
 window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 

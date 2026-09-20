@@ -51,12 +51,27 @@ jobs:
               waitUntil: 'domcontentloaded',
               timeout: 120000
             });
-            await page.waitForFunction(() => document.querySelectorAll('#scene canvas').length > 0, null, { timeout: 120000 });
-            await page.waitForTimeout(20000);
+            await page.waitForTimeout(15000);
             const status = await page.locator('#boot-status').textContent().catch(() => '');
             const canvasCount = await page.locator('#scene canvas').count();
-            const canvasData = await page.locator('#scene canvas').evaluate(canvas => canvas.toDataURL('image/png'));
-            require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
+            const webglSupport = await page.evaluate(() => {
+              const c = document.createElement('canvas');
+              const gl2 = c.getContext('webgl2');
+              const gl1 = c.getContext('webgl') || c.getContext('experimental-webgl');
+              return {
+                webgl2: !!gl2,
+                webgl1: !!gl1,
+                renderer: gl2?.getParameter(gl2.RENDERER) || gl1?.getParameter(gl1.RENDERER) || null,
+                vendor: gl2?.getParameter(gl2.VENDOR) || gl1?.getParameter(gl1.VENDOR) || null
+              };
+            });
+            const bodySnapshot = await page.locator('body').innerText().catch(() => '');
+            const resourceSnapshot = await page.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /app\\.js|three|postprocessing|shader/i.test(n)).slice(-80));
+            let canvasData = null;
+            if (canvasCount) {
+              canvasData = await page.locator('#scene canvas').evaluate(canvas => canvas.toDataURL('image/png'));
+              require('fs').writeFileSync('hearthmere-live-canvas.png', Buffer.from(canvasData.split(',')[1], 'base64'));
+            }
             const assetChecks = await Promise.all(['hero.glb','character.glb','inn.glb','forge.glb','chapel.glb','mill.glb','watchtower.glb','grass.png','cobble.png','roof.png'].map(async name => {
               const u = 'https://raw.githubusercontent.com/corgifighter/Test-screen/main/' + name;
               const res = await page.request.get(u);
@@ -64,10 +79,13 @@ jobs:
             }));
             require('fs').writeFileSync(
               'hearthmere-browser-check.txt',
-              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks }, null, 2)
+              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot }, null, 2)
             );
-            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks }, null, 2));
-            if (canvasCount < 1) throw new Error('No Three.js canvas was created.');
+            console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot }, null, 2));
+            if (canvasCount < 1) {
+              if (!webglSupport.webgl1 && !webglSupport.webgl2) throw new Error('Browser smoke environment has no WebGL context; renderer could not create its canvas.');
+              throw new Error('WebGL is available but Hearthmere did not create a Three.js canvas. Inspect errors and failedRequests above.');
+            }
             if (status && status.startsWith('Runtime error:')) throw new Error(status);
             if (errors.some(e => /THREE|WebGL|GLTF|failed|error/i.test(e))) {
               throw new Error('Browser console/runtime errors detected: ' + errors.join(' | '));
@@ -75,6 +93,15 @@ jobs:
             await browser.close();
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hearthmere-browser-smoke-diagnostics
+          path: |
+            hearthmere-live-canvas.png
+            hearthmere-browser-check.txt
 
       - name: Commit verified real browser frame
         shell: bash

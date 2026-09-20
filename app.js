@@ -141,6 +141,8 @@ resizeFXAA();
 // tone mapping and output color-space conversion to the composited image.
 const outputPass=new OutputPass();
 composer.addPass(outputPass);
+let postProcessingFailed=false;
+let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -2561,7 +2563,18 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
   if(!camera.userData.followInit){camera.position.set(controls.target.x+17.2,9.8,controls.target.z+17.4);camera.userData.followInit=true;}
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
-controls.update();composer.render();
+controls.update();
+try{
+  if(!postProcessingFailed) composer.render();
+  else renderer.render(scene,camera);
+}catch(err){
+  postProcessingFailed=true;
+  postProcessingError=err?.message||String(err);
+  recordRuntimeIssue('errors',{message:postProcessingError,source:'composer.render',line:0,column:0});
+  try{renderer.render(scene,camera);}catch(fallbackErr){
+    recordRuntimeIssue('errors',{message:fallbackErr?.message||String(fallbackErr),source:'renderer.render fallback',line:0,column:0});
+  }
+}
 const currentDrawCalls=renderer.info.render.calls;
 const currentTriangles=renderer.info.render.triangles;
 const frameRendered=currentDrawCalls>0;
@@ -2587,6 +2600,8 @@ updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t)
     distilledFailures:[...distilledLoadStats.failedKeys],
     cc0Failures:[...cc0LoadStats.failedUrls],
     runtimeErrors:runtimeDiagnostics.errors.slice(-8),
+    postProcessingFailed,
+    postProcessingError,
     unhandledRejections:runtimeDiagnostics.unhandledRejections.slice(-8),
     contextLost:runtimeDiagnostics.contextLost,
     shadowPolicy:{...shadowPolicy},
@@ -2601,7 +2616,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();applyCC0Materials();await buildInteractions();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

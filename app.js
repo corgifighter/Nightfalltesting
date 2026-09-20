@@ -7,6 +7,7 @@ import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/exampl
 import {SSAOPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js';
 import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js';
 import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js';
+import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
 
 const root=document.querySelector('#scene');
 // Stage 2 engineering foundation: deterministic world generation.
@@ -130,6 +131,13 @@ resizeSSAO();
 composer.addPass(bloomPass);
 const fxaaPass=new FXAAPass();
 composer.addPass(fxaaPass);
+// GRAPHICS MASTER PRESENTATION — restrained final image grade before OutputPass.
+const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
+  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.075},uContrast:{value:1.055},uWarmth:{value:.018},uVignette:{value:.075}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
+}));
+composer.addPass(cinematicGradePass);
 // EffectComposer renders into an intermediate color space. OutputPass is the
 // authoritative final presentation stage: it applies the renderer's configured
 // tone mapping and output color-space conversion to the composited image.
@@ -350,13 +358,17 @@ const MAT={
 MAT.grass.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='varying vec3 vWorldPos;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vWorldPos=(modelMatrix*vec4(transformed,1.0)).xyz;');
- shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;\n float domain=sin((vWorldPos.x+sin(vWorldPos.z*.021)*6.5)*.026+(vWorldPos.z+cos(vWorldPos.x*.018)*5.0)*.017);\n vec3 soil=vec3(.23,.18,.115);\n vec3 richMeadow=vec3(.18,.32,.115);\n vec3 meadowBright=vec3(.31,.46,.18);\n natural=mix(soil,richMeadow,smoothstep(-.48,.42,biome));\n natural=mix(natural,meadowBright,smoothstep(.48,.92,biome));\n natural=mix(natural,vec3(.15,.25,.105),smoothstep(.72,1.0,abs(domain))*.18);\n float riverWet=1.0-smoothstep(5.0,17.0,abs(vWorldPos.x-31.0));\n natural=mix(natural,vec3(.18,.27,.13),riverWet*.12);\n float pathWear=1.0-smoothstep(2.8,7.0,abs(vWorldPos.x));\n pathWear*=smoothstep(-52.0,58.0,vWorldPos.z);\n natural=mix(natural,vec3(.27,.23,.16),pathWear*.055);');
+ shader.fragmentShader='varying vec3 vWorldPos;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float n1=sin(vWorldPos.x*.11)*sin(vWorldPos.z*.09);\n float n2=sin(vWorldPos.x*.031+vWorldPos.z*.047)*.5;\n float n3=sin(vWorldPos.x*.27-vWorldPos.z*.19)*.18;\n float n=clamp((n1+n2+n3)*.5+.5,0.0,1.0);\n vec3 meadowA=vec3(.16,.29,.14); vec3 meadowB=vec3(.30,.43,.19); vec3 meadowC=vec3(.42,.48,.24);\n vec3 natural=mix(meadowA,meadowB,smoothstep(.18,.58,n)); natural=mix(natural,meadowC,smoothstep(.70,.96,n));\n float fleck=fract(sin(dot(vWorldPos.xz,vec2(12.9898,78.233)))*43758.5453);\n natural+=vec3(fleck*.025,fleck*.018,fleck*.008);\n float biome=sin(vWorldPos.x*.017+vWorldPos.z*.011)*.5+sin(vWorldPos.z*.031-vWorldPos.x*.009)*.3;\n float domain=sin((vWorldPos.x+sin(vWorldPos.z*.021)*6.5)*.026+(vWorldPos.z+cos(vWorldPos.x*.018)*5.0)*.017);\n vec3 soil=vec3(.23,.18,.115);\n vec3 richMeadow=vec3(.18,.32,.115);\n vec3 meadowBright=vec3(.31,.46,.18);\n natural=mix(soil,richMeadow,smoothstep(-.48,.42,biome));\n natural=mix(natural,meadowBright,smoothstep(.48,.92,biome));\n natural=mix(natural,vec3(.15,.25,.105),smoothstep(.72,1.0,abs(domain))*.18);\n float slope=1.0-clamp(dot(normalize(vNormal),vec3(0.0,1.0,0.0)),0.0,1.0);
+ natural=mix(natural,vec3(.22,.19,.145),smoothstep(.24,.78,slope)*.16);
+ float elevation=clamp((vWorldPos.y+2.0)/8.0,0.0,1.0);
+ natural*=mix(.94,1.025,elevation);
+ float riverWet=1.0-smoothstep(5.0,17.0,abs(vWorldPos.x-31.0));\n natural=mix(natural,vec3(.18,.27,.13),riverWet*.12);\n float pathWear=1.0-smoothstep(2.8,7.0,abs(vWorldPos.x));\n pathWear*=smoothstep(-52.0,58.0,vWorldPos.z);\n natural=mix(natural,vec3(.27,.23,.16),pathWear*.055);');
  MAT.grass.userData.shader=shader;
 };
 MAT.water.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
  shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
- shader.fragmentShader='varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
+ shader.fragmentShader='varying vec3 vWaterWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vNormal),normalize(-vViewPosition)),0.0),3.0); float sunSpark=pow(max(dot(reflect(normalize(-vViewPosition),normalize(vNormal)),normalize(vec3(-.52,.74,.42))),0.0),72.0); diffuseColor.rgb+=vec3(1.0,.78,.48)*sunSpark*.20; diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
@@ -2773,6 +2785,14 @@ function foundationPhysicalizeFoliageMaterial(mat,phase=0){
   physical.clearcoatRoughness=.78;
   physical.envMapIntensity=.55;
   physical.userData.foundationFoliageConverted=true;
+  const prior=mat.onBeforeCompile;
+  physical.onBeforeCompile=(shader,renderer)=>{
+    if(prior)prior(shader,renderer);
+    shader.uniforms.uLeafPhase={value:phase};
+    shader.vertexShader='uniform float uLeafPhase;varying vec3 vLeafWorld;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vLeafWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    shader.fragmentShader='varying vec3 vLeafWorld;\\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\\n float leafBreak=sin(vLeafWorld.x*1.9+vLeafWorld.z*1.37+uLeafPhase)*sin(vLeafWorld.z*.73-vLeafWorld.x*.41+uLeafPhase*.71); diffuseColor.rgb*=1.0+leafBreak*.028; float backLight=pow(max(dot(normalize(vNormal),normalize(vec3(-.52,.74,.42))),0.0),2.2); diffuseColor.rgb+=vec3(.055,.075,.038)*backLight;');
+  };
+  physical.needsUpdate=true;
   physical.userData.foliagePhase=phase;
   return physical;
 }
@@ -2899,6 +2919,42 @@ function buildGraphicsFoundationV2(){
   };
 }
 
+function buildGraphicsMasterPass(){
+  if(player && !player.userData.graphicsMasterRig){
+    const key=new THREE.SpotLight(0xffd0a0,3.2,11,Math.PI*.34,.78,1.8);
+    key.position.set(-3.8,6.4,4.6);key.castShadow=false;key.name='HeroWarmKey';
+    const keyTarget=new THREE.Object3D();keyTarget.position.set(0,1.5,0);player.add(keyTarget);key.target=keyTarget;player.add(key);
+    const rim=new THREE.PointLight(0x8ec5d5,2.4,8,.9);rim.position.set(2.8,3.4,-2.6);rim.name='HeroCoolRim';player.add(rim);
+    const fillHero=new THREE.PointLight(0xffb36c,.72,5,.9);fillHero.position.set(-1.8,2.1,2.4);player.add(fillHero);
+    player.userData.graphicsMasterRig={key,rim,fillHero};
+  }
+  scene.traverse(obj=>{
+    if(obj.userData?.vegetationTier!=='hero' || obj.userData.graphicsCanopyDetail)return;
+    obj.userData.graphicsCanopyDetail=true;
+    const accents=[
+      [-.72,4.58,.16,.62,.48,.58,0],[.68,4.42,-.12,.58,.44,.54,2],[.05,5.05,.18,.54,.40,.50,1]
+    ];
+    accents.forEach(([x,y,z,sx,sy,sz,mi])=>{
+      const leaf=hdSphere(.70,TREE_LEAF_MATS[mi],[x,y,z],obj,[sx,sy,sz]);
+      leaf.castShadow=true;leaf.receiveShadow=true;leaf.userData.graphicsCanopyAccent=true;
+    });
+  });
+  const rigs=[['inn',-10,5.5,-7,0xffb56e,1.25,9],['forge',4.7,4.8,-9,0xff9b55,1.10,8],['chapel',-7,6,15,0xffd49a,.90,9],['mill',22.5,5,-13.5,0xffb86b,1.15,9],['watchtower',20.5,7,17.5,0x88b8cc,1,10]];
+  rigs.forEach(([name,x,y,z,color,intensity,distance])=>{
+    const id='GraphicsRim_'+name;if(scene.getObjectByName(id))return;
+    const l=new THREE.PointLight(color,intensity,distance,.9);l.name=id;l.position.set(x,y,z);scene.add(l);
+  });
+  if(!scene.getObjectByName('GraphicsSunHalo')){
+    const c=document.createElement('canvas');c.width=256;c.height=256;const ctx=c.getContext('2d');
+    const g=ctx.createRadialGradient(128,128,4,128,128,124);
+    g.addColorStop(0,'rgba(255,245,206,.78)');g.addColorStop(.12,'rgba(255,220,158,.38)');g.addColorStop(.42,'rgba(255,198,132,.12)');g.addColorStop(1,'rgba(255,180,120,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,256,256);
+    const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false,blending:THREE.AdditiveBlending}));
+    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(28,28,1);scene.add(halo);
+  }
+  window.__HEARTHMERE_GRAPHICS_MASTER={version:1,gradePass:true,heroRig:!!player?.userData.graphicsMasterRig,canopyAccents:[...scene.children].filter(o=>o.userData?.graphicsCanopyDetail).length,landmarkRims:rigs.length};
+}
 function buildHighEndAtmospherePass(){
   scene.background.set(0x7e9692);
   scene.fog.color.set(0x71837d);scene.fog.density=.00072;
@@ -3114,7 +3170,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildGraphicsFoundationV2();buildGraphicsMasterPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

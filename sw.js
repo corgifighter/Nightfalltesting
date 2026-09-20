@@ -1,4 +1,4 @@
-const CACHE='hearthmere-nightfalltesting-v11';
+const CACHE='hearthmere-nightfalltesting-v12';
 const CORE=["./","./index.html","./app.js","./manifest.webmanifest"];
 const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
@@ -7,7 +7,8 @@ const CDN=[
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/EffectComposer.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/Pass.js",
   "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js",
-  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js"
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js",
+  "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js"
 ];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(async c=>{

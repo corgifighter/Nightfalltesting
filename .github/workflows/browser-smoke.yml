@@ -71,6 +71,7 @@ jobs:
             });
             const bodySnapshot = await page.locator('body').innerText().catch(() => '');
             const resourceSnapshot = await page.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /app\\.js|three|postprocessing|shader/i.test(n)).slice(-80));
+            const appProbe = await page.request.get(new URL('app.js?build=52', page.url()).href).then(async res => ({ status: res.status(), contentType: res.headers()['content-type'] || '', length: (await res.body()).length })).catch(e => ({ error: String(e) }));
             let canvasData = null;
             if (canvasCount) {
               canvasData = await page.locator('#scene canvas').evaluate(canvas => canvas.toDataURL('image/png'));
@@ -83,7 +84,7 @@ jobs:
             }));
             require('fs').writeFileSync(
               'hearthmere-browser-check.txt',
-              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot }, null, 2)
+              JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot, appProbe }, null, 2)
             );
             console.log(JSON.stringify({ canvasCount, status, errors, failedRequests, assetChecks, webglSupport, bodySnapshot, resourceSnapshot }, null, 2));
             if (canvasCount < 1) {

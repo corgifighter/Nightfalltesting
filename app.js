@@ -1058,7 +1058,7 @@ function hdTreeCanopyGeometry(radius,height,pine=false){
       const taper=.24+.76*((y+1)/2);
       const r=Math.max(.001,(ring+wave)*taper);
       if(ring<1e-5)p.setXYZ(i,0,y,0);
-      else p.setXYZ(i,x/ring*r,y,z/ring*r);
+      else p.setXYZ(i,x/ring*r,y*height,z/ring*r);
     }else{
       const r=Math.max(.001,radius*(ring+wave)*(1+.12*Math.sin((y+1)*Math.PI)));
       if(ring<1e-5)p.setXYZ(i,0,y*height,0);

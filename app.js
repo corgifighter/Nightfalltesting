@@ -1,6 +1,9 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/controls/OrbitControls.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js';
+import {EffectComposer} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/EffectComposer.js';
+import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 const root=document.querySelector('#scene');
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
@@ -19,18 +22,23 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x7f9289,.00195);
+scene.fog=new THREE.FogExp2(0x82958e,.00172);
 
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.08,1800);
 camera.position.set(27,18,25);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.setSize(innerWidth,innerHeight);
+const composer=new EffectComposer(renderer);
+const renderPass=new RenderPass(scene,camera);
+composer.addPass(renderPass);
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.16,.52,.82);
+composer.addPass(bloomPass);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
+renderer.toneMappingExposure=1.02;
 renderer.physicallyCorrectLights=true;
 renderer.useLegacyLights=false;
 renderer.sortObjects=true;
@@ -41,11 +49,11 @@ const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
 controls.minDistance=8;controls.maxDistance=58;controls.minPolarAngle=.38;controls.maxPolarAngle=1.20;controls.rotateSpeed=.24;
 
-const hemi=new THREE.HemisphereLight(0xe8f2ef,0x332a24,1.35);scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffd6a0,4.2);sun.position.set(-58,86,42);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-95;sun.shadow.camera.right=95;sun.shadow.camera.top=95;sun.shadow.camera.bottom=-95;sun.shadow.bias=-.00022;scene.add(sun);
-const fill=new THREE.DirectionalLight(0x84a8bd,1.0);fill.position.set(45,34,-55);scene.add(fill);
-const moon=new THREE.DirectionalLight(0x5f79a4,.18);moon.position.set(30,50,-45);scene.add(moon);
+const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.12);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffd8ad,3.35);sun.position.set(-58,86,42);sun.castShadow=true;
+sun.shadow.mapSize.set(3072,3072);sun.shadow.camera.left=-78;sun.shadow.camera.right=78;sun.shadow.camera.top=78;sun.shadow.camera.bottom=-78;sun.shadow.bias=-.00012;sun.shadow.normalBias=.025;scene.add(sun);
+const fill=new THREE.DirectionalLight(0x89afc2,.82);fill.position.set(45,34,-55);scene.add(fill);
+const moon=new THREE.DirectionalLight(0x6682aa,.14);moon.position.set(30,50,-45);scene.add(moon);
 
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
@@ -60,7 +68,7 @@ scene.add(sky);
   sg.addColorStop(0,'rgba(255,244,194,1)');sg.addColorStop(.16,'rgba(255,211,143,.72)');sg.addColorStop(1,'rgba(255,194,120,0)');
   x.fillStyle=sg;x.fillRect(450,120,250,250);
   const src=new THREE.CanvasTexture(c);src.colorSpace=THREE.SRGBColorSpace;src.mapping=THREE.EquirectangularReflectionMapping;
-  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.52;
+  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.44;
   src.dispose();pmrem.dispose();
 })();
 
@@ -454,7 +462,7 @@ function buildLandscapeAnchors(){
 }
 function buildWorldVisualPass(){
   sun.color.set(0xffd2a0);fill.color.set(0x7ea8bd);hemi.color.set(0xdbece6);hemi.groundColor.set(0x30251f);
-  fill.intensity=1.15;sun.intensity=4.35;
+  fill.intensity=.92;sun.intensity=3.55;
   const practicals=[[-14,-8,0xffb35c,2.2,11],[4,-12,0xffa14c,1.7,9],[15,-10,0xffb35c,1.6,9],[-4,-28,0xffc07a,1.5,8],[20,-24,0xffb15b,1.8,10]];
   practicals.forEach(([x,z,c,i,d])=>{const l=new THREE.PointLight(c,i,d,.8);l.position.set(x,2.3,z);scene.add(l);});
   const hazeMat=new THREE.MeshBasicMaterial({color:0xc8d5cc,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
@@ -1200,7 +1208,7 @@ function frame(t){const dt=Math.min(.05,(t-last)/1000);last=t;time+=dt;
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
 birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.8+b.userData.phase)*dt*.12;b.rotation.z=Math.sin(time*7+b.userData.phase)*.16;if(b.position.x>55)b.position.x=-55});
  motes.forEach((m,i)=>{m.position.y+=dt*(.018+Math.sin(i)*.006);m.position.x+=Math.sin(time*.25+m.userData.phase)*dt*.012;m.material.opacity=.08+.12*(Math.sin(time*.7+m.userData.phase)+1)/2;if(m.position.y>10)m.position.y=1});
- const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00165+.00065*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=2.05+2.65*day;moon.intensity=.10+.42*(1-day);hemi.intensity=1.02+.68*day;renderer.toneMappingExposure=.90+.27*day;scene.environmentIntensity=.40+.20*day;
+ const day=(Math.sin(time*.014)+1)/2;scene.fog.density=.00165+.00065*(1-day);sun.position.x=-58+Math.sin(time*.018)*18;sun.position.z=42+Math.cos(time*.014)*14;sun.intensity=2.05+2.65*day;moon.intensity=.10+.42*(1-day);hemi.intensity=1.02+.68*day;renderer.toneMappingExposure=.90+.20*day;scene.environmentIntensity=.34+.16*day;
  if(player){
   const oldTarget=controls.target.clone();
   tmpTarget.set(player.position.x,0,player.position.z);
@@ -1210,10 +1218,10 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(!camera.userData.followInit){camera.position.set(controls.target.x+27,18,controls.target.z+25);camera.userData.followInit=true;}
 }
 scene.traverse(o=>{if(o.userData?.worldLabel)o.visible=!cinematicMode;});
-controls.update();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();renderer.render(scene,camera);if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
+controls.update();composer.render();destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && renderer.info.render.calls>0){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){captureRequested=false;renderer.domElement.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='hearthmere-real-game-frame.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildFarmArrival();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();replaceLegacyVisuals();applyCC0Materials();await buildInteractions();bootSet(1,'The lanterns are lit.');setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloomPass.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

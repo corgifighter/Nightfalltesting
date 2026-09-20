@@ -1058,7 +1058,14 @@ const HD={
   warm:new THREE.MeshStandardMaterial({color:0xffb45c,emissive:0xff6b22,emissiveIntensity:1.6,roughness:.38}),
   water:new THREE.MeshPhysicalMaterial({color:0x2d8d98,roughness:.07,metalness:.05,transmission:.18,clearcoat:1,clearcoatRoughness:.08})
 };
-function addSurfaceVariation(mat,seed=1,contrast=.12){
+
+// Foliage is deliberately treated as a hero material: soft response, controlled
+// transmission and subtle clearcoat prevent the current faceted green masses from
+// reading as painted geometry.
+HD.leaf=new THREE.MeshPhysicalMaterial({color:0x3f7044,roughness:.88,metalness:0,clearcoat:.08,clearcoatRoughness:.72,sheen:.12,sheenColor:new THREE.Color(0x7eaa72),sheenRoughness:.72});
+HD.leafLight=new THREE.MeshPhysicalMaterial({color:0x679052,roughness:.86,metalness:0,clearcoat:.06,clearcoatRoughness:.74,sheen:.14,sheenColor:new THREE.Color(0xa4c28e),sheenRoughness:.70});
+HD.trunk=new THREE.MeshPhysicalMaterial({color:0x4a3323,roughness:.91,metalness:0,clearcoat:.04,clearcoatRoughness:.82});
+\nfunction addSurfaceVariation(mat,seed=1,contrast=.12){
   mat.onBeforeCompile=(shader)=>{
     shader.vertexShader='varying vec3 vSurfaceWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSurfaceWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
     shader.fragmentShader='varying vec3 vSurfaceWorld;\n'+shader.fragmentShader

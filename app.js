@@ -3655,6 +3655,47 @@ function buildWorldMaterialIntegrationPass(){
 }
 
 
+function buildWildflowerMeadowPass(){
+  if(window.__HEARTHMERE_WILDFLOWERS?.version===1)return;
+  const root=new THREE.Group();root.name='WildflowerMeadows';
+  const species=[
+    {color:0xd9c98a,scale:.72,count:34},
+    {color:0x8d86ad,scale:.62,count:30},
+    {color:0xc47b67,scale:.58,count:28}
+  ];
+  const petalGeo=new THREE.ConeGeometry(.065,.22,5);
+  const centerGeo=new THREE.SphereGeometry(.055,7,5);
+  let placed=0;
+  species.forEach((sp,si)=>{
+    const petalMat=new THREE.MeshPhysicalMaterial({color:sp.color,roughness:.78,metalness:0,sheen:.25,flatShading:true});
+    const centerMat=new THREE.MeshPhysicalMaterial({color:si===1?0xd5bd70:0x8f6a3f,roughness:.84,metalness:0});
+    const petalsA=new THREE.InstancedMesh(petalGeo,petalMat,sp.count);
+    const petalsB=new THREE.InstancedMesh(petalGeo,petalMat,sp.count);
+    const centers=new THREE.InstancedMesh(centerGeo,centerMat,sp.count);
+    const dummy=new THREE.Object3D();
+    let n=0,guard=0;
+    while(n<sp.count&&guard<sp.count*14){
+      guard++;
+      const x=-47+worldRandom()*94,z=-51+worldRandom()*108;
+      const edge=1-Math.min(1,Math.hypot(x*.55,(z+2)*.42)/55);
+      if(Math.abs(x)<9&&z>-31&&z<35)continue;
+      if(edge<.08&&worldRandom()<.7)continue;
+      if(Math.abs(x-31)<4&&z>-34&&z<55)continue;
+      const y=terrainHeight(x,z);
+      const s=sp.scale*(.72+worldRandom()*.42);
+      dummy.position.set(x,y+.10,z);dummy.rotation.set(0,worldRandom()*Math.PI,0);dummy.scale.set(s,s,s);dummy.updateMatrix();petalsA.setMatrixAt(n,dummy.matrix);
+      dummy.rotation.y+=Math.PI*.5;dummy.rotation.x=.08;dummy.updateMatrix();petalsB.setMatrixAt(n,dummy.matrix);
+      dummy.position.y+=.12*s;dummy.scale.setScalar(s*.72);dummy.rotation.set(0,worldRandom()*Math.PI,0);dummy.updateMatrix();centers.setMatrixAt(n,dummy.matrix);
+      n++;
+    }
+    petalsA.count=n;petalsB.count=n;centers.count=n;
+    petalsA.instanceMatrix.needsUpdate=true;petalsB.instanceMatrix.needsUpdate=true;centers.instanceMatrix.needsUpdate=true;
+    petalsA.frustumCulled=false;petalsB.frustumCulled=false;centers.frustumCulled=false;
+    root.add(petalsA,petalsB,centers);placed+=n;
+  });
+  scene.add(root);
+  window.__HEARTHMERE_WILDFLOWERS={version:1,flowers:placed,species:3};
+}
 function buildGroundIntegrationPass(){
   if(window.__HEARTHMERE_GROUND_INTEGRATION?.version===1)return;
   const rootGroup=new THREE.Group();
@@ -3771,7 +3812,7 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

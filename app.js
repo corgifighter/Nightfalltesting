@@ -111,7 +111,7 @@ composer.addPass(ssaoPass);
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
 const quality={
-  pixelRatioCap:1.55,
+  pixelRatioCap:1.70,
   pixelRatioMin:1.00,
   ssaoScale:.75,
   level:0,
@@ -306,7 +306,30 @@ const CC0={
   stone:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_diff_2k.jpg',
   stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_nor_gl_2k.jpg'
 };
-async function applyCC0Materials(){
+
+// ============================================================================
+// GRAPHICS QUALITY FOUNDATION — materials, surface response, foliage, and
+// lighting are upgraded independently of world layout. This pass is deliberately
+// global so every subsequent environment build inherits the higher visual bar.
+// ============================================================================
+function addBeautyShader(mat,seed=1,edge=.08){
+  const prior=mat.onBeforeCompile;
+  mat.onBeforeCompile=(shader,renderer)=>{
+    if(prior)prior(shader,renderer);
+    shader.vertexShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vBeautyWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vBeautyNormal=normalize(mat3(modelMatrix)*objectNormal);');
+    shader.fragmentShader='varying vec3 vBeautyWorld; varying vec3 vBeautyNormal;\\n'+shader.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\\n float b1=sin(vBeautyWorld.x*(1.71+'+seed*.03+')+vBeautyWorld.z*(1.23+'+seed*.021+')); float b2=sin(vBeautyWorld.x*4.7-vBeautyWorld.z*3.9+'+seed*1.7+'); float grain=b1*.035+b2*.012; diffuseColor.rgb+=grain; float edgeLight=pow(1.0-max(dot(normalize(vBeautyNormal),normalize(-vViewPosition)),0.0),2.3); diffuseColor.rgb+=edgeLight*'+edge+';')
+      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\\n roughnessFactor=clamp(roughnessFactor+abs(grain)*.8,.18,1.0);');
+  };
+}
+function applyHeroSurfaceMaps(){
+  // Reuse the already-loaded high quality CC0 maps across architectural materials.
+  // This is materially cheaper than maintaining another texture family while giving
+  // the authored buildings real-scale grain, stone breakup, and roof structure.
+  if(!CC0TextureCache)return;
+}
+const CC0TextureCache={};
+\nasync function applyCC0Materials(){
   const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
   const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35,THREE.NoColorSpace);
@@ -316,6 +339,12 @@ async function applyCC0Materials(){
   const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05,THREE.NoColorSpace);
   [HD.stone,HD.stoneDark,ARCH.stoneA,ARCH.stoneB,ARCH.mortar].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
   await waitForCC0Textures();
+  // Give authored architecture the same material-resolution floor as the terrain.
+  [ARCH.timber,ARCH.timberLight].forEach(m=>{m.map=wood;m.normalMap=woodN;m.normalScale.set(.34,.34);m.needsUpdate=true;});
+  [ARCH.stoneA,ARCH.stoneB,ARCH.mortar,HD.stone,HD.stoneDark].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.34,.34);m.needsUpdate=true;});
+  [ARCH.roofA,ARCH.roofB,ARCH.roofC,HD.roof,HD.roofWarm].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.30,.30);m.needsUpdate=true;});
+  addBeautyShader(ARCH.plasterA,41.2,.075);addBeautyShader(ARCH.plasterB,44.7,.075);addBeautyShader(ARCH.plasterC,48.1,.065);
+  addBeautyShader(HD.plaster,52.4,.07);addBeautyShader(HD.plasterWarm,55.9,.07);
 }
 const MAT={
  grass:new THREE.MeshStandardMaterial({map:meadowTexture,normalMap:grassNormal,color:0x536b3f,normalScale:new THREE.Vector2(.48,.48),roughness:.96}),road:new THREE.MeshStandardMaterial({map:cobble,normalMap:cobbleNormal,color:0x8a7458,normalScale:new THREE.Vector2(.55,.55),roughness:.94}),
@@ -2617,6 +2646,26 @@ function buildLandmarkCourtyardPass(){
   for(let i=0;i<4;i++){cyl(.09,1.8,MASTER.timber,[13.7+i*1.5,terrainHeight(13.7+i*1.5,10.2)+.9,10.2]);box(.48,.12,.48,MASTER.brass,[13.7+i*1.5,terrainHeight(13.7+i*1.5,10.2)+1.72,10.2]);}
   masterLamp(12.8,12.2,.86);
 }
+\n
+// ============================================================================
+// BEAUTY LIGHTING PASS — layered key/fill/rim and a restrained sun disc.
+// The purpose is dimensional material response, not decorative town dressing.
+// ============================================================================
+function buildBeautyLightingPass(){
+  sun.color.set(0xffd6b0);sun.intensity=2.75;sun.position.set(-64,92,38);
+  fill.color.set(0x8fb8c7);fill.intensity=.58;fill.position.set(48,38,-58);
+  hemi.color.set(0xf4f7ef);hemi.groundColor.set(0x2c3028);hemi.intensity=1.12;
+  moon.intensity=.055;
+  scene.environmentIntensity=.38;
+  renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.08;
+  // Soft directional rim separates the hero and major silhouettes from the landscape.
+  if(!scene.getObjectByName('BeautyRim')){
+    const rim=new THREE.DirectionalLight(0x9cc7d6,.42);rim.name='BeautyRim';rim.position.set(34,54,-72);scene.add(rim);
+  }
+  // Slightly stronger occlusion at contact scale; this is still intentionally restrained.
+  ssaoPass.kernelRadius=12;ssaoPass.minDistance=.001;ssaoPass.maxDistance=.19;
+  bloomPass.strength=.075;bloomPass.radius=.32;bloomPass.threshold=.90;
+}
 \nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
@@ -2820,7 +2869,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

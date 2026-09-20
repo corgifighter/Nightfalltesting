@@ -137,6 +137,12 @@ sun.shadow.bias=-.00008;
 sun.shadow.normalBias=.018;
 sun.shadow.camera.updateProjectionMatrix();
 scene.add(sun);
+function setShadowMapSize(size){
+  if(sun.shadow.mapSize.x===size && sun.shadow.mapSize.y===size)return;
+  sun.shadow.mapSize.set(size,size);
+  if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
+  sun.shadow.needsUpdate=true;
+}
 const fill=new THREE.DirectionalLight(0x89afc2,.82);fill.position.set(45,34,-55);scene.add(fill);
 const moon=new THREE.DirectionalLight(0x6682aa,.14);moon.position.set(30,50,-45);scene.add(moon);
 
@@ -1384,6 +1390,7 @@ function updateAdaptiveQuality(now){
   quality.level=next;
   quality.pixelRatioCap=[1.55,1.40,1.25,1.10][quality.level];
   quality.ssaoScale=[.75,.70,.64,.58][quality.level];
+  setShadowMapSize([3072,2560,2048,1536][quality.level]);
   const pixelRatio=Math.min(devicePixelRatio,quality.pixelRatioCap);
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);resizeSSAO();

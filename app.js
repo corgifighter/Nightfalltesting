@@ -245,14 +245,13 @@ const CC0={
   stoneNormal:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/medieval_blocks_03/medieval_blocks_03_nor_gl_2k.jpg'
 };
 function applyCC0Materials(){
-  const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6);
-  meadowN.colorSpace=THREE.NoColorSpace;
+  const meadow=loadCC0Map(CC0.meadow,3.6),meadowN=loadCC0Map(CC0.meadowNormal,3.6,THREE.NoColorSpace);
   MAT.grass.map=meadow;MAT.grass.normalMap=meadowN;MAT.grass.needsUpdate=true;
-  const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35);woodN.colorSpace=THREE.NoColorSpace;
+  const wood=loadCC0Map(CC0.wood,1.35),woodN=loadCC0Map(CC0.woodNormal,1.35,THREE.NoColorSpace);
   [HD.timber,HD.timberLight].forEach(m=>{m.map=wood;m.normalMap=woodN;m.normalScale.set(.28,.28);m.needsUpdate=true;});
-  const roof=loadCC0Map(CC0.roof,1.15),roofN=loadCC0Map(CC0.roofNormal,1.15);roofN.colorSpace=THREE.NoColorSpace;
+  const roof=loadCC0Map(CC0.roof,1.15),roofN=loadCC0Map(CC0.roofNormal,1.15,THREE.NoColorSpace);
   [HD.roof,HD.roofWarm].forEach(m=>{m.map=roof;m.normalMap=roofN;m.normalScale.set(.38,.38);m.needsUpdate=true;});
-  const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05);stoneN.colorSpace=THREE.NoColorSpace;
+  const stone=loadCC0Map(CC0.stone,1.05),stoneN=loadCC0Map(CC0.stoneNormal,1.05,THREE.NoColorSpace);
   [HD.stone,HD.stoneDark].forEach(m=>{m.map=stone;m.normalMap=stoneN;m.normalScale.set(.42,.42);m.needsUpdate=true;});
 }
 const MAT={

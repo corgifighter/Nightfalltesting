@@ -1,0 +1,603 @@
+# HEARTHMERE / NIGHTFALL REBORN — FULL CONTINUATION HANDOFF
+Date: 2026-09-20
+Repository: corgifighter/Nightfalltesting
+Reference/asset repository: corgifighter/Test-screen
+
+## NON-NEGOTIABLE DIRECTIVE: SPEED HAS NO VALUE
+
+The user explicitly rejects rushed 1–3 minute passes, superficial tweaks, incremental cosmetic polishing, fake screenshots, and “good enough” implementations.
+
+Correct operating mode:
+- Deeply inspect the existing project before changing it.
+- Pick ONE major visual system at a time.
+- Push that system as far as technically and artistically possible.
+- Make a large, coherent reconstruction, not a small iteration.
+- Spend the necessary time reasoning through geometry, materials, lighting, composition, interaction, performance, and integration.
+- Then move to the next major system.
+- Do NOT enter a screenshot/review loop after every tiny change.
+- User specifically requested massive upgrades across every major target first, then visual review.
+- Never confuse technical complexity, polygon count, or code volume with visual quality.
+- Never declare a pass successful merely because it renders.
+- If an asset/design is holding the project back, replace it. Nothing is sacred.
+- Target is not merely “less Lego.” Target is an unbelievably beautiful, cohesive, handcrafted, atmospheric fantasy RPG world.
+- A long, meticulous work turn is preferable to a fast answer. Speed is not an accepted currency.
+
+## PROJECT NORTH STAR
+
+Hearthmere / Nightfall Reborn is an original fantasy MMORPG-style browser game.
+
+Influences:
+- OSRS/RuneScape-style readability, charm and gameplay clarity are useful references.
+- It must NOT become a RuneScape clone.
+- Desired presentation: stylized realism with exceptional art direction.
+- Modern architecture, lighting, materials, animation and environmental depth.
+- Mobile-first browser playability.
+- Real Three.js WebGL scene.
+- Small vertical slice first, but it must feel like a genuine game world rather than a graybox/prototype.
+
+Desired visual progression:
+beautiful at first glance → believable at second glance → rich when examined closely → cohesive → atmospheric → handcrafted → strongly fantasy-specific.
+
+Reject:
+- primitive early-2000s indie appearance
+- low-poly asset-pack appearance
+- Lego/diorama world
+- flat board with buildings on it
+- placeholder environment
+- procedural mush
+- empty terrain
+- fake concept-art screenshot
+
+## USER'S KEY VISUAL FEEDBACK
+
+Latest previously verified mobile screenshot showed:
+- real Three.js world
+- pale/cream terrain
+- primitive spherical/bubble tree forms
+- flat path
+- blocky building
+- narrow turquoise river
+- tiny player
+- high/diorama-like camera
+- muddy/low-contrast lighting
+- HUD acceptable but world weak
+
+User said:
+- only marginal improvement
+- gap remains enormous (“million times better” was intentionally hyperbolic)
+- world looked like Lego/diorama/prototype
+- goal is NOT merely to stop looking like Lego
+- goal is unbelievably beautiful
+- no attachment to existing assets/designs
+- nothing is off limits
+- massive overhaul required
+- visual quality takes priority over micro-detail
+- do not waste time on vertex counts, gutters, tiny trims, etc. while global quality is far below target.
+
+## MASTER VISUAL PLAN
+
+Major systems, in priority order:
+1. Renderer/image quality
+2. Architecture reconstruction
+3. Material system
+4. Terrain surface/landform quality
+5. Vegetation
+6. Rocks/natural geometry
+7. Water
+8. Character
+9. Atmospheric depth
+10. Lighting/cinematography
+11. Camera/composition
+12. Environmental animation/life
+13. World dressing/storytelling
+14. VFX
+15. UI/UX
+16. Weather/time of day
+17. Performance architecture
+18. Full art-direction review
+19. Repeat weakest major system
+
+Renderer foundation is already strong enough. Do not endlessly micro-tune renderer without evidence. Content/art direction is the bottleneck.
+
+## ENGINEERING FOUNDATION ALREADY COMPLETED
+
+Completed:
+- deterministic seeded RNG
+- reusable cylinder/sphere/rock/tree geometry caches
+- scene telemetry
+- visible mesh/shadow/transparent/light budgets
+- texture telemetry
+- authoritative readiness state
+- real capture metadata
+- capture telemetry bug fixed
+- interaction raycasts isolated to explicit interaction roots
+- navigation abstraction
+- legacy visual GLB roots removed after replacement
+- stale hero mesh references repaired
+- procedural character animation references repaired
+- static reconstructed visuals can be matrix-frozen
+- shadow map cadence throttled
+- GPU geometry/texture/program telemetry
+- service-worker failure semantics hardened
+- adaptive quality uses rolling p95-style evidence
+- runtime diagnostics for errors/rejections/WebGL context loss
+- shader precompilation
+- CC0 enhancement textures initialized before readiness
+
+Current service-worker cache: v26.
+
+## RENDERER FOUNDATION
+
+Three.js 0.181.1 with:
+- WebGLRenderer
+- capped pixel ratio
+- EffectComposer
+- RenderPass
+- SSAO
+- UnrealBloom
+- FXAA
+- OutputPass
+- PCF soft shadows
+- sRGB output
+- AgX tone mapping
+- custom sky/environment
+- dynamic sun/moon/hemi/fill
+- fog
+- PMREM environment
+- shader precompilation
+- readiness diagnostics
+
+Do not spend the next turn on tiny renderer adjustments unless a concrete runtime problem requires it.
+
+## DEEP PASSES ALREADY COMPLETED
+
+### Architecture
+Recent commits:
+- 7d8ae1b56ef49b2268b214a9dc1fa3ff716a8bd3
+- 46b4850562d7a9041db51136aa25812a831ea6f2
+
+Work:
+- beveled building masses
+- layered roof construction
+- differentiated gables
+- thick eaves/ridges
+- recessed openings
+- chimneys
+- gable trims
+- dormers
+- landmark-specific silhouettes
+- distinct cottage massing
+- projecting secondary volumes
+- cottage-specific roofs
+- porches
+- additional facade framing/windows
+
+### Terrain
+Commit:
+422a1917bd81af41301004972f6490bf822ba865
+
+Work:
+- authored warped landform field
+- 192x192 terrain subdivisions
+- settlement basin
+- river valley
+- southern approach
+- multiple ridge frequencies
+- meadow/landform variation
+- terrain-conforming road ribbons
+- world-space biome response
+- darker soil/grass values
+- river wetness influence
+- path wear
+
+Goal: eliminate flat game-board appearance.
+
+### Vegetation
+Deep ecological layering:
+- hero groves
+- companion trees
+- wet woodland edges
+- western woodland
+- meadow/forest transition
+- village outskirts
+- river ferns
+- meadow grasses
+- forest-floor rocks
+- irregular density gradients
+- controlled clearings
+
+Do not blindly add hundreds more objects; eventually use telemetry.
+
+### River
+Deep waterway reconstruction:
+- irregular river centerline
+- variable width
+- water ribbon
+- water glow
+- authored bank ribbons
+- wet soil patches
+- river stones
+- foam rings
+- shoreline glints
+- reeds
+
+Shared fields:
+- riverCenterX(z)
+- riverHalfWidth(z)
+
+### Materials
+World-space surface variation added to:
+- timber
+- stone
+- roofs
+- trunks
+- architecture materials
+
+Plaster has multi-scale world-space variation and roughness variation.
+PBR wood/roof/stone maps are integrated into architecture materials.
+
+### Atmosphere
+Commit:
+422a1917bd81af41301004972f6490bf822ba865
+
+Added:
+- distant forest horizon
+- far trees
+- distant ridge forms
+- atmospheric depth veils
+- subordinate background silhouettes
+
+### Lighting
+Commit:
+427d94df999123f6a230434ef86e71c70a9c35cf
+
+Added:
+- authored warm local lights around inhabited structures
+- cool river fill
+- dynamic day palette
+- dynamic sun elevation/color
+- dynamic fog
+- controlled environment response
+
+### Character
+Commit:
+86aa75e372a4bd1f9b4cfbf651becfa0858b62ec
+
+Rebuilt procedural hero:
+- layered torso
+- chest volume
+- hem/belt
+- neck/head/jaw
+- hair and side locks
+- nose/eyes
+- articulated upper/lower arms
+- gloves
+- articulated legs
+- knees/shins
+- boots
+- split tunic
+- cloak
+- clasp
+- weapon
+
+Preserved animation targets:
+parts.arms
+parts.legs
+parts.cloak
+
+### Camera
+Commit:
+89be9d3f0ae5c671fd94818d26cb9a82ea4f60a9
+
+Changed:
+- FOV 52
+- closer/lower camera
+- min distance 5.5
+- max distance 46
+- lower polar angle
+- target raised toward player
+- forward-biased focus
+- less tabletop/diorama composition
+
+### Environmental storytelling
+Latest commit:
+9e0f06bbe5cfddb2c06877aad15931b7cef07f5f
+
+Added authored activity zones around:
+- Warm Lantern / inn frontage
+- Riverside Forge
+- Chapel yard
+- Ashwheel Mill
+- North Watch
+- River work edge
+
+Props include tables, benches, barrels, fuel, tools, ore, grave markers, candles, grain/sacks, loading structures, defensive clutter, flags, work platforms and baskets/skiff-related props.
+
+Goal: places should look inhabited and functional, not like isolated decorative meshes.
+
+## IMPORTANT CURRENT STATE
+
+The newest multi-system visual build has NOT yet been verified through the user's phone screenshot loop.
+
+Do not claim it is visually successful.
+Do not claim source changes equal runtime proof.
+Do not fabricate a screenshot.
+
+The user deliberately wants the screenshot/review loop postponed until after substantial reconstruction across the major systems.
+
+Also note: the newest cluster of visual changes should eventually receive parser/runtime validation before further escalation if needed.
+
+## NEXT MAJOR SYSTEMS TO DEEPEN
+
+Already deeply attacked:
+architecture, materials, terrain, vegetation, river/water, character, atmosphere, lighting, camera, environmental storytelling.
+
+Remaining major systems:
+
+### Natural geometry / rocks
+Deeply reconstruct:
+- rock silhouette library
+- moss/weathering
+- scale hierarchy
+- cliffs/boulders
+- river stones
+- exposed soil transitions
+- roots
+- stumps/deadwood
+- geological clustering
+- shadow relationships
+
+Use CC0 Poly Haven assets where they materially improve realism. Distill/LOD as needed.
+
+### Environmental animation/life
+Deep pass:
+- tree/foliage wind
+- grass movement
+- flags
+- water motion
+- smoke
+- forge embers
+- chimney smoke
+- birds/insects where appropriate
+- subtle NPC activity
+- animated light flicker
+- layered ambient movement
+
+Avoid uniform bobbing/oscillation. Use multiple frequencies/phases.
+
+### VFX
+Deep pass:
+- water sparkle
+- fire/embers
+- smoke
+- dust
+- pollen/motes
+- restrained fantasy/environmental particles
+
+### UI/UX
+HUD is currently not the primary bottleneck.
+Eventually improve:
+- hierarchy
+- typography
+- inventory/equipment
+- touch controls
+- minimap
+- transitions
+- interaction feedback
+- quest presentation
+
+Do not let UI displace world reconstruction.
+
+### Weather/time of day
+Deep pass:
+- sunrise/sunset
+- clouds
+- rain
+- fog
+- wet surfaces
+- night
+- moonlight
+- firelight
+- weather transitions
+
+### Performance architecture
+Later:
+- explicit hero/mid/far LOD
+- InstancedMesh where justified
+- chunking
+- texture duplication analysis
+- KTX2/Basis
+- remaining legacy GLB metadata migration
+- vendor Three.js dependency chain
+- optimize without visually degrading the target.
+
+## ASSET STRATEGY
+
+Poly Haven research established:
+- CC0
+- commercial use
+- no attribution required
+- high-quality HDRIs
+- photogrammetry PBR textures
+- realistic models
+
+Useful researched assets:
+Tree Small 02; Island Tree 02; Island Tree 03; Rock Moss Set 01; Shrub 02; Forest Ground 01; Medieval Wood; Medieval Blocks; Medieval Wall; Medieval Red Brick; Large Castle Door; Root Cluster; Tree Stump; Forest Slope HDRI; Medieval Cafe HDRI.
+
+Vendored:
+assets/cc0/polyhaven/rock_moss_set_01.glb
+assets/cc0/polyhaven/shrub_02.glb
+assets/cc0/polyhaven/fern_02.glb
+assets/cc0/polyhaven/grass_medium_01.glb
+assets/cc0/polyhaven/shrub_04.glb
+assets/cc0/polyhaven/wild_rooibos_bush.glb
+
+Principle:
+Never reject an exceptional source asset merely because raw representation is expensive.
+Pipeline:
+source → analyze → retopologize/simplify → bake normals/AO/material detail → LOD → integrate → instance/batch.
+
+Do not use low-poly asset packs as primary art solution.
+
+## ENGINEERING BACKLOG
+
+1. Validate shadow classification with actual performance data.
+2. Establish explicit hero/mid/far LOD policy.
+3. Expand navigation blockers beyond river/bridge.
+4. Analyze texture telemetry for duplicate/heavy families.
+5. Remove remaining hidden/legacy binary dependencies where practical.
+6. Vendor remaining Three.js runtime dependency chain.
+7. Evaluate KTX2/Basis.
+8. Use InstancedMesh/chunking for repeated foliage only when evidence supports it.
+9. True LOD after visual asset quality is established.
+
+## BOOT BUG HISTORY
+
+Previous real mobile screenshot exposed:
+Cannot access 'rockGeometryCache' before initialization
+
+Fixed by moving rockGeometryCache above world-environment construction, removing duplicate declaration, and advancing SW cache.
+
+Fix commit:
+27a37c9730dbe43e687a2dc71417812f9f7631d
+
+Do not reintroduce initialization-order problems.
+
+## MOBILE / HUD STATE
+
+Earlier mobile work:
+- inventory hidden by default on mobile
+- MENU opens inventory
+- minimap hidden on phone
+- compact quest panel
+- compact hotbar
+- cinematic mode hides HUD but preserves scene
+- CAPTURE/CINEMATIC remain accessible
+
+User tests from Android phone/browser.
+User wants:
+- launchable in phone browser
+- actual runtime frame
+- accurate capture from real WebGL canvas
+- no fake concept screenshots
+
+## QUALITY GATE
+
+Runtime:
+- GitHub Pages loads
+- no black screen
+- no fatal console errors
+- Three.js/GLBs/textures load
+- service worker safe
+- refresh works
+- mobile works
+- real capture works
+
+Character:
+- natural movement
+- grounded
+- readable silhouette
+- convincing animation
+
+World:
+- authored architecture
+- believable landforms
+- ecological vegetation
+- river integrated into landscape
+- materials respond to light
+- atmospheric depth
+- lighting hierarchy
+- world life
+- functional storytelling
+
+Visual:
+- not Lego
+- not low-poly
+- not graybox
+- not primitive early-2000s
+- not empty
+- not procedural demo
+- strong fantasy identity
+- stylized realism
+- cohesive art direction
+- attractive immediately
+- believable on closer inspection
+- rich when examined
+
+## DO NOT
+
+Do not:
+- make tiny roof tweaks and call them major
+- tweak polygon counts while global quality is poor
+- obsess over gutters/tiny trims/vertex counts
+- preserve bad assets because they already exist
+- produce concept art instead of modifying the actual game
+- provide fake screenshots
+- claim an unverified build works
+- rush due to token/time pressure
+- stop after one implementation pass
+- add arbitrary detail without composition/material/lighting logic
+- make every tree/rock/prop identical
+- create a dense procedural forest that destroys readability
+- sacrifice visual quality merely for easy optimization
+- return to renderer micro-tuning without concrete evidence
+
+## COMMUNICATION EXPECTATION
+
+User prefers:
+- decisive execution
+- minimal progress chatter
+- long uninterrupted work turns
+- actual repository changes
+- factual reporting
+- no premature celebration
+- no pretending
+
+“Continue” means continue doing deep work.
+“Go” means proceed without asking permission.
+When a major system is below target, reconstruct it.
+
+## EXACT CURRENT POSITION
+
+Current campaign sequence:
+Architecture
+→ Terrain
+→ Vegetation
+→ River
+→ Materials
+→ Atmosphere
+→ Lighting
+→ Character
+→ Camera
+→ Environmental storytelling
+
+Latest known commit:
+9e0f06bbe5cfddb2c06877aad15931b7cef07f5f
+
+Service worker:
+v26
+
+Next instance should:
+1. Read this document.
+2. Read current app.js before modifying it.
+3. Inspect recent commits if necessary.
+4. Continue the deep reconstruction campaign.
+5. Pick the next major remaining system.
+6. Work deeply on it.
+7. Do not enter screenshot loop prematurely.
+8. Maintain visual north star.
+9. Only after major systems have received substantial reconstruction should the user be asked for a real mobile frame.
+
+## FINAL DIRECTIVE
+
+This is not a speed challenge.
+Speed is not an accepted currency here.
+
+A long, carefully reasoned reconstruction that materially advances visual quality is worth more than a fast superficial answer.
+
+Treat this as an inherited production project, not a fresh chat.
+
+DO NOT reset the plan.
+DO NOT downgrade the ambition.
+DO NOT settle.
+CONTINUE THE DEEP WORK.

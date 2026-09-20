@@ -2410,7 +2410,97 @@ function applyShadowPolicy(){
   });
   scene.traverseVisible(o=>{if(o.isMesh&&o.castShadow)shadowPolicy.castersAfter++;});
 }
-const tmpTarget=new THREE.Vector3();
+
+// ============================================================================
+// MASTER ART-DIRECTION CONSTRUCTION PASS
+// Macro composition first: civic space, streets, arrival, river edge,
+// vegetation masses, and a coherent lighting hierarchy.
+// ============================================================================
+const MASTER={
+  plaza:new THREE.MeshStandardMaterial({color:0x827766,roughness:.88,metalness:.02}),
+  plazaDark:new THREE.MeshStandardMaterial({color:0x5b5147,roughness:.94}),
+  curb:new THREE.MeshStandardMaterial({color:0x69665e,roughness:.96}),
+  timber:new THREE.MeshStandardMaterial({color:0x4b3022,roughness:.82}),
+  timberLight:new THREE.MeshStandardMaterial({color:0x765038,roughness:.78}),
+  plaster:new THREE.MeshStandardMaterial({color:0xbcae91,roughness:.9}),
+  roof:new THREE.MeshStandardMaterial({color:0x403833,roughness:.84}),
+  banner:new THREE.MeshStandardMaterial({color:0x7d3d38,roughness:.88,side:THREE.DoubleSide}),
+  brass:new THREE.MeshStandardMaterial({color:0xa98243,roughness:.34,metalness:.7}),
+  glass:new THREE.MeshPhysicalMaterial({color:0x9ac9c4,roughness:.12,metalness:.04,transmission:.22,transparent:true,opacity:.9,clearcoat:1}),
+  green:new THREE.MeshStandardMaterial({color:0x4f7045,roughness:.96}),
+  flower:new THREE.MeshStandardMaterial({color:0xb9875e,roughness:.92})
+};
+function masterLamp(x,z,scale=1){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);
+  cyl(.075,2.7,MASTER.timber,[0,1.35,0],[],g);box(.46,.12,.46,MASTER.brass,[0,2.58,0]);
+  const glow=new THREE.Mesh(new THREE.OctahedronGeometry(.20,2),new THREE.MeshBasicMaterial({color:0xffbd6c,transparent:true,opacity:.92}));
+  glow.position.set(x, y+2.30, z);scene.add(glow);
+  const light=new THREE.PointLight(0xffa451,1.15,7.5,.85);light.position.set(x,y+2.25,z);scene.add(light);
+  g.scale.setScalar(scale);scene.add(g);return g;
+}
+function masterBanner(x,z,rot=0,h=4.2){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rot;
+  cyl(.075,h,MASTER.timber,[0,h/2,0],[],g);box(1.05,.08,.08,MASTER.brass,[0,h-.18,0]);
+  const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.0,1.45,3,4),MASTER.banner.clone());
+  flag.position.set(.48,h-.82,0);flag.rotation.y=Math.PI/2;flag.userData.windFlag=true;g.add(flag);scene.add(g);return g;
+}
+function masterArch(x,z,w=8,h=5.8){
+  const y=terrainHeight(x,z),g=new THREE.Group();g.position.set(x,y,z);
+  box(1.0,h,1.0,MASTER.curb,[-w/2,h/2,0],0,g);box(1.0,h,1.0,MASTER.curb,[w/2,h/2,0],0,g);
+  box(w+1.1,.72,1.05,MASTER.timberLight,[0,h-.15,0],0,g);box(w+.25,.22,.42,MASTER.timber,[0,h-.75,0],0,g);
+  for(const px of [-w*.34,-w*.12,w*.12,w*.34])box(.16,.75,.48,MASTER.timber,[px,h-.68,0],0,g);
+  scene.add(g);masterLamp(x-w/2-.9,z,.9);masterLamp(x+w/2+.9,z,.9);return g;
+}
+function masterPlaza(x,z,r=10){
+  addMesh(new THREE.CircleGeometry(r,72),MASTER.plaza,[x,terrainHeight(x,z)+.045,z],[-Math.PI/2,0,0],false);
+  addMesh(new THREE.CircleGeometry(r*.78,72),MASTER.plazaDark,[x,terrainHeight(x,z)+.052,z],[-Math.PI/2,0,0],false);
+  for(let i=0;i<12;i++){const a=i*Math.PI/6,px=x+Math.cos(a)*r*.84,pz=z+Math.sin(a)*r*.84;box(.9,.18,.42,MASTER.curb,[px,terrainHeight(px,pz)+.16,pz],a);}
+  for(let i=0;i<8;i++)masterLamp(x+Math.cos(i*Math.PI/4)*r*.94,z+Math.sin(i*Math.PI/4)*r*.94,.82);
+  box(1.8,.55,1.8,MASTER.curb,[x,terrainHeight(x,z)+.30,z]);
+  cyl(.72,.22,MASTER.brass,[x,terrainHeight(x,z)+.70,z]);
+  const flame=new THREE.Mesh(new THREE.IcosahedronGeometry(.28,2),new THREE.MeshBasicMaterial({color:0xff9b48,transparent:true,opacity:.95}));
+  flame.position.set(x,terrainHeight(x,z)+1.08,z);scene.add(flame);
+  const l=new THREE.PointLight(0xff9b4d,1.8,9,.8);l.position.copy(flame.position);scene.add(l);
+}
+function masterStreet(x,z,w,d,rot=0){
+  const path=addMesh(terrainRibbonGeometry(x,z,w,d,rot,72),MASTER.plazaDark,[0,0,0],undefined,false);path.receiveShadow=true;
+  for(const side of [-1,1])for(let i=0;i<18;i++){
+    const v=(i/17-.5)*d,lx=side*w*.53,lz=v,c=Math.cos(rot),s=Math.sin(rot);
+    const px=x+lx*c-lz*s,pz=z+lx*s+lz*c;box(.42,.18,.72,MASTER.curb,[px,terrainHeight(px,pz)+.16,pz],rot+(i%3)*.08);
+  }
+}
+function masterRiverBanks(){
+  for(const side of [-1,1])for(let i=0;i<18;i++){
+    const z=-48+i*5.1,cx=riverCenterX(z),hw=riverHalfWidth(z),x=cx+side*(hw+1.9),y=terrainHeight(x,z);
+    const stone=box(1.1,.32,.72,MASTER.curb,[x,y+.18,z],(i*.41)%Math.PI);stone.scale.set(1.2+(i%3)*.25,.75,1);
+    if(i%2===0){const plant=new THREE.Group();plant.position.set(x+side*.7,y,z+.8);for(let j=0;j<5;j++)cyl(.025,.7+worldRandom()*.45,MASTER.green,[(worldRandom()-.5)*.6,.35,(worldRandom()-.5)*.5],[0,(worldRandom()-.5)*.35,(worldRandom()-.5)*.18],plant);scene.add(plant);}
+  }
+}
+function masterTreeCluster(x,z,s=1){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z),z);
+  cyl(.30*s,3.0*s,HD.trunk||MASTER.timber,[0,1.5*s,0],[],g);
+  [[0,3.25,0,1.65],[1.0,2.85,.15,1.05],[-.95,2.75,-.10,1.12],[.15,4.05,.05,1.05]].forEach((v,i)=>{const m=new THREE.Mesh(new THREE.IcosahedronGeometry(v[3]*s,2),i%2?(HD.leafLight||MASTER.green):(HD.leaf||MASTER.green));m.position.set(v[0]*s,v[1]*s,v[2]*s);m.scale.y=.9;m.castShadow=true;m.receiveShadow=true;g.add(m);});
+  scene.add(g);return g;
+}
+function masterFlowerMeadow(x,z,r=4){
+  const g=new THREE.Group();g.position.set(x,terrainHeight(x,z)+.03,z);
+  for(let i=0;i<26;i++){const a=worldRandom()*Math.PI*2,rr=Math.sqrt(worldRandom())*r;cyl(.018,.22+worldRandom()*.20,i%3?MASTER.green:MASTER.flower,[Math.cos(a)*rr,.11,Math.sin(a)*rr]);}
+  scene.add(g);return g;
+}
+function buildMasterArtDirectionPass(){
+  masterPlaza(-5,-8,10.5);
+  masterStreet(-5,-19,6.0,22,-.04);masterStreet(-8,3,5.0,34,.04);masterStreet(7,-8,5.0,34,.10);masterStreet(7,13,4.2,22,-.06);
+  masterArch(-5,-31,9.5,6.2);
+  masterBanner(-14,-28,-.10,4.8);masterBanner(4,-29,.08,4.8);masterBanner(-25,8,.32,4.1);masterBanner(23,9,-.25,4.1);
+  masterRiverBanks();masterStreet(31,6,5.6,15,Math.PI/2);
+  [[27,-1],[35,-1],[27,13],[35,13]].forEach(v=>masterLamp(...v,.82));
+  [[-39,-28,1.35],[-38,2,1.15],[-37,28,1.25],[31,-34,1.35],[42,-5,1.2],[39,27,1.3],[-31,39,1.15],[34,42,1.25]].forEach(v=>masterTreeCluster(...v));
+  [[-31,-15,4.5],[-27,27,4.0],[20,29,4.8],[38,34,4.6],[-39,15,3.8]].forEach(v=>masterFlowerMeadow(...v));
+  [[-14,-13,0.9],[1,-7,.82],[-12,11,.8],[16,-17,.9],[16,14,.78]].forEach(([x,z,r])=>masterLamp(x+r*2.1,z-r*2.0,.72));
+  const plazaLight=new THREE.PointLight(0xffc27a,2.2,16,.75);plazaLight.position.set(-5,5,-8);scene.add(plazaLight);
+  const gateLight=new THREE.PointLight(0xff9c52,1.8,12,.8);gateLight.position.set(-5,4,-31);scene.add(gateLight);
+}
+\nconst tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();
 const tmpNext=new THREE.Vector3();
 const tmpWanderDelta=new THREE.Vector3();
@@ -2613,7 +2703,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{runtimeDiagnostics.visibilityState='pagehide';});
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

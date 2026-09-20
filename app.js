@@ -1589,8 +1589,8 @@ function upgradeFoliageMaterial(mat,phase){
     if(prior)prior(shader);
     shader.uniforms.uFoliageTime={value:0};
     shader.uniforms.uFoliagePhase={value:phase};
-    shader.vertexShader='uniform float uFoliageTime; uniform float uFoliagePhase; varying vec3 vFoliageWorld;\\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\\n vFoliageWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float sway=sin(uFoliageTime*1.25+uFoliagePhase+transformed.y*1.7+transformed.x*1.1)*.035; transformed.x+=sway*max(0.0,transformed.y); transformed.z+=cos(uFoliageTime*1.05+uFoliagePhase+transformed.y*1.3)*.018*max(0.0,transformed.y);');
-    shader.fragmentShader='varying vec3 vFoliageWorld;\\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\\n float leafNoise=fract(sin(dot(vFoliageWorld.xz,vec2(17.13,41.77)))*43758.5453); diffuseColor.rgb*=mix(.93,1.07,leafNoise);');
+    shader.vertexShader='uniform float uFoliageTime; uniform float uFoliagePhase; varying vec3 vFoliageWorld;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vFoliageWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float sway=sin(uFoliageTime*1.25+uFoliagePhase+transformed.y*1.7+transformed.x*1.1)*.035; transformed.x+=sway*max(0.0,transformed.y); transformed.z+=cos(uFoliageTime*1.05+uFoliagePhase+transformed.y*1.3)*.018*max(0.0,transformed.y);');
+    shader.fragmentShader='varying vec3 vFoliageWorld;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float leafNoise=fract(sin(dot(vFoliageWorld.xz,vec2(17.13,41.77)))*43758.5453); diffuseColor.rgb*=mix(.93,1.07,leafNoise);');
     mat.userData.foliageShader=shader;
   };
 }

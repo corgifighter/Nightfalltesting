@@ -165,8 +165,19 @@ function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g
 function label(text,pos,color='#efe6d2',scale=1){const c=document.createElement('canvas');c.width=640;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,640,128);x.font='700 31px Georgia';x.textAlign='center';x.fillStyle='rgba(5,9,8,.78)';x.roundRect(22,20,596,88,18);x.fill();x.fillStyle=color;x.fillText(text,320,76);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(6.8*scale,1.36*scale,1);s.position.set(...pos);s.userData.worldLabel=true;scene.add(s);return s}
 
 // Ground: broad playable meadow with restrained sculpted undulation.
-const tg=new THREE.PlaneGeometry(190,190,112,112);const ta=tg.attributes.position;
-for(let i=0;i<ta.count;i++){const x=ta.getX(i),z=ta.getY(i);let h=Math.sin(x*.075)*.62+Math.cos(z*.082)*.48+Math.sin((x-z)*.035)*.72;h*=Math.max(0,1-Math.abs(x)/112);ta.setZ(i,h)}
+// MAJOR TERRAIN RECONSTRUCTION — macro landforms first, detail later.
+// The settlement sits in a broad basin while the perimeter rises into rolling terrain.
+function macroTerrainHeight(x,z){
+  const settlement=Math.exp(-(x*x+z*z)/1850);
+  const riverValley=Math.exp(-((x-31)*(x-31))/115);
+  const southApproach=Math.exp(-((z+18)*(z+18))/900);
+  const broad=(Math.sin(x*.030+z*.012)*1.75 + Math.cos(z*.034-x*.010)*1.35 + Math.sin((x-z)*.018)*1.05);
+  const secondary=(Math.sin(x*.075)*.34 + Math.cos(z*.068)*.28);
+  const relief=Math.max(.12,1.02-settlement*.88-riverValley*.72-southApproach*.30);
+  return broad*relief + secondary*(.55+relief*.45);
+}
+const tg=new THREE.PlaneGeometry(230,230,160,160);const ta=tg.attributes.position;
+for(let i=0;i<ta.count;i++){const x=ta.getX(i),z=ta.getY(i);ta.setZ(i,macroTerrainHeight(x,z))}
 tg.rotateX(-Math.PI/2);tg.computeVertexNormals();addMesh(tg,MAT.grass,[0,0,0],undefined,false);
 
 // Sculpted ground layers: soft meadow clearings and worn earth around the settlement.
@@ -1115,7 +1126,7 @@ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let dest=null;let cine
 function setHover(o){if(hovered===o)return;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive)m.material.emissive.setHex(m.userData.baseEmissive||0x000000)});hovered=o;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive){m.userData.baseEmissive=m.material.emissive.getHex();m.material.emissive.lerp(new THREE.Color(0x9d7b39),.35)}})}
 renderer.domElement.addEventListener('pointermove',e=>{mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactables,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
 const destinationMarker=new THREE.Mesh(new THREE.RingGeometry(.34,.52,28),new THREE.MeshBasicMaterial({color:0xe7cb76,transparent:true,opacity:.86,side:THREE.DoubleSide,depthWrite:false}));destinationMarker.rotation.x=-Math.PI/2;destinationMarker.position.y=.18;destinationMarker.visible=false;scene.add(destinationMarker);
-function terrainHeight(x,z){return Math.sin(x*.075)*.62+Math.cos(z*.082)*.48+Math.sin((x-z)*.035)*.72;}
+function terrainHeight(x,z){return macroTerrainHeight(x,z);}
 function traversable(x,z){const riverBlocked=Math.abs(x-31)<13.4;const bridge=Math.abs(x-31)<6.2&&z>-2&&z<14;return !riverBlocked||bridge}
 function say(s){toast.textContent=s;toast.classList.add('show');clearTimeout(say.t);say.t=setTimeout(()=>toast.classList.remove('show'),2600)}
 function pick(e){mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactables,true);if(hits.length){let o=hits[0].object;while(o&&!o.userData.interaction)o=o.parent;if(o){say(`${o.userData.interaction.name} — ${o.userData.interaction.msg}`);if(o.userData.interaction.action)o.userData.interaction.action();return}}const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),p=new THREE.Vector3();if(ray.ray.intersectPlane(plane,p)){p.x=THREE.MathUtils.clamp(p.x,-52,55);p.z=THREE.MathUtils.clamp(p.z,-58,64);if(!traversable(p.x,p.z)){say('The river is too deep here. Cross at the stone bridge.');return}dest=p.clone();destinationMarker.position.set(p.x,.2,p.z);destinationMarker.visible=true}}

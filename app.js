@@ -3812,7 +3812,160 @@ function buildGroundIntegrationPass(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();
+
+/*
+============================================================================
+GRAPHICS BENCHMARK V3 — WORLD RECONSTRUCTION
+This is deliberately a macro art-direction pass. It does not chase tiny trim:
+it changes the silhouette hierarchy, biome composition, terrain framing,
+material separation and landmark context that determine whether the world
+reads as a cohesive authored place at normal play distance.
+============================================================================
+*/
+function buildWorldArtDirectionV3(){
+  if(window.__HEARTHMERE_GRAPHICS_V3?.version===3)return;
+  const root=new THREE.Group();root.name='GraphicsBenchmarkV3';scene.add(root);
+
+  // 1) Large-scale terrain framing. The playable basin is kept readable while
+  // broad raised shoulders create a natural bowl instead of a flat green sheet.
+  const ridgeMat=new THREE.MeshPhysicalMaterial({
+    color:0x3f5546,roughness:.985,metalness:0,sheen:.12,
+    sheenColor:new THREE.Color(0x728263),sheenRoughness:.92
+  });
+  const ridgeGeo=(cx,cz,rx,rz,h,phase)=>{
+    const seg=64,verts=[],idx=[];
+    for(let i=0;i<seg;i++){
+      const a=i/seg*Math.PI*2;
+      const wobble=1+.075*Math.sin(a*3+phase)+.045*Math.sin(a*7-phase*.7);
+      const x=cx+Math.cos(a)*rx*wobble,z=cz+Math.sin(a)*rz*wobble;
+      const y=macroTerrainHeight(x,z)+h*(.62+.20*Math.sin(a*2+phase)+.10*Math.sin(a*5));
+      verts.push(x,y,z,x,macroTerrainHeight(x,z)+.06,z);
+    }
+    for(let i=0;i<seg;i++){const n=(i+1)%seg,a=i*2,b=a+1,c=n*2,d=c+1;idx.push(a,c,b,c,d,b);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(idx);g.computeVertexNormals();return g;
+  };
+  [
+    [-43,4,17,38,2.8,1.2],[45,8,18,42,3.4,2.7],[-4,46,42,13,2.5,.8],[18,-48,35,13,2.1,3.4]
+  ].forEach(v=>{
+    const m=new THREE.Mesh(ridgeGeo(...v),ridgeMat);m.receiveShadow=true;m.castShadow=true;root.add(m);
+  });
+
+  // 2) Replace the old "single lawn" read with broad, irregular biome islands.
+  const biomeMats=[
+    new THREE.MeshPhysicalMaterial({color:0x486236,roughness:.99,sheen:.12,sheenColor:new THREE.Color(0x71885a)}),
+    new THREE.MeshPhysicalMaterial({color:0x667344,roughness:.985,sheen:.10,sheenColor:new THREE.Color(0x9b9a65)}),
+    new THREE.MeshPhysicalMaterial({color:0x765e3f,roughness:1,metalness:0})
+  ];
+  const islands=[
+    [-34,-6,11,7,.12,0],[-27,18,13,8,-.28,1],[18,27,15,9,.20,0],
+    [40,17,10,16,.42,1],[-42,35,9,12,-.18,0],[34,-35,14,8,-.22,1],
+    [-38,-39,11,7,.15,2],[7,-43,17,6,-.08,2]
+  ];
+  islands.forEach(([x,z,rx,rz,rot,mi],i)=>{
+    const g=new THREE.CircleGeometry(1,64);g.scale(rx,rz,1);
+    const mesh=new THREE.Mesh(g,biomeMats[mi]);mesh.rotation.x=-Math.PI/2;mesh.rotation.z=rot;
+    mesh.position.set(x,terrainHeight(x,z)+.028,z);mesh.receiveShadow=true;mesh.userData.staticVisual=true;root.add(mesh);
+  });
+
+  // 3) High-information woodland masses. Trees are clustered into authored groves,
+  // not evenly scattered; the negative space around the settlement remains deliberate.
+  const groves=[
+    [-46,-22,1.35,5],[-44,-7,1.12,4],[-46,11,1.30,5],[-41,27,1.22,4],
+    [45,-20,1.42,5],[47,-4,1.22,4],[46,14,1.35,5],[41,31,1.28,4],
+    [-28,40,1.05,4],[-13,43,1.18,4],[4,45,1.10,4],[25,45,1.22,5],
+    [-28,-42,1.08,4],[-10,-45,1.18,4],[12,-46,1.10,4],[29,-43,1.28,4]
+  ];
+  groves.forEach(([x,z,s,n],gi)=>{
+    for(let j=0;j<n;j++){
+      const a=(j/n)*Math.PI*2+gi*.71,r=1.1+(j%3)*.72;
+      const tx=x+Math.cos(a)*r,tz=z+Math.sin(a)*r;
+      const tree=hdTree(tx,tz,s*(.78+(j%3)*.10),(gi+j)%4===0);
+      tree.userData.vegetationTier='hero_companion';
+      tree.userData.windPhase=gi*.73+j*.31;
+      tree.userData.windStrength=.0038;
+      tree.userData.staticVisual=true;
+      root.add(tree);
+    }
+  });
+
+  // 4) Natural outcrops use deformed high-resolution icospheres rather than the
+  // old perfectly round rock primitive. These establish foreground/intermediate
+  // scale landmarks and make the terrain feel geologically continuous.
+  const outcropMats=[
+    new THREE.MeshPhysicalMaterial({color:0x5c6259,roughness:.94,sheen:.08,sheenColor:new THREE.Color(0x8b987b)}),
+    new THREE.MeshPhysicalMaterial({color:0x454e49,roughness:.97,sheen:.10,sheenColor:new THREE.Color(0x6d805f)})
+  ];
+  const outcrops=[
+    [-39,-12,1.9,1.25,1.45],[-36,21,2.2,1.5,1.15],[39,-9,2.0,1.3,1.55],
+    [35,25,2.35,1.45,1.35],[-24,34,1.55,1.15,1.20],[28,-39,2.1,1.35,1.25],
+    [-8,-39,1.45,1.05,1.05],[9,36,1.7,1.2,1.15]
+  ];
+  outcrops.forEach(([x,z,sx,sy,sz],i)=>{
+    const geo=new THREE.IcosahedronGeometry(1,2);
+    const p=geo.attributes.position;
+    for(let k=0;k<p.count;k++){
+      const vx=p.getX(k),vy=p.getY(k),vz=p.getZ(k);
+      const n=1+.11*Math.sin(vx*5.3+vz*3.1+i)+.07*Math.cos(vy*7.1-vx*2.4);
+      p.setXYZ(k,vx*n*sx,vy*n*sy,vz*n*sz);
+    }
+    geo.computeVertexNormals();
+    const m=new THREE.Mesh(geo,outcropMats[i%2]);m.position.set(x,terrainHeight(x,z)+sy*.64,z);
+    m.rotation.set(.08+i*.03,i*.71,-.05);m.castShadow=true;m.receiveShadow=true;m.userData.staticVisual=true;root.add(m);
+    const moss=new THREE.Mesh(new THREE.SphereGeometry(1.01,32,20),new THREE.MeshPhysicalMaterial({color:0x526b42,roughness:1,sheen:.18,transparent:true,opacity:.30}));
+    moss.scale.set(sx*.92,sy*.40,sz*.96);moss.position.set(x-.12,terrainHeight(x,z)+sy*.92,z+.05);moss.rotation.y=i*.8;root.add(moss);
+  });
+
+  // 5) The settlement gets a stronger inhabited skyline: a few asymmetrical homes
+  // and workshops bridge the gap between landmark buildings and wilderness.
+  const skyline=[
+    [-24,-7,.92,.08],[-20,4,.82,-.12],[-17,23,.88,.18],[-2,27,.82,-.10],
+    [9,20,.86,.16],[12,-27,.90,-.14],[25,-25,.82,.10],[30,7,.78,-.16]
+  ];
+  skyline.forEach(([x,z,s,r],i)=>{
+    const h=hdBuilding('cottage',x,z,s,r);
+    h.userData.architectureTier='secondary_hero';
+    h.userData.staticVisual=true;
+    root.add(h);
+    if(i%2===0){
+      const yard=new THREE.Mesh(new THREE.CircleGeometry(2.3,48),new THREE.MeshPhysicalMaterial({color:0x6c684f,roughness:1,transparent:true,opacity:.42}));
+      yard.rotation.x=-Math.PI/2;yard.position.set(x,terrainHeight(x,z)+.045,z);yard.userData.staticVisual=true;root.add(yard);
+    }
+  });
+
+  // 6) Cohesive material grade: architecture stays warm and tactile, vegetation
+  // stays deep/varied, and the river becomes the cool visual counterweight.
+  [ARCH.plasterA,ARCH.plasterB,ARCH.plasterC,HD.plaster,HD.plasterWarm].forEach(m=>{
+    m.roughness=Math.max(.82,m.roughness||.9);m.envMapIntensity=Math.max(.42,m.envMapIntensity||0);
+  });
+  [ARCH.roofA,ARCH.roofB,ARCH.roofC,HD.roof,HD.roofWarm].forEach(m=>{
+    m.roughness=Math.max(.68,m.roughness||.8);m.envMapIntensity=Math.max(.38,m.envMapIntensity||0);
+  });
+  [HD.leaf,HD.leafLight,MASTER.green].forEach(m=>{
+    if(m){m.roughness=.90;m.envMapIntensity=Math.max(.30,m.envMapIntensity||0);}
+  });
+  MAT.water.color.set(0x207b86);MAT.water.roughness=.055;MAT.water.clearcoat=1;MAT.water.clearcoatRoughness=.08;
+
+  // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
+  // below "effect overload"; the geometry and composition carry the image.
+  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMappingExposure=1.10;
+  scene.environmentIntensity=.44;
+  sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;
+  bloomPass.strength=.095;bloomPass.radius=.36;bloomPass.threshold=.88;
+  ssaoPass.kernelRadius=14;ssaoPass.maxDistance=.23;
+  cinematicGradePass.uniforms.uSaturation.value=1.13;
+  cinematicGradePass.uniforms.uContrast.value=1.085;
+  cinematicGradePass.uniforms.uWarmth.value=.028;
+  cinematicGradePass.uniforms.uVignette.value=.075;
+
+  window.__HEARTHMERE_GRAPHICS_V3={
+    version:3,terrainRidges:4,biomeIslands:islands.length,groves:groves.length,
+    outcrops:outcrops.length,secondaryBuildings:skyline.length,
+    renderer:'Three.js 0.181.1 / WebGL PBR pipeline'
+  };
+}
+
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

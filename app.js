@@ -94,7 +94,12 @@ const composer=new EffectComposer(renderer);
 // Keep the post-processing buffers at the exact same capped device-pixel ratio as the renderer.
 // EffectComposer owns its own render targets, so this is synchronized explicitly rather than
 // relying on the constructor's one-time snapshot.
+// Initialize the post-processing render targets at the real viewport size before the first frame.
+// EffectComposer starts with a 1x1 target; setting only the pixel ratio does not size its
+// internal buffers. On mobile that produced the severe full-screen blur visible in the first
+// capture frame because a 1x1 shaded image was being upscaled to the device viewport.
 composer.setPixelRatio(renderer.getPixelRatio());
+composer.setSize(innerWidth,innerHeight);
 const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
@@ -3298,7 +3303,7 @@ function updateAdaptiveQuality(now){
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
   const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
-  composer.setPixelRatio(pixelRatio);resizeSSAO();
+  composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();
   rendererDiagnostics.pixelRatio=pixelRatio;
   rendererDiagnostics.qualityLevel=quality.level;
   rendererDiagnostics.averageFrameMs=avgFrameMs;
@@ -4208,4 +4213,4 @@ window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

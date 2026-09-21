@@ -59,7 +59,7 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x66776f,.00134);
+scene.fog=new THREE.FogExp2(0x66776f,.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
@@ -99,7 +99,7 @@ const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
 // rather than having the occlusion pass darken already-bloomed pixels.
-const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.10,.42,.86);
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.145,.48,.82);
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
@@ -133,7 +133,7 @@ const fxaaPass=new FXAAPass();
 composer.addPass(fxaaPass);
 // GRAPHICS MASTER PRESENTATION — restrained final image grade before OutputPass.
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
-  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.075},uContrast:{value:1.055},uWarmth:{value:.018},uVignette:{value:.075}},
+  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.115},uContrast:{value:1.075},uWarmth:{value:.024},uVignette:{value:.095}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
@@ -149,7 +149,7 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
-renderer.toneMappingExposure=1.02;
+renderer.toneMappingExposure=1.08;
 renderer.setClearColor(0x9aaea5,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -175,9 +175,9 @@ const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
 controls.minDistance=5.5;controls.maxDistance=40;controls.minPolarAngle=.40;controls.maxPolarAngle=1.02;controls.rotateSpeed=.24;
 
-const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,1.02);scene.add(hemi);
+const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.88);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
-const sun=new THREE.DirectionalLight(0xffd8ad,2.35);sun.position.set(-58,86,42);sun.castShadow=true;
+const sun=new THREE.DirectionalLight(0xffd8ad,2.65);sun.position.set(-58,86,42);sun.castShadow=true;
 // Size the orthographic shadow volume from the actual playable footprint rather than
 // an arbitrary square. The diagonal is used because the shadow camera is rotated by
 // the light direction, so axis-aligned world extents are not sufficient coverage.

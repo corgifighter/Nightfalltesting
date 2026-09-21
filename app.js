@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:80,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:81,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -3388,14 +3388,25 @@ if(cinematicMode){
   controls.target.set(-2.5,1.6,-9.0);
   camera.lookAt(controls.target);
   controls.update();
+
+  // HARD BEAUTY-BASELINE: remove the atmospheric shell from the inspection frame.
+  // The production sky has a warm horizon by design, but it must never be capable of
+  // obscuring the actual world while we repair the renderer.
   scene.fog.density=0;
-  scene.background.set(0x73837e);
-  renderer.toneMappingExposure=1.0;
-  sun.intensity=2.15;
-  sun.color.set(0xfff6e8);
-  fill.intensity=.38;
-  fill.color.set(0xa8c1cf);
-  hemi.intensity=.82;
+  scene.background.set(0x263b37);
+  if(sky)sky.visible=false;
+  if(sunDisc)sunDisc.visible=false;
+  scene.getObjectByName('CinematicWorldDepth')?.traverse(o=>{o.visible=false;});
+  scene.getObjectByName('DistantTreeLine')?.traverse(o=>{o.visible=false;});
+  clouds.forEach(o=>o.visible=false);
+  renderer.toneMappingExposure=.92;
+  sun.intensity=1.55;
+  sun.color.set(0xfffdf5);
+  fill.intensity=.52;
+  fill.color.set(0xb7cad4);
+  hemi.intensity=1.0;
+  hemi.color.set(0xdce9e4);
+  hemi.groundColor.set(0x455348);
   cinematicSpots.forEach(l=>l.intensity=0);
   fireLights.forEach(l=>l.intensity=0);
   scene.traverse(o=>{if(o.isPointLight && o.name && (o.name.startsWith('GraphicsRim_') || o.name==='HeroWarmKey' || o.name==='HeroCoolRim'))o.intensity=0;});

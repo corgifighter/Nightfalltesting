@@ -58,8 +58,9 @@ const bootSet=(n,msg)=>{bootProgress.style.width=Math.round(n*100)+'%';bootStatu
 bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x8fa49e);
-scene.fog=new THREE.FogExp2(0x66776f,.00118);
+// Neutral daylight baseline: atmospheric color must not tint the whole world warm.
+scene.background=new THREE.Color(0x8fa09c);
+scene.fog=new THREE.FogExp2(0x71807c,.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
@@ -137,7 +138,7 @@ composer.addPass(bloomPass);
 // Native MSAA is enabled on the renderer; a second FXAA pass would soften the mobile image.
 // GRAPHICS MASTER PRESENTATION — restrained final image grade before OutputPass.
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
-  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.055},uContrast:{value:1.045},uWarmth:{value:0.0},uVignette:{value:.065}},
+  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.035},uContrast:{value:1.035},uWarmth:{value:0.0},uVignette:{value:.055}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
@@ -153,8 +154,8 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
-renderer.toneMappingExposure=1.02;
-renderer.setClearColor(0x8fa49e,1);
+renderer.toneMappingExposure=1.00;
+renderer.setClearColor(0x8fa09c,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
@@ -2725,8 +2726,8 @@ function buildPresentationMaterialPass(){
   ARCH.roofA.color.set(0x45403b);ARCH.roofB.color.set(0x5a473d);ARCH.roofC.color.set(0x45514b);
   // A gentle cool environment keeps shadowed facades legible while warm practicals retain focus.
   hemi.intensity=1.08;fill.intensity=.66;sun.intensity=2.6;scene.environmentIntensity=.34;
-  renderer.toneMappingExposure=1.04;
-  scene.fog.color.set(0x72827b);scene.fog.density=.00086;
+  renderer.toneMappingExposure=1.01;
+  scene.fog.color.set(0x788782);scene.fog.density=.00078;
   bloomPass.strength=.07;bloomPass.radius=.34;bloomPass.threshold=.88;
 }
 
@@ -2777,9 +2778,9 @@ function buildLandmarkCourtyardPass(){
 // The purpose is dimensional material response, not decorative town dressing.
 // ============================================================================
 function buildBeautyLightingPass(){
-  sun.color.set(0xffd6b0);sun.intensity=2.75;sun.position.set(-64,92,38);
+  sun.color.set(0xfff8ec);sun.intensity=2.70;sun.position.set(-64,92,38);
   fill.color.set(0x8fb8c7);fill.intensity=.58;fill.position.set(48,38,-58);
-  hemi.color.set(0xf4f7ef);hemi.groundColor.set(0x2c3028);hemi.intensity=1.12;
+  hemi.color.set(0xeaf3ef);hemi.groundColor.set(0x39443d);hemi.intensity=1.08;
   moon.intensity=.055;
   scene.environmentIntensity=.38;
   renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.08;
@@ -3081,9 +3082,9 @@ function buildGraphicsFoundationV2(){
   });
 
   // Lighting hierarchy: warm key, cool fill, restrained bloom, stronger contact AO.
-  sun.color.set(0xffd7b1);sun.intensity=2.82;sun.position.set(-64,92,38);
+  sun.color.set(0xfff8ec);sun.intensity=2.76;sun.position.set(-64,92,38);
   fill.color.set(0x8bb8c9);fill.intensity=.62;fill.position.set(48,38,-58);
-  hemi.color.set(0xf2f6ee);hemi.groundColor.set(0x262c25);hemi.intensity=1.10;
+  hemi.color.set(0xe9f2ee);hemi.groundColor.set(0x3a453e);hemi.intensity=1.07;
   ssaoPass.kernelRadius=13;
   ssaoPass.minDistance=.001;
   ssaoPass.maxDistance=.21;
@@ -3172,13 +3173,13 @@ function buildLandmarkBannerPass(){
   window.__HEARTHMERE_BANNERS={version:1,count:banners.length,banners};
 }
 function buildHighEndAtmospherePass(){
-  scene.background.set(0x7e9692);
-  scene.fog.color.set(0x71837d);scene.fog.density=.00072;
+  scene.background.set(0x839c99);
+  scene.fog.color.set(0x7b8985);scene.fog.density=.00072;
   if(sky?.material?.uniforms){
     sky.material.uniforms.top.value.set(0x18384b);
     sky.material.uniforms.mid.value.set(0x5f817f);
-    sky.material.uniforms.horizon.value.set(0xe1c28d);
-    sky.material.uniforms.sun.value.set(0xffd7a2);
+    sky.material.uniforms.horizon.value.set(0xaebfbb);
+    sky.material.uniforms.sun.value.set(0xfff5df);
   }
   sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
 }
@@ -3356,15 +3357,16 @@ sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.075-.015*day,.42,.68+.08*day);
+// Keep the moving daylight neutral; warm practical lights remain localized.
+  sun.color.set(0xfff7e8);
 fill.color.setHSL(.55,.28,.60);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
-hemi.color.setHSL(.48,.16,.82);
-hemi.groundColor.setHSL(.08,.20,.18+.04*day);
-renderer.toneMappingExposure=.82+.12*day+.035*golden;
-scene.environmentIntensity=.22+.12*day;
+hemi.color.set(0xe8f1ed);
+hemi.groundColor.set(0x3b463f);
+renderer.toneMappingExposure=.98+.04*day;
+scene.environmentIntensity=.28+.06*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
@@ -3959,7 +3961,7 @@ function buildWorldArtDirectionV3(){
   ssaoPass.kernelRadius=14;ssaoPass.maxDistance=.23;
   cinematicGradePass.uniforms.uSaturation.value=1.13;
   cinematicGradePass.uniforms.uContrast.value=1.085;
-  cinematicGradePass.uniforms.uWarmth.value=.028;
+  cinematicGradePass.uniforms.uWarmth.value=0.0;
   cinematicGradePass.uniforms.uVignette.value=.075;
 
   window.__HEARTHMERE_GRAPHICS_V3={

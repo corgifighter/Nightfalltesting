@@ -3357,20 +3357,20 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-if(!cleanMode&&!probeMode&&!fogOffMode){scene.fog.density=.00105+.00058*(1-day);scene.fog.color.setHSL(.42,.10,.39+.08*day);}else{scene.fog.density=0;}
+if(!cleanMode&&!probeMode&&!fogOffMode){scene.fog.density=.00058+.00028*(1-day);scene.fog.color.setHSL(.48,.075,.43+.045*day);}else{scene.fog.density=0;}
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.075-.015*day,.42,.68+.08*day);
+sun.color.setHSL(.10-.012*day,.26,.76+.07*day);
 fill.color.setHSL(.55,.28,.60);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
 hemi.color.setHSL(.48,.16,.82);
 hemi.groundColor.setHSL(.08,.20,.18+.04*day);
-renderer.toneMappingExposure=.82+.12*day+.035*golden;
+renderer.toneMappingExposure=1.02+.08*day+.02*golden;
 scene.environmentIntensity=.22+.12*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
@@ -3388,7 +3388,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode||cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

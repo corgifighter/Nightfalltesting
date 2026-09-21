@@ -4069,7 +4069,87 @@ async function buildWorldArtDirectionV4(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();
+/* GRAPHICS BENCHMARK V5 — HERO SILHOUETTE REPLACEMENT
+   Do not keep adding detail to a silhouette that is still visibly procedural.
+   Replace the highest-salience remaining procedural foliage with the richer
+   authored GLB library, while preserving the authored placement coordinates. */
+async function buildWorldArtDirectionV5(){
+  if(window.__HEARTHMERE_GRAPHICS_V5?.version===5)return;
+
+  const proceduralTrees=[];
+  scene.traverse(o=>{
+    if(!o.isGroup || o.userData?.vegetationTier!=='hero')return;
+    if(o.userData?.assetReplacementTier)return;
+    proceduralTrees.push(o);
+  });
+
+  const specs=proceduralTrees.map((g,i)=>({
+    x:g.position.x,z:g.position.z,scale:g.scale.x,rotation:g.rotation.y,
+    pine:!!(g.children?.some?.(c=>c.userData?.pineTree)),
+    i
+  }));
+
+  // Hide first, then replace. This prevents a doubled silhouette if an asset loads
+  // successfully and makes the intended production layer explicit.
+  proceduralTrees.forEach(g=>{
+    g.visible=false;
+    g.userData.replacedByV5=true;
+  });
+
+  const placed=[];
+  for(const s of specs){
+    const name=s.i%4===0?'tree_pine':'tree_oak';
+    const g=await placeAsset(name,s.x,s.z,s.scale,s.rotation);
+    if(g){
+      g.userData.assetReplacementTier='v5_hero_tree';
+      g.userData.staticVisual=true;
+      g.traverse(o=>{
+        if(!o.isMesh||!o.material)return;
+        o.material=o.material.clone();
+        o.material.roughness=Math.max(.72,o.material.roughness??.82);
+        o.material.envMapIntensity=Math.max(.30,o.material.envMapIntensity??0);
+        o.castShadow=true;o.receiveShadow=true;
+      });
+      placed.push(g);
+    }else{
+      // Preserve the authored procedural tree if the production asset is unavailable.
+      const original=proceduralTrees[s.i];
+      if(original){original.visible=true;original.userData.replacementFallback=true;}
+    }
+  }
+
+  // Remove only successfully replaced procedural hero roots; their old geometry no
+  // longer contributes to draw calls or shadows. Fallbacks remain intact.
+  proceduralTrees.forEach(g=>{
+    if(g.userData.replacementFallback)return;
+    g.removeFromParent();
+  });
+
+  // A deliberately sparse foreground dressing ribbon gives the new hero trees a
+  // believable ground contact without carpeting the mobile scene in alpha cards.
+  const contactSpots=[
+    [-34,-30,.72,0],[-27,-25,.58,.6],[-18,-28,.66,-.4],[23,-31,.74,.3],
+    [29,-27,.62,-.7],[43,-24,.68,.2],[-37,28,.64,-.3],[-31,34,.56,.5],
+    [-22,31,.62,-.2],[39,29,.70,.4],[45,38,.58,-.5],[24,42,.60,.2]
+  ];
+  const contact=[];
+  for(let i=0;i<contactSpots.length;i++){
+    const [x,z,sc,r]=contactSpots[i];
+    const key=i%3===0?'shrub':i%3===1?'shrubAlt':'scrub';
+    const g=await placeDistilledVariant(key,x,z,sc,r,i);
+    if(g){g.userData.assetReplacementTier='v5_tree_contact';g.userData.staticVisual=true;contact.push(g);}
+  }
+
+  window.__HEARTHMERE_GRAPHICS_V5={
+    version:5,
+    replacedHeroTrees:placed.length,
+    fallbackHeroTrees:proceduralTrees.length-placed.length,
+    contactDressing:contact.length,
+    strategy:'replace remaining hero procedural foliage with production GLB silhouettes'
+  };
+}
+
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

@@ -63,7 +63,7 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x66776f,(cleanMode||probeMode)?0:.00118);
+scene.fog=new THREE.FogExp2(0x87948f,(cleanMode||probeMode||rawMode||fogOffMode)?0:.000055);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:77,cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -109,7 +109,7 @@ const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
 // rather than having the occlusion pass darken already-bloomed pixels.
-const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.145,.48,.82);
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0,.20,.96);\nbloomPass.enabled=false;
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
@@ -188,7 +188,7 @@ controls.minDistance=5.5;controls.maxDistance=40;controls.minPolarAngle=.40;cont
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.88);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
-const sun=new THREE.DirectionalLight(0xffd8ad,2.65);sun.position.set(-58,86,42);sun.castShadow=true;
+const sun=new THREE.DirectionalLight(0xfff1dc,2.65);sun.position.set(-58,86,42);sun.castShadow=true;
 // Size the orthographic shadow volume from the actual playable footprint rather than
 // an arbitrary square. The diagonal is used because the shadow camera is rotated by
 // the light direction, so axis-aligned world extents are not sufficient coverage.
@@ -210,7 +210,7 @@ function setShadowMapSize(size){
   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
   sun.shadow.needsUpdate=true;
 }
-const fill=new THREE.DirectionalLight(0x89afc2,.48);fill.position.set(45,34,-55);scene.add(fill);
+const fill=new THREE.DirectionalLight(0x9bb6c8,.48);fill.position.set(45,34,-55);scene.add(fill);
 const moon=new THREE.DirectionalLight(0x6682aa,.10);moon.position.set(30,50,-45);scene.add(moon);
 
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
@@ -3357,19 +3357,19 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-if(!cleanMode&&!probeMode&&!fogOffMode){scene.fog.density=.00024+.00012*(1-day);scene.fog.color.setHSL(.50,.055,.48+.035*day);}else{scene.fog.density=0;}
+if(!cleanMode&&!probeMode&&!rawMode&&!fogOffMode){scene.fog.density=.000045+.000025*(1-day);scene.fog.color.setHex(0x87948f);}else{scene.fog.density=0;}
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.10-.008*day,.105,.86+.035*day);
+sun.color.setHSL(.105,.055,.91+.025*day);
 fill.color.setHSL(.56,.18,.68);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
-hemi.color.setHSL(.52,.08,.88);
-hemi.groundColor.setHSL(.11,.10,.22+.035*day);
+hemi.color.setHSL(.54,.045,.90);
+hemi.groundColor.setHSL(.12,.055,.27+.025*day);
 renderer.toneMappingExposure=.96+.055*day+.012*golden;
 scene.environmentIntensity=.18+.08*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
@@ -3406,7 +3406,7 @@ if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;
 const frameMs=rawDt*1000;
 perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
-updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
+updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);window.__HEARTHMERE_RENDER_DIAGNOSTICS.cinematicMode=cinematicMode;window.__HEARTHMERE_RENDER_DIAGNOSTICS.fogDensity=scene.fog?.density||0;window.__HEARTHMERE_RENDER_DIAGNOSTICS.camera=[camera.position.x,camera.position.y,camera.position.z];window.__HEARTHMERE_RENDER_DIAGNOSTICS.target=[controls.target.x,controls.target.y,controls.target.z];window.__HEARTHMERE_RENDER_DIAGNOSTICS.postProcessingFailed=postProcessingFailed;destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
   window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
   window.__HEARTHMERE_CAPTURE_META={
@@ -3964,10 +3964,10 @@ function buildWorldArtDirectionV3(){
   // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
   // below "effect overload"; the geometry and composition carry the image.
   renderer.toneMapping=THREE.AgXToneMapping;
-  renderer.toneMappingExposure=1.00;
+  renderer.toneMappingExposure=.98;
   scene.environmentIntensity=.26;
   sun.intensity=2.25;fill.intensity=.44;hemi.intensity=.88;
-  bloomPass.strength=.045;bloomPass.radius=.20;bloomPass.threshold=.92;
+  bloomPass.strength=0;bloomPass.radius=.20;bloomPass.threshold=.96;bloomPass.enabled=false;
   ssaoPass.kernelRadius=14;ssaoPass.maxDistance=.23;
   cinematicGradePass.uniforms.uSaturation.value=1.045;
   cinematicGradePass.uniforms.uContrast.value=1.04;

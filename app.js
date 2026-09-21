@@ -3385,7 +3385,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(cleanMode||probeMode||rawMode||fogOffMode||cinematicMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
@@ -3405,7 +3405,7 @@ perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
 updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
-  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
+  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode||cinematicMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
     threeRevision:THREE.REVISION,

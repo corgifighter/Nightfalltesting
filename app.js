@@ -3965,6 +3965,110 @@ function buildWorldArtDirectionV3(){
   };
 }
 
+
+/*
+============================================================================
+GRAPHICS BENCHMARK V4 — ASSET REPLACEMENT
+Macro quality rule: when a procedural silhouette has reached its ceiling,
+replace it with a richer authored/CC0 asset instead of decorating the weak
+silhouette further. This pass specifically replaces the V3 companion woods
+and geology with the already-vendored/high-information asset pipeline.
+============================================================================
+*/
+async function buildWorldArtDirectionV4(){
+  if(window.__HEARTHMERE_GRAPHICS_V4?.version===4)return;
+
+  const v3=scene.getObjectByName('GraphicsBenchmarkV3');
+  if(v3){
+    v3.traverse(o=>{
+      if(o.userData?.vegetationTier==='hero_companion')o.visible=false;
+      if(o.isMesh && o.geometry){
+        const type=o.geometry.type||'';
+        if(type==='IcosahedronGeometry')o.visible=false;
+      }
+    });
+  }
+
+  // Replace the procedural forest companions with the production GLB tree set.
+  const treeSpecs=[
+    [-46,-23,1.10,-.22,0],[-44,-8,1.02,.12,1],[-46,11,1.16,-.18,0],[-41,27,1.08,.28,1],
+    [45,-20,1.18,.14,1],[47,-4,1.08,-.12,0],[46,14,1.15,.24,1],[41,31,1.10,-.18,0],
+    [-28,40,.94,.20,1],[-13,43,1.02,-.16,0],[4,45,.96,.12,1],[25,45,1.05,-.24,0],
+    [-28,-42,.98,.18,1],[-10,-45,1.06,-.10,0],[12,-46,.98,.22,1],[29,-43,1.08,-.16,0],
+    [-37,-16,.82,.34,0],[37,-16,.88,-.26,1],[-35,30,.86,.18,1],[34,30,.90,-.22,0]
+  ];
+  const trees=[];
+  for(let i=0;i<treeSpecs.length;i++){
+    const [x,z,s,r,p]=treeSpecs[i];
+    const g=await placeAsset(p?'tree_pine':'tree_oak',x,z,s,r);
+    if(g){g.userData.assetReplacementTier='v4_tree';g.userData.staticVisual=true;trees.push(g);}
+  }
+
+  // Replace the V3 procedural geology with the local Poly Haven rock/moss set.
+  const rockSpecs=[
+    [-39,-12,1.25,.16,0],[-36,21,1.42,-.28,1],[39,-9,1.30,.22,2],
+    [35,25,1.46,-.16,0],[-24,34,1.05,.30,1],[28,-39,1.36,-.20,2],
+    [-8,-39,.96,.12,0],[9,36,1.10,-.24,1]
+  ];
+  const rocks=[];
+  for(let i=0;i<rockSpecs.length;i++){
+    const [x,z,s,r,v]=rockSpecs[i];
+    const g=await placeDistilledVariant('rock',x,z,s,r,v);
+    if(g){g.userData.assetReplacementTier='v4_rock';g.userData.staticVisual=true;rocks.push(g);}
+  }
+
+  // Build a layered near-ground material break using actual high-information
+  // CC0 shrubs/ferns/grass rather than relying on flat procedural color patches.
+  const understory=[
+    ['shrub',-31,-18,.62,.12,0],['shrubAlt',-26,-10,.55,-.18,1],['scrub',-22,20,.58,.24,2],
+    ['fern',-18,9,.48,-.12,0],['shrubAlt',-14,-18,.52,.20,1],['shrub',-4,-23,.62,-.24,0],
+    ['scrub',7,-17,.58,.14,1],['fern',12,-7,.46,-.18,0],['shrubAlt',19,-2,.56,.22,1],
+    ['shrub',24,8,.64,-.16,0],['scrub',29,18,.56,.18,2],['fern',17,22,.44,-.28,0],
+    ['shrubAlt',-23,27,.54,.10,1],['scrub',-8,29,.60,-.22,2],['shrub',7,31,.58,.16,0],
+    ['fern',-4,16,.46,.26,1],['shrubAlt',3,5,.52,-.12,0],['shrub',-2,-7,.50,.18,1]
+  ];
+  const understoryPlaced=[];
+  for(let i=0;i<understory.length;i++){
+    const [key,x,z,s,r,v]=understory[i];
+    const g=await placeDistilledVariant(key,x,z,s,r,v);
+    if(g){g.userData.assetReplacementTier='v4_understory';g.userData.staticVisual=true;understoryPlaced.push(g);}
+  }
+
+  // A sparse grass layer ties the replacement assets into the authored ground
+  // without turning the mobile scene into a dense alpha-card carpet.
+  const grassSpecs=[
+    [-33,-14,.44,.1],[-28,5,.38,-.2],[-19,-4,.42,.18],[-10,-15,.40,-.14],
+    [0,-12,.44,.22],[10,-3,.38,-.18],[18,5,.43,.16],[27,12,.40,-.22],
+    [-20,22,.40,.12],[-7,25,.42,-.16],[6,27,.38,.20],[20,28,.44,-.12]
+  ];
+  const grassPlaced=[];
+  for(let i=0;i<grassSpecs.length;i++){
+    const [x,z,s,r]=grassSpecs[i];
+    const g=await placeDistilledVariant('grass',x,z,s,r,i);
+    if(g){g.userData.assetReplacementTier='v4_grass';g.userData.staticVisual=true;grassPlaced.push(g);}
+  }
+
+  // Material hierarchy: natural assets should sit into the world rather than
+  // looking like isolated imports.
+  [...trees,...rocks,...understoryPlaced,...grassPlaced].forEach(g=>{
+    g.traverse(o=>{
+      if(!o.isMesh||!o.material)return;
+      o.material.roughness=Math.max(.72,o.material.roughness??.82);
+      o.material.envMapIntensity=Math.max(.28,o.material.envMapIntensity??0);
+      o.receiveShadow=true;
+    });
+  });
+
+  window.__HEARTHMERE_GRAPHICS_V4={
+    version:4,
+    replacedProceduralTrees:trees.length,
+    replacedGeology:rocks.length,
+    understory:understoryPlaced.length,
+    grassAnchors:grassPlaced.length,
+    strategy:'replace weak silhouettes with richer GLB assets'
+  };
+}
+
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();

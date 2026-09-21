@@ -61,7 +61,7 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=cleanMode?null:new THREE.FogExp2(0x66776f,.00118);
+scene.fog=new THREE.FogExp2(0x66776f,cleanMode?0:.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
@@ -3353,8 +3353,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-scene.fog.density=.00105+.00058*(1-day);
-scene.fog.color.setHSL(.42,.10,.39+.08*day);
+if(!cleanMode){scene.fog.density=.00105+.00058*(1-day);scene.fog.color.setHSL(.42,.10,.39+.08*day);}else{scene.fog.density=0;}
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;

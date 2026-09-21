@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:82,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:83,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -162,8 +162,25 @@ composer.addPass(outputPass);
 // if the frame is still a uniform field, the problem is above the Three.js geometry
 // layer (camera/frustum/visibility/canvas composition).
 const geometryIsolationMaterial=new THREE.MeshBasicMaterial({color:0x5f8f63,side:THREE.DoubleSide,fog:false});
-geometryIsolationMaterial.name='V82_GeometryIsolationMaterial';
-window.__HEARTHMERE_GEOMETRY_ISOLATION_V82={version:82,active:false,mode:'flat geometry isolation'};
+geometryIsolationMaterial.name='V83_GeometryIsolationMaterial';
+const geometryDiagnosticCube=new THREE.Mesh(
+  new THREE.BoxGeometry(6,6,6),
+  new THREE.MeshBasicMaterial({color:0xff00ff,side:THREE.DoubleSide,fog:false})
+);
+geometryDiagnosticCube.name='V83_DiagnosticCube';
+geometryDiagnosticCube.position.set(0,3,0);
+geometryDiagnosticCube.visible=false;
+scene.add(geometryDiagnosticCube);
+const geometryDiagnosticGround=new THREE.Mesh(
+  new THREE.PlaneGeometry(70,70),
+  new THREE.MeshBasicMaterial({color:0x1b5cff,side:THREE.DoubleSide,fog:false,wireframe:false})
+);
+geometryDiagnosticGround.name='V83_DiagnosticGround';
+geometryDiagnosticGround.rotation.x=-Math.PI/2;
+geometryDiagnosticGround.position.y=-0.02;
+geometryDiagnosticGround.visible=false;
+scene.add(geometryDiagnosticGround);
+window.__HEARTHMERE_GEOMETRY_ISOLATION_V83={version:83,active:false,mode:'forced-visibility + known-geometry isolation'};
 let postProcessingFailed=false;
 let postProcessingError=null;
 renderer.shadowMap.enabled=true;
@@ -3398,14 +3415,15 @@ if(cinematicMode){
   camera.lookAt(controls.target);
   controls.update();
 
-  // V82: deterministic geometry-only isolation. The previous Cinematic pass changed
-  // atmosphere state but still left us looking at a uniform field. This pass removes
-  // every known atmospheric/overlay contributor and forces all remaining scene geometry
-  // through an unlit flat material. It is deliberately blunt: this is the test that
-  // finally separates "the world is not rendering" from "the world is rendering but
-  // its materials/lighting are overwhelming it".
+  // V83: the previous green frame was ambiguous because the diagnostic background
+  // itself was green. Make the test physically undeniable. A known magenta cube and
+  // blue ground plane are added to the same scene/camera, while all existing scene
+  // objects are temporarily forced visible. If these known meshes render, the WebGL
+  // camera/canvas path is healthy and any missing authored world is a visibility/
+  // scene-construction problem. If they do not render, the fault is below the scene
+  // graph and we stop touching art/materials until that is fixed.
   scene.fog.density=0;
-  scene.background.set(0x111713);
+  scene.background.set(0x07090a);
   scene.overrideMaterial=geometryIsolationMaterial;
   geometryIsolationMaterial.fog=false;
   sky.visible=false;
@@ -3415,14 +3433,16 @@ if(cinematicMode){
   scene.getObjectByName('DistantTreeLine')?.traverse(o=>{o.visible=false;});
   clouds.forEach(o=>o.visible=false);
   scene.traverse(o=>{if(o.isSprite)o.visible=false;});
+  scene.traverse(o=>{if(o!==sky&&o!==sunDisc&&o!==geometryDiagnosticCube&&o!==geometryDiagnosticGround)o.visible=true;});
+  geometryDiagnosticCube.visible=true;
+  geometryDiagnosticGround.visible=true;
   renderer.toneMapping=THREE.NoToneMapping;
   renderer.toneMappingExposure=1;
-  window.__HEARTHMERE_GEOMETRY_ISOLATION_V82.active=true;
+  window.__HEARTHMERE_GEOMETRY_ISOLATION_V83.active=true;
 }else{
-  // Cinematic is reversible. V81 left the sky/depth shell hidden after exit, which
-  // explains the user's observation that the orange field did not return. Restore the
-  // production presentation state explicitly before the normal beauty composer runs.
   if(scene.overrideMaterial===geometryIsolationMaterial)scene.overrideMaterial=null;
+  geometryDiagnosticCube.visible=false;
+  geometryDiagnosticGround.visible=false;
   geometryIsolationMaterial.fog=false;
   sky.visible=true;
   sunDisc.visible=true;
@@ -3433,7 +3453,7 @@ if(cinematicMode){
   scene.traverse(o=>{if(o.isSprite && !o.userData?.worldLabel)o.visible=true;});
   scene.background.set(0x7e9692);
   renderer.toneMapping=THREE.AgXToneMapping;
-  window.__HEARTHMERE_GEOMETRY_ISOLATION_V82.active=false;
+  window.__HEARTHMERE_GEOMETRY_ISOLATION_V83.active=false;
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();

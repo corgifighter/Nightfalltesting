@@ -109,7 +109,8 @@ const renderPass=new RenderPass(scene,camera);
 composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
 // rather than having the occlusion pass darken already-bloomed pixels.
-const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0,.20,.96);\nbloomPass.enabled=false;
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0,.20,.96);
+bloomPass.enabled=false;
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);

@@ -22,7 +22,7 @@ function worldRandom(){
   t^=t+Math.imul(t^(t>>>7),t|61);
   return ((t^(t>>>14))>>>0)/4294967296;
 }
-const captureMode=new URLSearchParams(location.search).get('capture')==='1';
+const params=new URLSearchParams(location.search);\nconst captureMode=params.get('capture')==='1';\nconst cleanMode=params.get('clean')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -59,12 +59,12 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x66776f,.00118);
+scene.fog=cleanMode?null:new THREE.FogExp2(0x66776f,.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio(captureMode?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
+renderer.setPixelRatio((captureMode||cleanMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 const gl=renderer.getContext();
@@ -3383,7 +3383,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode){renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(captureMode||cleanMode){renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
@@ -3403,7 +3403,7 @@ perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
 updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
-  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,postProcessingBypassed:captureMode};
+  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,postProcessingBypassed:(captureMode||cleanMode),fogDisabled:cleanMode};
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
     threeRevision:THREE.REVISION,

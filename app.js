@@ -4125,6 +4125,52 @@ async function buildWorldArtDirectionV5(){
     g.removeFromParent();
   });
 
+  // V3's circular biome decals were useful for blocking composition, but their
+  // perfect circumference is a visible procedural tell. Replace those decals with
+  // irregular authored-looking ground islands so the terrain reads as continuous.
+  const v3Root=scene.getObjectByName('GraphicsBenchmarkV3');
+  let replacedBiomeDecals=0;
+  if(v3Root){
+    v3Root.traverse(o=>{
+      if(o.isMesh && o.geometry?.type==='CircleGeometry'){
+        o.visible=false;
+        o.userData.replacedByV5Biome=true;
+        replacedBiomeDecals++;
+      }
+    });
+  }
+  const biomeSpecs=[
+    [-34,-6,12,8,.12,0x536c3e],[-27,18,14,9,-.28,0x6a7647],[18,27,16,10,.20,0x536c3e],
+    [40,17,11,17,.42,0x6a7647],[-42,35,10,13,-.18,0x536c3e],[34,-35,15,9,-.22,0x6a7647],
+    [-38,-39,12,8,.15,0x765e3f],[7,-43,18,7,-.08,0x765e3f]
+  ];
+  const biomeRoot=new THREE.Group();
+  biomeRoot.name='V5BiomeIntegration';
+  biomeSpecs.forEach(([cx,cz,rx,rz,rot,color],i)=>{
+    const seg=20,verts=[],idx=[];
+    for(let j=0;j<seg;j++){
+      const a=j/seg*Math.PI*2;
+      const wobble=1+.10*Math.sin(a*3+i*.7)+.055*Math.sin(a*7-i);
+      const x=cx+Math.cos(a)*rx*wobble,z=cz+Math.sin(a)*rz*wobble;
+      const y=terrainHeight(x,z)+.035;
+      verts.push(x,y,z);
+    }
+    verts.push(cx,terrainHeight(cx,cz)+.038,cz);
+    const center=seg;
+    for(let j=0;j<seg;j++){const n=(j+1)%seg;idx.push(center,j,n);}
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+    geo.setIndex(idx);geo.computeVertexNormals();
+    const mat=new THREE.MeshPhysicalMaterial({
+      color,roughness:.995,metalness:0,sheen:.10,
+      sheenColor:new THREE.Color(i%2?0x9b9a65:0x71885a),sheenRoughness:.94
+    });
+    const m=new THREE.Mesh(geo,mat);
+    m.receiveShadow=true;m.userData.staticVisual=true;m.userData.biomeIslandV5=true;
+    biomeRoot.add(m);
+  });
+  scene.add(biomeRoot);
+
   // A deliberately sparse foreground dressing ribbon gives the new hero trees a
   // believable ground contact without carpeting the mobile scene in alpha cards.
   const contactSpots=[

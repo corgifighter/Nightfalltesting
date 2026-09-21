@@ -117,7 +117,10 @@ ssaoPass.kernelRadius=10;
 ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
 ssaoPass.output=SSAOPass.OUTPUT.Default;
-composer.addPass(ssaoPass);
+// Disabled in the mobile beauty chain while preserving the configured pass for later
+// reintegration. The prior SSAO stage was the only full-scene depth reconstruction
+// remaining between the beauty render and bloom and is not allowed to soften the image.
+ssaoPass.enabled=false;
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
@@ -3354,21 +3357,21 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-if(!cleanMode&&!probeMode&&!fogOffMode){scene.fog.density=.00058+.00028*(1-day);scene.fog.color.setHSL(.48,.075,.43+.045*day);}else{scene.fog.density=0;}
+if(!cleanMode&&!probeMode&&!fogOffMode){scene.fog.density=.00024+.00012*(1-day);scene.fog.color.setHSL(.50,.055,.48+.035*day);}else{scene.fog.density=0;}
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.10-.012*day,.26,.76+.07*day);
-fill.color.setHSL(.55,.28,.60);
+sun.color.setHSL(.10-.008*day,.105,.86+.035*day);
+fill.color.setHSL(.56,.18,.68);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
-hemi.color.setHSL(.48,.16,.82);
-hemi.groundColor.setHSL(.08,.20,.18+.04*day);
-renderer.toneMappingExposure=1.02+.08*day+.02*golden;
-scene.environmentIntensity=.22+.12*day;
+hemi.color.setHSL(.52,.08,.88);
+hemi.groundColor.setHSL(.11,.10,.22+.035*day);
+renderer.toneMappingExposure=.96+.055*day+.012*golden;
+scene.environmentIntensity=.18+.08*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
@@ -3385,7 +3388,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(cleanMode||probeMode||rawMode||fogOffMode||cinematicMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
@@ -3405,7 +3408,7 @@ perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
 updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
-  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode||cinematicMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
+  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
     threeRevision:THREE.REVISION,
@@ -3961,15 +3964,15 @@ function buildWorldArtDirectionV3(){
   // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
   // below "effect overload"; the geometry and composition carry the image.
   renderer.toneMapping=THREE.AgXToneMapping;
-  renderer.toneMappingExposure=1.10;
-  scene.environmentIntensity=.44;
-  sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;
-  bloomPass.strength=.095;bloomPass.radius=.36;bloomPass.threshold=.88;
+  renderer.toneMappingExposure=1.00;
+  scene.environmentIntensity=.26;
+  sun.intensity=2.25;fill.intensity=.44;hemi.intensity=.88;
+  bloomPass.strength=.045;bloomPass.radius=.20;bloomPass.threshold=.92;
   ssaoPass.kernelRadius=14;ssaoPass.maxDistance=.23;
-  cinematicGradePass.uniforms.uSaturation.value=1.13;
-  cinematicGradePass.uniforms.uContrast.value=1.085;
-  cinematicGradePass.uniforms.uWarmth.value=.028;
-  cinematicGradePass.uniforms.uVignette.value=.075;
+  cinematicGradePass.uniforms.uSaturation.value=1.045;
+  cinematicGradePass.uniforms.uContrast.value=1.04;
+  cinematicGradePass.uniforms.uWarmth.value=.004;
+  cinematicGradePass.uniforms.uVignette.value=.04;
 
   window.__HEARTHMERE_GRAPHICS_V3={
     version:3,terrainRidges:4,biomeIslands:islands.length,groves:groves.length,

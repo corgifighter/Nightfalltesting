@@ -58,12 +58,12 @@ const bootSet=(n,msg)=>{bootProgress.style.width=Math.round(n*100)+'%';bootStatu
 bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9aaea5);
+scene.background=new THREE.Color(0x8fa49e);
 scene.fog=new THREE.FogExp2(0x66776f,.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
@@ -119,7 +119,7 @@ composer.addPass(ssaoPass);
 const quality={
   pixelRatioCap:1.70,
   pixelRatioMin:1.00,
-  ssaoScale:.75,
+  ssaoScale:1.00,
   level:0,
   frameCount:0,
   frameSamples:[],
@@ -134,11 +134,10 @@ function resizeSSAO(){
 }
 resizeSSAO();
 composer.addPass(bloomPass);
-const fxaaPass=new FXAAPass();
-composer.addPass(fxaaPass);
+// Native MSAA is enabled on the renderer; a second FXAA pass would soften the mobile image.
 // GRAPHICS MASTER PRESENTATION — restrained final image grade before OutputPass.
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
-  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.115},uContrast:{value:1.075},uWarmth:{value:.024},uVignette:{value:.095}},
+  uniforms:{tDiffuse:{value:null},uSaturation:{value:1.055},uContrast:{value:1.045},uWarmth:{value:0.0},uVignette:{value:.065}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
@@ -154,8 +153,8 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
-renderer.toneMappingExposure=1.08;
-renderer.setClearColor(0x9aaea5,1);
+renderer.toneMappingExposure=1.02;
+renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
@@ -182,7 +181,7 @@ controls.minDistance=5.5;controls.maxDistance=40;controls.minPolarAngle=.40;cont
 
 const hemi=new THREE.HemisphereLight(0xeaf5f1,0x30271f,.88);scene.add(hemi);
 const WORLD_BOUNDS={minX:-52,maxX:55,minZ:-58,maxZ:64};
-const sun=new THREE.DirectionalLight(0xffd8ad,2.65);sun.position.set(-58,86,42);sun.castShadow=true;
+const sun=new THREE.DirectionalLight(0xfff0dc,2.55);sun.position.set(-58,86,42);sun.castShadow=true;
 // Size the orthographic shadow volume from the actual playable footprint rather than
 // an arbitrary square. The diagonal is used because the shadow camera is rotated by
 // the light direction, so axis-aligned world extents are not sufficient coverage.
@@ -204,10 +203,10 @@ function setShadowMapSize(size){
   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
   sun.shadow.needsUpdate=true;
 }
-const fill=new THREE.DirectionalLight(0x89afc2,.48);fill.position.set(45,34,-55);scene.add(fill);
+const fill=new THREE.DirectionalLight(0x9ab7c9,.52);fill.position.set(45,34,-55);scene.add(fill);
 const moon=new THREE.DirectionalLight(0x6682aa,.10);moon.position.set(30,50,-45);scene.add(moon);
 
-const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
+const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xa8b3aa)},sun:{value:new THREE.Color(0xffe2c2)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
 
 // Shared geometry cache must exist before world-environment construction can call rockMesh().
@@ -219,13 +218,13 @@ const rockGeometryCache=new Map();
 (function buildWorldEnvironment(){
   const c=document.createElement('canvas');c.width=768;c.height=384;const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,384);
-  g.addColorStop(0,'#16384a');g.addColorStop(.38,'#527b82');g.addColorStop(.63,'#b5b9a3');g.addColorStop(.78,'#e7c98e');g.addColorStop(1,'#6c7770');
+  g.addColorStop(0,'#16384a');g.addColorStop(.38,'#527b82');g.addColorStop(.63,'#aeb8ad');g.addColorStop(.78,'#c8cfc2');g.addColorStop(1,'#68766f');
   x.fillStyle=g;x.fillRect(0,0,c.width,c.height);
   const sg=x.createRadialGradient(575,245,4,575,245,115);
-  sg.addColorStop(0,'rgba(255,244,194,1)');sg.addColorStop(.16,'rgba(255,211,143,.72)');sg.addColorStop(1,'rgba(255,194,120,0)');
+  sg.addColorStop(0,'rgba(255,246,225,.82)');sg.addColorStop(.16,'rgba(224,235,231,.42)');sg.addColorStop(1,'rgba(200,220,215,0)');
   x.fillStyle=sg;x.fillRect(450,120,250,250);
   const src=new THREE.CanvasTexture(c);src.colorSpace=THREE.SRGBColorSpace;src.mapping=THREE.EquirectangularReflectionMapping;
-  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.28;
+  const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromEquirectangular(src).texture;scene.environmentIntensity=.22;
   src.dispose();pmrem.dispose();
 })();
 
@@ -253,7 +252,7 @@ function cloudTexture(){
 }
 const cloudMap=cloudTexture(),clouds=[];
 for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudMap,color:0xffffff,transparent:true,opacity:.13+.035*(i%4),depthWrite:false,fog:false}));sp.position.set(-95+i*16,42+(i%5)*7,-78-(i%4)*22);sp.scale.set(18+(i%3)*9,6+(i%2)*3,1);sp.userData.speed=.12+(i%3)*.035;scene.add(sp);clouds.push(sp);}
-const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xffe6b1,transparent:true,opacity:.86}));
+const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xfff0d9,transparent:true,opacity:.72}));
 sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
 // Transitional production asset source: the reference repository is public and already contains the full core GLB/texture set.

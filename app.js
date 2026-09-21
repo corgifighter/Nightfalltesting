@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:81,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:82,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -155,6 +155,15 @@ composer.addPass(cinematicGradePass);
 // tone mapping and output color-space conversion to the composited image.
 const outputPass=new OutputPass();
 composer.addPass(outputPass);
+// V82 renderer isolation material. MeshBasicMaterial is intentionally lighting-,
+// texture-, fog-, environment-, and post-grade-independent. In Cinematic this is
+// used as a decisive geometry test: if the authored terrain/buildings appear, the
+// geometry/camera path is healthy and the fault is in material/lighting/atmosphere;
+// if the frame is still a uniform field, the problem is above the Three.js geometry
+// layer (camera/frustum/visibility/canvas composition).
+const geometryIsolationMaterial=new THREE.MeshBasicMaterial({color:0x5f8f63,side:THREE.DoubleSide,fog:false});
+geometryIsolationMaterial.name='V82_GeometryIsolationMaterial';
+window.__HEARTHMERE_GEOMETRY_ISOLATION_V82={version:82,active:false,mode:'flat geometry isolation'};
 let postProcessingFailed=false;
 let postProcessingError=null;
 renderer.shadowMap.enabled=true;
@@ -3384,32 +3393,47 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
   if(!camera.userData.followInit){camera.position.set(controls.target.x+14.6,8.2,controls.target.z+14.8);camera.userData.followInit=true;}
 }
 if(cinematicMode){
-  camera.position.set(13.8,8.4,10.8);
-  controls.target.set(-2.5,1.6,-9.0);
+  camera.position.set(14.6,8.2,14.8);
+  controls.target.set(0,0,0);
   camera.lookAt(controls.target);
   controls.update();
 
-  // HARD BEAUTY-BASELINE: remove the atmospheric shell from the inspection frame.
-  // The production sky has a warm horizon by design, but it must never be capable of
-  // obscuring the actual world while we repair the renderer.
+  // V82: deterministic geometry-only isolation. The previous Cinematic pass changed
+  // atmosphere state but still left us looking at a uniform field. This pass removes
+  // every known atmospheric/overlay contributor and forces all remaining scene geometry
+  // through an unlit flat material. It is deliberately blunt: this is the test that
+  // finally separates "the world is not rendering" from "the world is rendering but
+  // its materials/lighting are overwhelming it".
   scene.fog.density=0;
-  scene.background.set(0x263b37);
-  if(sky)sky.visible=false;
-  if(sunDisc)sunDisc.visible=false;
+  scene.background.set(0x111713);
+  scene.overrideMaterial=geometryIsolationMaterial;
+  geometryIsolationMaterial.fog=false;
+  sky.visible=false;
+  sunDisc.visible=false;
+  scene.getObjectByName('GraphicsSunHalo')?.traverse(o=>{o.visible=false;});
   scene.getObjectByName('CinematicWorldDepth')?.traverse(o=>{o.visible=false;});
   scene.getObjectByName('DistantTreeLine')?.traverse(o=>{o.visible=false;});
   clouds.forEach(o=>o.visible=false);
-  renderer.toneMappingExposure=.92;
-  sun.intensity=1.55;
-  sun.color.set(0xfffdf5);
-  fill.intensity=.52;
-  fill.color.set(0xb7cad4);
-  hemi.intensity=1.0;
-  hemi.color.set(0xdce9e4);
-  hemi.groundColor.set(0x455348);
-  cinematicSpots.forEach(l=>l.intensity=0);
-  fireLights.forEach(l=>l.intensity=0);
-  scene.traverse(o=>{if(o.isPointLight && o.name && (o.name.startsWith('GraphicsRim_') || o.name==='HeroWarmKey' || o.name==='HeroCoolRim'))o.intensity=0;});
+  scene.traverse(o=>{if(o.isSprite)o.visible=false;});
+  renderer.toneMapping=THREE.NoToneMapping;
+  renderer.toneMappingExposure=1;
+  window.__HEARTHMERE_GEOMETRY_ISOLATION_V82.active=true;
+}else{
+  // Cinematic is reversible. V81 left the sky/depth shell hidden after exit, which
+  // explains the user's observation that the orange field did not return. Restore the
+  // production presentation state explicitly before the normal beauty composer runs.
+  if(scene.overrideMaterial===geometryIsolationMaterial)scene.overrideMaterial=null;
+  geometryIsolationMaterial.fog=false;
+  sky.visible=true;
+  sunDisc.visible=true;
+  scene.getObjectByName('GraphicsSunHalo')?.traverse(o=>{o.visible=true;});
+  scene.getObjectByName('CinematicWorldDepth')?.traverse(o=>{o.visible=true;});
+  scene.getObjectByName('DistantTreeLine')?.traverse(o=>{o.visible=true;});
+  clouds.forEach(o=>o.visible=true);
+  scene.traverse(o=>{if(o.isSprite && !o.userData?.worldLabel)o.visible=true;});
+  scene.background.set(0x7e9692);
+  renderer.toneMapping=THREE.AgXToneMapping;
+  window.__HEARTHMERE_GEOMETRY_ISOLATION_V82.active=false;
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();

@@ -68,7 +68,7 @@ scene.fog=new THREE.FogExp2(0x66776f,(cleanMode||probeMode)?0:.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
 renderer.setPixelRatio((captureMode||cleanMode||probeMode||rawMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
@@ -125,7 +125,7 @@ composer.addPass(ssaoPass);
 const quality={
   pixelRatioCap:1.70,
   pixelRatioMin:1.00,
-  ssaoScale:.75,
+  ssaoScale:1.00,
   level:0,
   frameCount:0,
   frameSamples:[],

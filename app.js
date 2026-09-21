@@ -22,7 +22,9 @@ function worldRandom(){
   t^=t+Math.imul(t^(t>>>7),t|61);
   return ((t^(t>>>14))>>>0)/4294967296;
 }
-const params=new URLSearchParams(location.search);\nconst captureMode=params.get('capture')==='1';\nconst cleanMode=params.get('clean')==='1';
+const params=new URLSearchParams(location.search);
+const captureMode=params.get('capture')==='1';
+const cleanMode=params.get('clean')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -3287,7 +3289,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||document.hidden)return;
+  if(captureMode||cleanMode||document.hidden)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);

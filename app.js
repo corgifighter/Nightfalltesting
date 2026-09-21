@@ -3379,7 +3379,11 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
-  if(!postProcessingFailed) composer.render();
+  // Capture mode is the authoritative visual inspection path. Render the scene directly at
+  // the renderer's native drawing-buffer resolution so a post-processing pass can never
+  // silently downsample the real game frame. The normal game path keeps the full beauty chain.
+  if(captureMode) renderer.render(scene,camera);
+  else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

@@ -27,6 +27,7 @@ const captureMode=params.get('capture')==='1';
 const cleanMode=params.get('clean')==='1';
 const probeMode=params.get('probe')==='1';
 const rawMode=params.get('raw')==='1';
+const fogOffMode=params.get('raw')==='2';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -3292,7 +3293,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||cleanMode||probeMode||rawMode||document.hidden)return;
+  if(captureMode||cleanMode||probeMode||rawMode||fogOffMode||document.hidden)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);
@@ -3387,7 +3388,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode||cleanMode||probeMode||rawMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(captureMode||cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog=null;scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

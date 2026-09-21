@@ -3386,7 +3386,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode||cleanMode||probeMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(captureMode||cleanMode||probeMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

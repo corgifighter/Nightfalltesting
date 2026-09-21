@@ -3293,7 +3293,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||cleanMode||probeMode||rawMode||fogOffMode||document.hidden)return;
+  if(captureMode||cleanMode||probeMode||rawMode||fogOffMode||cinematicMode||document.hidden)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);

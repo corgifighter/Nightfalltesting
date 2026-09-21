@@ -76,20 +76,8 @@ jobs:
               console.log('PAGE_NAVIGATION_ERROR=' + navigationError);
             }
             await page.waitForTimeout(8000);
-            await page.waitForFunction(() => window.__HEARTHMERE_READY === true, { timeout: 60000 }).catch(() => {});
+            await page.waitForFunction(() => window.__HEARTHMERE_READY === true, { timeout: 30000 }).catch(() => {});
             const status = await page.locator('#boot-status').textContent().catch(() => '');
-            const liveAppParse = await page.evaluate(async () => {
-              try {
-                const u = new URL('app.js?live-parse=' + Date.now(), location.href);
-                const res = await fetch(u.href, { cache: 'no-store' });
-                const src = await res.text();
-                try {
-                  const acorn=await import('https://cdn.jsdelivr.net/npm/acorn@8.15.0/+esm');
-                  acorn.parse(src,{ecmaVersion:'latest',sourceType:'module'});
-                  return { ok:true, length:src.length, status:res.status };
-                } catch(e) { return { ok:false, name:e?.name, message:e?.message, line:e?.loc?.line, column:e?.loc?.column, pos:e?.pos, stack:e?.stack, length:src.length, status:res.status }; }
-              } catch(e) { return { fetchError:String(e) }; }
-            });
             const canvasCount = await page.locator('#scene canvas').count();
             const webglSupport = await page.evaluate(() => {
               const c = document.createElement('canvas');
@@ -104,10 +92,6 @@ jobs:
             });
             const bodySnapshot = await page.locator('body').innerText().catch(() => '');
             const resourceSnapshot = await page.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /app\\.js|three|postprocessing|shader/i.test(n)).slice(-80));
-            const dependencyProbe = await page.evaluate(async () => {
-              const urls=['https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/controls/OrbitControls.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/loaders/GLTFLoader.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/EffectComposer.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/RenderPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js','https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js'];
-              const out=[]; for(const u of urls){try{await import(u);out.push({u,ok:true})}catch(e){out.push({u,ok:false,name:e?.name,message:e?.message})}} return out;
-            });
             let canvasData = null;
             if (canvasCount > 0) {
               try {

@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:78,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:80,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -3375,13 +3375,30 @@ renderer.toneMappingExposure=.96+.055*day+.012*golden;
 scene.environmentIntensity=.18+.08*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
- if(player){
+ if(player && !cinematicMode){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;
   tmpTarget.set(player.position.x+Math.sin(player.rotation.y)*1.15,.72,player.position.z+Math.cos(player.rotation.y)*1.15);
   controls.target.lerp(tmpTarget,.11);
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
   if(!camera.userData.followInit){camera.position.set(controls.target.x+14.6,8.2,controls.target.z+14.8);camera.userData.followInit=true;}
+}
+if(cinematicMode){
+  camera.position.set(13.8,8.4,10.8);
+  controls.target.set(-2.5,1.6,-9.0);
+  camera.lookAt(controls.target);
+  controls.update();
+  scene.fog.density=0;
+  scene.background.set(0x73837e);
+  renderer.toneMappingExposure=1.0;
+  sun.intensity=2.15;
+  sun.color.set(0xfff6e8);
+  fill.intensity=.38;
+  fill.color.set(0xa8c1cf);
+  hemi.intensity=.82;
+  cinematicSpots.forEach(l=>l.intensity=0);
+  fireLights.forEach(l=>l.intensity=0);
+  scene.traverse(o=>{if(o.isPointLight && o.name && (o.name.startsWith('GraphicsRim_') || o.name==='HeroWarmKey' || o.name==='HeroCoolRim'))o.intensity=0;});
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
@@ -3390,6 +3407,7 @@ try{
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
   if(cleanMode||probeMode||rawMode||fogOffMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}if(fogOffMode){scene.fog.density=0;scene.fog.color.set(0x8ca9a3);scene.background=new THREE.Color(0x8ca9a3);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  else if(cinematicMode){renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

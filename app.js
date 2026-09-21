@@ -365,8 +365,8 @@ MAT.grass.onBeforeCompile=(shader)=>{
 };
 MAT.water.onBeforeCompile=(shader)=>{
  shader.uniforms.uTime={value:0};
- shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld; varying vec3 vWaterNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vWaterNormal=normalize(mat3(modelMatrix)*objectNormal); transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
- shader.fragmentShader='uniform float uTime; varying vec3 vWaterWorld; varying vec3 vWaterNormal;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vWaterNormal),normalize(-vViewPosition)),0.0),3.0); float sunSpark=pow(max(dot(reflect(normalize(-vViewPosition),normalize(vWaterNormal)),normalize(vec3(-.52,.74,.42))),0.0),72.0); diffuseColor.rgb+=vec3(1.0,.78,.48)*sunSpark*.20; diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
+ shader.vertexShader='uniform float uTime; varying vec3 vWaterWorld; varying vec3 vWaterNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; vWaterNormal=normalize(mat3(modelMatrix)*objectNormal); transformed.y += sin(transformed.x*0.55 + uTime*1.7)*0.045 + cos(transformed.z*0.22 + uTime*1.15)*0.028;');
+ shader.fragmentShader='uniform float uTime; varying vec3 vWaterWorld; varying vec3 vWaterNormal;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n float ripple=sin(vWaterWorld.x*.75+vWaterWorld.z*.38+uTime*1.5)*.5+sin(vWaterWorld.x*.19-vWaterWorld.z*.62-uTime*.7)*.5; diffuseColor.rgb*=mix(.88,1.12,ripple*.5+.5); float fresnel=pow(1.0-max(dot(normalize(vWaterNormal),normalize(-vViewPosition)),0.0),3.0); float sunSpark=pow(max(dot(reflect(normalize(-vViewPosition),normalize(vWaterNormal)),normalize(vec3(-.52,.74,.42))),0.0),72.0); diffuseColor.rgb+=vec3(1.0,.78,.48)*sunSpark*.20; diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.50,.82,.82),fresnel*.48);');
  MAT.water.userData.shader=shader;
 };
 function addMesh(g,m,pos=[0,0,0],rot=[0,0,0],cast=true){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.castShadow=cast;o.receiveShadow=true;scene.add(o);return o}
@@ -3334,6 +3334,7 @@ function frame(t){
  updateHeroPresentation();updateCharacterPresentation();
  foam.forEach((r,i)=>{r.position.z+=dt*(.65+(i%4)*.1);r.scale.x=1.5+Math.sin(time*1.8+i)*.22;r.material.opacity=.16+.10*(Math.sin(time*1.4+i)+1);if(r.position.z>62)r.position.z=-52;r.position.x=27+Math.sin(time*.7+i*1.8)*3.8});
  embers.forEach((e,i)=>{e.position.y+=dt*(.35+Math.sin(i)*.08);e.position.x+=Math.sin(time*2+i)*dt*.025;if(e.position.y>3)e.position.y=.9;e.material.opacity=.35+.5*(Math.sin(time*6+i)+1)/2});
+ const day=(Math.sin(time*.014)+1)/2;
  fireLights.forEach((l,i)=>l.intensity=5.1+Math.sin(time*7+i)*.75+Math.sin(time*13)*.3);warmWindows.forEach((m,i)=>m.emissiveIntensity=.10+.055*(Math.sin(time*.9+i*.73)+1)/2);windowSpillLights.forEach((l,i)=>{const dayLight=(Math.sin(time*.014)+1)/2;l.intensity=.07+.34*(1-dayLight)+.035*(Math.sin(time*.85+i*.61)+1)/2;});
  smoke.forEach((s,i)=>{s.position.y+=dt*(.22+.025*i);s.position.x+=Math.sin(time*.65+s.userData.phase)*dt*.018;s.material.opacity=.035+.025*(Math.sin(time*.8+s.userData.phase)+1)/2;if(s.position.y>6){s.position.y=.9;s.position.x+=((i%2)-.5)*.3}});
  clouds.forEach((c,i)=>{c.position.x+=dt*c.userData.speed;if(c.position.x>120)c.position.x=-120;});
@@ -3343,8 +3344,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  fireflies.forEach((f,i)=>{const dayNow=(Math.sin(time*.014)+1)/2,night=1-dayNow;f.position.y+=Math.sin(time*1.6+f.userData.phase)*dt*.12;f.position.x+=Math.cos(time*.9+f.userData.phase)*dt*.06;f.position.z+=Math.sin(time*.7+f.userData.phase)*dt*.05;f.material.opacity=Math.max(0,night*.72)*(0.45+0.55*(Math.sin(time*2.2+f.userData.phase)+1)/2);f.scale.setScalar(.7+.5*(Math.sin(time*2.7+f.userData.phase)+1)/2);});
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
- const day=(Math.sin(time*.014)+1)/2;
-const golden=1-Math.abs(day-.52)*1.92;
+ const golden=1-Math.abs(day-.52)*1.92;
 scene.fog.density=.00105+.00058*(1-day);
 scene.fog.color.setHSL(.42,.10,.39+.08*day);
 sun.position.y=48+day*58;

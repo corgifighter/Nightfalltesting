@@ -26,6 +26,7 @@ const params=new URLSearchParams(location.search);
 const captureMode=params.get('capture')==='1';
 const cleanMode=params.get('clean')==='1';
 const probeMode=params.get('probe')==='1';
+const rawMode=params.get('raw')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -67,7 +68,7 @@ scene.fog=new THREE.FogExp2(0x66776f,(cleanMode||probeMode)?0:.00118);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio((captureMode||cleanMode||probeMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
+renderer.setPixelRatio((captureMode||cleanMode||probeMode||rawMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 const gl=renderer.getContext();
@@ -93,7 +94,7 @@ const rendererDiagnostics={
 window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
-if(captureMode||probeMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';}
+if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
 const composer=new EffectComposer(renderer);
 // Keep the post-processing buffers at the exact same capped device-pixel ratio as the renderer.
 // EffectComposer owns its own render targets, so this is synchronized explicitly rather than
@@ -3291,7 +3292,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||cleanMode||probeMode||document.hidden)return;
+  if(captureMode||cleanMode||probeMode||rawMode||document.hidden)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);
@@ -3386,7 +3387,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode||cleanMode||probeMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(captureMode||cleanMode||probeMode||rawMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);controls.update();}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

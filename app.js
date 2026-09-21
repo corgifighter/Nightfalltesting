@@ -6,7 +6,6 @@ import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js
 import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {SSAOPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js';
 import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js';
-import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js';
 import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
 
 const root=document.querySelector('#scene');
@@ -140,8 +139,6 @@ function resizeSSAO(){
 }
 resizeSSAO();
 composer.addPass(bloomPass);
-const fxaaPass=new FXAAPass();
-composer.addPass(fxaaPass);
 // GRAPHICS MASTER PRESENTATION — restrained final image grade before OutputPass.
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
   uniforms:{tDiffuse:{value:null},uSaturation:{value:1.115},uContrast:{value:1.075},uWarmth:{value:.024},uVignette:{value:.095}},

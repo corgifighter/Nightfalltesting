@@ -91,7 +91,7 @@ const rendererDiagnostics={
   pixelRatio:renderer.getPixelRatio(),
   drawingBuffer:[renderer.domElement.width,renderer.domElement.height]
 };
-window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:77,cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
+window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;window.__HEARTHMERE_RENDER_DIAGNOSTICS={build:78,playerSpawn:[4,-12],cinematicMode:false,postProcessing:'RenderPass + OutputPass only; bloom/grade/SSAO disabled',fogDensity:0,camera:[0,0,0],target:[0,0,0]};
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
 if(captureMode||probeMode||rawMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';renderer.domElement.style.filter='none';}
@@ -2095,7 +2095,7 @@ async function spawnCharacter(x,z,cloth,name,role='villager'){
  label(name,[x,5.15,z],'#f0e7d2',.58);characters.push(g);return g;
 }
 async function buildCharacters(){
- player=await spawnCharacter(0,30,0x60746e,'YOU','player');
+ player=await spawnCharacter(4,-12,0x60746e,'YOU','player');
  const mara=await spawnCharacter(5,-10,0x8b5144,'MARA','smith');
  const rowan=await spawnCharacter(14,13,0x506e4b,'ROWAN','watch');
  interact(mara,'Mara','The bell rang by itself. I heard footsteps on the mill roof after midnight.');

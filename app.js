@@ -25,6 +25,7 @@ function worldRandom(){
 const params=new URLSearchParams(location.search);
 const captureMode=params.get('capture')==='1';
 const cleanMode=params.get('clean')==='1';
+const probeMode=params.get('probe')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -61,12 +62,12 @@ bootSet(.03,'Waking the crossing…');
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9aaea5);
-scene.fog=new THREE.FogExp2(0x66776f,cleanMode?0:.00118);
+scene.fog=new THREE.FogExp2(0x66776f,(cleanMode||probeMode)?0:.00118);
 
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio((captureMode||cleanMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
+renderer.setPixelRatio((captureMode||cleanMode||probeMode)?Math.min(devicePixelRatio,2.0):Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 const gl=renderer.getContext();
@@ -92,7 +93,7 @@ const rendererDiagnostics={
 window.__HEARTHMERE_RENDERER_DIAGNOSTICS=rendererDiagnostics;
 if(diagnosticsMode) console.table(rendererDiagnostics);
 renderer.setSize(innerWidth,innerHeight);
-if(captureMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';}
+if(captureMode||probeMode){renderer.domElement.style.width=innerWidth+'px';renderer.domElement.style.height=innerHeight+'px';}
 const composer=new EffectComposer(renderer);
 // Keep the post-processing buffers at the exact same capped device-pixel ratio as the renderer.
 // EffectComposer owns its own render targets, so this is synchronized explicitly rather than
@@ -212,6 +213,7 @@ const moon=new THREE.DirectionalLight(0x6682aa,.10);moon.position.set(30,50,-45)
 
 const sky=new THREE.Mesh(new THREE.SphereGeometry(520,32,18),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x213e49)},mid:{value:new THREE.Color(0x78908c)},horizon:{value:new THREE.Color(0xcab98d)},sun:{value:new THREE.Color(0xffd39a)}},vertexShader:'varying vec3 vN;void main(){vN=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 horizon;uniform vec3 sun;varying vec3 vN;void main(){float h=max(vN.y,0.0);vec3 c=mix(horizon,mid,smoothstep(0.0,.35,h));c=mix(c,top,smoothstep(.35,.92,h));float s=pow(max(dot(vN,normalize(vec3(-.38,.72,.45))),0.0),96.0);c+=sun*s*.72;gl_FragColor=vec4(c,1.0);}'}));
 scene.add(sky);
+if(probeMode){sky.visible=false;scene.background=new THREE.Color(0x3b403e);}
 
 // Shared geometry cache must exist before world-environment construction can call rockMesh().
 // The environment is built immediately during module evaluation, so this declaration
@@ -3289,7 +3291,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||cleanMode||document.hidden)return;
+  if(captureMode||cleanMode||probeMode||document.hidden)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);
@@ -3353,7 +3355,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-if(!cleanMode){scene.fog.density=.00105+.00058*(1-day);scene.fog.color.setHSL(.42,.10,.39+.08*day);}else{scene.fog.density=0;}
+if(!cleanMode&&!probeMode){scene.fog.density=.00105+.00058*(1-day);scene.fog.color.setHSL(.42,.10,.39+.08*day);}else{scene.fog.density=0;}
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
@@ -3384,7 +3386,7 @@ try{
   // Capture mode is the authoritative visual inspection path. Render the scene directly at
   // the renderer's native drawing-buffer resolution so a post-processing pass can never
   // silently downsample the real game frame. The normal game path keeps the full beauty chain.
-  if(captureMode||cleanMode){renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
+  if(captureMode||cleanMode||probeMode){if(probeMode){camera.position.set(14.6,8.2,14.8);controls.target.set(0,0,0);}renderer.setSize(innerWidth,innerHeight,false);renderer.render(scene,camera);}
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
@@ -3404,7 +3406,7 @@ perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;
 updatePerformanceStats(t,frameMs);renderer.info.reset();updateAdaptiveQuality(t);destinationMarker.scale.setScalar(1+Math.sin(time*5)*.08);minimap();if(autoCaptureArmed && player && window.__HEARTHMERE_READY && cc0LoadStats.pending===0 && distilledLoadStats.pending===0 && performance.now()-captureReadyAt>1200 && frameRendered){autoCaptureArmed=false;captureRequested=true;}if(captureRequested){
   captureRequested=false;
-  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,postProcessingBypassed:(captureMode||cleanMode),fogDisabled:cleanMode};
+  window.__HEARTHMERE_CAPTURE_DIAGNOSTICS={viewport:[innerWidth,innerHeight],cssSize:[renderer.domElement.clientWidth,renderer.domElement.clientHeight],drawingBuffer:[renderer.domElement.width,renderer.domElement.height],pixelRatio:renderer.getPixelRatio(),captureMode,cleanMode,probeMode,postProcessingBypassed:(captureMode||cleanMode||probeMode),fogDisabled:(cleanMode||probeMode),skyDisabled:probeMode};
   window.__HEARTHMERE_CAPTURE_META={
     seed:WORLD_SEED,
     threeRevision:THREE.REVISION,

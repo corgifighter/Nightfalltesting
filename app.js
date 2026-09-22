@@ -6,7 +6,8 @@ import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js
 import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {SSAOPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/SSAOPass.js';
 import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/OutputPass.js';
-import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js';
+import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
+import {FXAAShader} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/shaders/FXAAShader.js';
 
 const root=document.querySelector('#scene');
 // Stage 2 engineering foundation: deterministic world generation.
@@ -128,8 +129,10 @@ function resizeSSAO(){
 }
 resizeSSAO();
 composer.addPass(bloomPass);
-const fxaaPass=new FXAAPass();
+const fxaaPass=new ShaderPass(FXAAShader);
 composer.addPass(fxaaPass);
+function resizeFXAA(){const ratio=renderer.getPixelRatio();fxaaPass.material.uniforms.resolution.value.set(1/(innerWidth*ratio),1/(innerHeight*ratio));}
+resizeFXAA();
 // EffectComposer renders into an intermediate color space. OutputPass is the
 // authoritative final presentation stage: it applies the renderer's configured
 // tone mapping and output color-space conversion to the composited image.
@@ -2461,7 +2464,7 @@ function updateAdaptiveQuality(now){
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
   const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
-  composer.setPixelRatio(pixelRatio);resizeSSAO();
+  composer.setPixelRatio(pixelRatio);resizeSSAO();resizeFXAA();
   rendererDiagnostics.pixelRatio=pixelRatio;
   rendererDiagnostics.qualityLevel=quality.level;
   rendererDiagnostics.averageFrameMs=avgFrameMs;
@@ -2580,4 +2583,4 @@ window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);resizeSSAO();resizeFXAA();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

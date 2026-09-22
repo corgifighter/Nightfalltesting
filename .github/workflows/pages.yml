@@ -2,7 +2,7 @@ name: Deploy Hearthmere to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main","bisect-200"]
   workflow_dispatch:
 
 permissions:

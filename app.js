@@ -3395,9 +3395,16 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
+
+// FORENSIC PRESENTATION ISOLATION:
+// All authored world-building passes above are complete before this point and some of them
+// intentionally configure cinematic tone mapping. For this diagnostic frame, bypass the entire
+// EffectComposer and force a neutral renderer output. If the world returns, the white wash is
+// definitively inside the composer/output chain rather than terrain, lighting, assets, or fog.
+renderer.toneMapping=THREE.NoToneMapping;
+renderer.toneMappingExposure=1.0;
 try{
-  if(!postProcessingFailed) composer.render();
-  else renderer.render(scene,camera);
+  renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;
   postProcessingError=err?.message||String(err);

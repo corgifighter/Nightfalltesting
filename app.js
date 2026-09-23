@@ -117,7 +117,9 @@ composer.addPass(ssaoPass);
 // RenderPass remains intact; this isolates whether the stagnant wash originates after scene shading.
 ssaoPass.enabled=false;
 bloomPass.enabled=false;
-cinematicGradePass.enabled=false;
+// The cinematic grade is intentionally bypassed during the color-pipeline investigation.
+// Keep this assignment after construction; referencing the const before initialization caused
+// a runtime ReferenceError and could prevent the renderer from reaching the authored world.
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
@@ -147,6 +149,9 @@ const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
   fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
 composer.addPass(cinematicGradePass);
+// Keep the grade explicitly disabled while diagnosing the reported stagnant color wash.
+// This makes the A/B state unambiguous: scene shading -> OutputPass, with no camera-space grade.
+cinematicGradePass.enabled=false;
 // EffectComposer renders into an intermediate color space. OutputPass is the
 // authoritative final presentation stage: it applies the renderer's configured
 // tone mapping and output color-space conversion to the composited image.

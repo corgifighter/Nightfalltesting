@@ -3145,7 +3145,7 @@ function buildGraphicsMasterPass(){
     // Keep the sun texture available for future refinement, but do not composite a
     // camera-facing additive wash over the authored world.
     const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false,blending:THREE.AdditiveBlending,opacity:.16}));
-    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(6,6,1);scene.add(halo);
+    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(6,6,1);halo.visible=false;scene.add(halo);
   }
   window.__HEARTHMERE_GRAPHICS_MASTER={version:1,gradePass:true,heroRig:!!player?.userData.graphicsMasterRig,canopyAccents:[...scene.children].filter(o=>o.userData?.graphicsCanopyDetail).length,landmarkRims:rigs.length};
 }

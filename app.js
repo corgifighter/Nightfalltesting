@@ -162,8 +162,11 @@ let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.02;
+// Diagnostic baseline: bypass ACES exposure while isolating the white image wash.
+// The scene's authored lights already provide the intended dynamic range; the final output
+// should not be additionally lifted during this investigation.
+renderer.toneMapping=THREE.NoToneMapping;
+renderer.toneMappingExposure=1.0;
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.

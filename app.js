@@ -2963,8 +2963,8 @@ function buildCinematicWorldDepthPass(){
     m.scale.y=.45;
     root.add(m);
   };
-  makeMistBand(.8,-58,170,12,0xd5d6c0,.055);
-  makeMistBand(1.5,-88,210,16,0xb9c8bd,.035);
+  makeMistBand(.8,-58,170,12,0xd5d6c0,.022);
+  makeMistBand(1.5,-88,210,16,0xb9c8bd,.014);
 
   // A restrained distant tree line gives the settlement a believable enclosed valley
   // without spending geometry on the playable center.
@@ -3354,8 +3354,8 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-scene.fog.density=.00105+.00058*(1-day);
-scene.fog.color.setHSL(.42,.025,.39+.08*day);
+scene.fog.density=.00064+.00032*(1-day);
+scene.fog.color.setHSL(.46,.012,.41+.07*day);
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;

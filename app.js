@@ -3180,8 +3180,8 @@ function buildHighEndAtmospherePass(){
   if(sky?.material?.uniforms){
     sky.material.uniforms.top.value.set(0x18384b);
     sky.material.uniforms.mid.value.set(0x5f817f);
-    sky.material.uniforms.horizon.value.set(0xe1c28d);
-    sky.material.uniforms.sun.value.set(0xffd7a2);
+    sky.material.uniforms.horizon.value.set(0xb9c4bd);
+    sky.material.uniforms.sun.value.set(0xffe0bd);
   }
   sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
 }
@@ -3355,21 +3355,21 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
 
  const golden=1-Math.abs(day-.52)*1.92;
 scene.fog.density=.00105+.00058*(1-day);
-scene.fog.color.setHSL(.42,.10,.39+.08*day);
+scene.fog.color.setHSL(.42,.025,.39+.08*day);
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.075-.015*day,.42,.68+.08*day);
-fill.color.setHSL(.55,.28,.60);
+sun.color.setHSL(.065-.015*day,.16,.68+.08*day);
+fill.color.setHSL(.55,.20,.60);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
-hemi.color.setHSL(.48,.16,.82);
-hemi.groundColor.setHSL(.08,.20,.18+.04*day);
-renderer.toneMappingExposure=.90+.20*day;
-scene.environmentIntensity=.30+.12*day;
+hemi.color.setHSL(.48,.07,.82);
+hemi.groundColor.setHSL(.08,.06,.18+.04*day);
+renderer.toneMappingExposure=.84+.16*day;
+scene.environmentIntensity=.26+.10*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){

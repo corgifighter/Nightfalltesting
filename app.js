@@ -117,7 +117,7 @@ composer.addPass(ssaoPass);
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
 const quality={
-  pixelRatioCap:1.70,
+  pixelRatioCap:1.55,
   pixelRatioMin:1.00,
   ssaoScale:1.00,
   level:0,
@@ -152,7 +152,7 @@ let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.AgXToneMapping;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.02;
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
@@ -2782,7 +2782,7 @@ function buildBeautyLightingPass(){
   hemi.color.set(0xf4f7ef);hemi.groundColor.set(0x2c3028);hemi.intensity=1.12;
   moon.intensity=.055;
   scene.environmentIntensity=.38;
-  renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.08;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   // Soft directional rim separates the hero and major silhouettes from the landscape.
   if(!scene.getObjectByName('BeautyRim')){
     const rim=new THREE.DirectionalLight(0x9cc7d6,.42);rim.name='BeautyRim';rim.position.set(34,54,-72);scene.add(rim);
@@ -2991,7 +2991,7 @@ function buildGraphicsFoundationV2(){
   // Renderer/presentation: preserve a rich HDR-like response while keeping the
   // mobile target conservative. Three.js recommends environment lighting for PBR
   // materials, and the scene already supplies a PMREM environment.
-  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.075;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.transmissionResolutionScale=.55;
@@ -3286,6 +3286,8 @@ function updatePerformanceStats(now,frameMs){
 }
 function updateAdaptiveQuality(now){
   if(captureMode||document.hidden)return;
+  if(quality.level!==0){quality.level=0;quality.pixelRatioCap=1.55;quality.ssaoScale=1.00;const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();}
+  return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);
@@ -3363,8 +3365,8 @@ moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
 hemi.color.setHSL(.48,.16,.82);
 hemi.groundColor.setHSL(.08,.20,.18+.04*day);
-renderer.toneMappingExposure=.82+.12*day+.035*golden;
-scene.environmentIntensity=.22+.12*day;
+renderer.toneMappingExposure=.90+.20*day;
+scene.environmentIntensity=.30+.12*day;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
@@ -3951,16 +3953,16 @@ function buildWorldArtDirectionV3(){
 
   // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
   // below "effect overload"; the geometry and composition carry the image.
-  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.10;
   scene.environmentIntensity=.44;
   sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;
   bloomPass.strength=.095;bloomPass.radius=.36;bloomPass.threshold=.88;
   ssaoPass.kernelRadius=14;ssaoPass.maxDistance=.23;
-  cinematicGradePass.uniforms.uSaturation.value=1.13;
-  cinematicGradePass.uniforms.uContrast.value=1.085;
-  cinematicGradePass.uniforms.uWarmth.value=.028;
-  cinematicGradePass.uniforms.uVignette.value=.075;
+  cinematicGradePass.uniforms.uSaturation.value=1.0;
+  cinematicGradePass.uniforms.uContrast.value=1.0;
+  cinematicGradePass.uniforms.uWarmth.value=0.0;
+  cinematicGradePass.uniforms.uVignette.value=0.0;
 
   window.__HEARTHMERE_GRAPHICS_V3={
     version:3,terrainRidges:4,biomeIslands:islands.length,groves:groves.length,

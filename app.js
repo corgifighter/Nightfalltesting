@@ -139,7 +139,7 @@ composer.addPass(bloomPass);
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
   uniforms:{tDiffuse:{value:null},uSaturation:{value:1.055},uContrast:{value:1.045},uWarmth:{value:0.0},uVignette:{value:.065}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-  fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
+  fragmentShader:'uniform sampler2D tDiffuse;varying vec2 vUv;void main(){vec4 c=texture2D(tDiffuse,vUv);gl_FragColor=c;}'
 }));
 composer.addPass(cinematicGradePass);
 // EffectComposer renders into an intermediate color space. OutputPass is the

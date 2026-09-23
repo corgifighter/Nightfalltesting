@@ -105,7 +105,6 @@ composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
 // rather than having the occlusion pass darken already-bloomed pixels.
 const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.145,.48,.82);
-bloomPass.enabled=true;
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
@@ -113,9 +112,6 @@ ssaoPass.kernelRadius=10;
 ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
 ssaoPass.output=SSAOPass.OUTPUT.Default;
-// BUILD 76 FORENSIC: isolate SSAO from the final image while preserving every other
-// renderer, lighting, material, fog, bloom, grade, and OutputPass setting.
-ssaoPass.enabled=false;
 composer.addPass(ssaoPass);
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
@@ -2967,8 +2963,8 @@ function buildCinematicWorldDepthPass(){
     m.scale.y=.45;
     root.add(m);
   };
-  makeMistBand(.8,-58,170,12,0xd5d6c0,.022);
-  makeMistBand(1.5,-88,210,16,0xb9c8bd,.014);
+  makeMistBand(.8,-58,170,12,0xd5d6c0,.055);
+  makeMistBand(1.5,-88,210,16,0xb9c8bd,.035);
 
   // A restrained distant tree line gives the settlement a believable enclosed valley
   // without spending geometry on the playable center.
@@ -3358,8 +3354,8 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-scene.fog.density=.00064+.00032*(1-day);
-scene.fog.color.setHSL(.46,.012,.41+.07*day);
+scene.fog.density=.00105+.00058*(1-day);
+scene.fog.color.setHSL(.42,.025,.39+.08*day);
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;

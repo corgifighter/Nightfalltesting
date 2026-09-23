@@ -3039,7 +3039,7 @@ function buildGraphicsFoundationV2(){
           if(!isMetal && isRoof)mat.clearcoat=Math.max(mat.clearcoat||0,.12);
           if(!isMetal && isCloth)mat.sheen=Math.max(mat.sheen||0,.16);
         }
-        if(!mat.transparent && !mat.userData.noFoundationShader){
+        if(!mat.transparent && !mat.userData.noFoundationShader && !window.__HEARTHMERE_DISABLE_FOUNDATION_SURFACE_SHADER){
           installFoundationSurfaceShader(mat,((obj.id||1)*.37)+(mi*.91),.018);
         }
         materials.add(mat);

@@ -113,6 +113,11 @@ ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
 ssaoPass.output=SSAOPass.OUTPUT.Default;
 composer.addPass(ssaoPass);
+// FORENSIC A/B: preserve the full scene, but bypass camera-space beauty composites.
+// RenderPass remains intact; this isolates whether the stagnant wash originates after scene shading.
+ssaoPass.enabled=false;
+bloomPass.enabled=false;
+cinematicGradePass.enabled=false;
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.

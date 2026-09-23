@@ -3355,7 +3355,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
  riverMist.forEach((m,i)=>{m.position.y=m.userData.baseY+Math.sin(time*.55+m.userData.phase)*.10;m.position.x+=Math.sin(time*.33+m.userData.phase)*dt*.018;m.material.opacity=.025+.045*(Math.sin(time*.75+m.userData.phase)+1)/2;});
 
  const golden=1-Math.abs(day-.52)*1.92;
-scene.fog.density=0; // BUILD 74 FORENSIC: authoritative fog bypass; remove after source is confirmed
+scene.fog.density=.00064+.00032*(1-day);
 scene.fog.color.setHSL(.46,.012,.41+.07*day);
 sun.position.y=48+day*58;
 sun.position.x=-58+Math.sin(time*.018)*22;
@@ -3373,6 +3373,8 @@ renderer.toneMappingExposure=.84+.16*day;
 scene.environmentIntensity=.26+.10*day;
 scene.environmentIntensity=0;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
+  // BUILD 75 FORENSIC: neutralize global lighting chroma, preserve intensity.
+  sun.color.set(0xffffff); fill.color.set(0xffffff); hemi.color.set(0xffffff); hemi.groundColor.set(0x808080);
 
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;

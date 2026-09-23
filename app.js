@@ -3361,15 +3361,21 @@ sun.position.x=-58+Math.sin(time*.018)*22;
 sun.position.z=42+Math.cos(time*.014)*18;
  sunDisc.position.copy(sun.position).normalize().multiplyScalar(220); const sunHalo=scene.getObjectByName('GraphicsSunHalo'); if(sunHalo)sunHalo.position.copy(sunDisc.position);
 sun.intensity=1.35+2.15*day;
-sun.color.setHSL(.065-.015*day,.16,.68+.08*day);
-fill.color.setHSL(.55,.20,.60);
+// FORENSIC DAYLIGHT CHROMA PASS:
+// The previous frame loop re-authored light chroma every frame, making one-shot
+// light tests invalid and allowing a persistent warm/green cast to survive.
+// Keep the authored intensity/day cycle, but use near-neutral daylight chroma so
+// color is carried by actual materials and intentionally local practical lights.
+sun.color.setHSL(.055-.008*day,.055,.68+.08*day);
+fill.color.setHSL(.55,.075,.60);
 fill.intensity=.30+.28*day;
 moon.intensity=.035+.24*(1-day);
 hemi.intensity=.66+.48*day;
-hemi.color.setHSL(.48,.07,.82);
-hemi.groundColor.setHSL(.08,.06,.18+.04*day);
+hemi.color.setHSL(.50,.025,.82);
+hemi.groundColor.setHSL(.08,.025,.18+.04*day);
 renderer.toneMappingExposure=.84+.16*day;
 scene.environmentIntensity=.26+.10*day;
+window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:true,sunSaturation:.055,fillSaturation:.075,hemiSaturation:.025};
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){

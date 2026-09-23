@@ -152,7 +152,7 @@ let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMapping=THREE.AgXToneMapping;
 renderer.toneMappingExposure=1.02;
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
@@ -2782,7 +2782,7 @@ function buildBeautyLightingPass(){
   hemi.color.set(0xf4f7ef);hemi.groundColor.set(0x2c3028);hemi.intensity=1.12;
   moon.intensity=.055;
   scene.environmentIntensity=.38;
-  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+  renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.08;
   // Soft directional rim separates the hero and major silhouettes from the landscape.
   if(!scene.getObjectByName('BeautyRim')){
     const rim=new THREE.DirectionalLight(0x9cc7d6,.42);rim.name='BeautyRim';rim.position.set(34,54,-72);scene.add(rim);
@@ -2991,7 +2991,7 @@ function buildGraphicsFoundationV2(){
   // Renderer/presentation: preserve a rich HDR-like response while keeping the
   // mobile target conservative. Three.js recommends environment lighting for PBR
   // materials, and the scene already supplies a PMREM environment.
-  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMapping=THREE.AgXToneMapping;
   renderer.toneMappingExposure=1.075;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.transmissionResolutionScale=.55;
@@ -3376,8 +3376,8 @@ hemi.groundColor.setHSL(.08,.025,.18+.04*day);
 renderer.toneMappingExposure=.84+.16*day;
 // Forensic isolation: the PMREM environment is a persistent global indirect-light
 // source. Hold it OFF every frame so no later presentation pass can restore it.
-scene.environmentIntensity=0;
-window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:true,sunSaturation:.055,fillSaturation:.075,hemiSaturation:.025,environmentDisabled:true};
+scene.environmentIntensity=.26+.10*day;
+window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:false,reason:'Build 80: restored authored PMREM contribution and switched presentation transform to AgX'};
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
@@ -3964,7 +3964,7 @@ function buildWorldArtDirectionV3(){
 
   // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
   // below "effect overload"; the geometry and composition carry the image.
-  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMapping=THREE.AgXToneMapping;
   renderer.toneMappingExposure=1.10;
   scene.environmentIntensity=.44;
   sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;

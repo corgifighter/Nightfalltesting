@@ -105,7 +105,7 @@ composer.addPass(renderPass);
 // Depth-aware occlusion must precede bloom so bloom is applied to the final shaded image,
 // rather than having the occlusion pass darken already-bloomed pixels.
 const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.145,.48,.82);
-bloomPass.enabled=false;
+bloomPass.enabled=true;
 // Stage 1 image-quality pass: restrained screen-space occlusion restores contact depth
 // between architecture, props, terrain, and the character without changing world layout.
 const ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight);
@@ -3371,6 +3371,7 @@ hemi.color.setHSL(.48,.07,.82);
 hemi.groundColor.setHSL(.08,.06,.18+.04*day);
 renderer.toneMappingExposure=.84+.16*day;
 scene.environmentIntensity=.26+.10*day;
+scene.environmentIntensity=0;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){
@@ -4205,7 +4206,7 @@ async function buildWorldArtDirectionV5(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();scene.fog.density=0;buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

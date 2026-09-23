@@ -113,6 +113,9 @@ ssaoPass.kernelRadius=10;
 ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
 ssaoPass.output=SSAOPass.OUTPUT.Default;
+// BUILD 76 FORENSIC: isolate SSAO from the final image while preserving every other
+// renderer, lighting, material, fog, bloom, grade, and OutputPass setting.
+ssaoPass.enabled=false;
 composer.addPass(ssaoPass);
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
@@ -3371,10 +3374,7 @@ hemi.color.setHSL(.48,.07,.82);
 hemi.groundColor.setHSL(.08,.06,.18+.04*day);
 renderer.toneMappingExposure=.84+.16*day;
 scene.environmentIntensity=.26+.10*day;
-scene.environmentIntensity=0;
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
-  // BUILD 75 FORENSIC: neutralize global lighting chroma, preserve intensity.
-  sun.color.set(0xffffff); fill.color.set(0xffffff); hemi.color.set(0xffffff); hemi.groundColor.set(0x808080);
 
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;

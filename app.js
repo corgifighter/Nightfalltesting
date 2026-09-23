@@ -3141,8 +3141,11 @@ function buildGraphicsMasterPass(){
     g.addColorStop(0,'rgba(255,245,206,.78)');g.addColorStop(.12,'rgba(255,220,158,.38)');g.addColorStop(.42,'rgba(255,198,132,.12)');g.addColorStop(1,'rgba(255,180,120,0)');
     ctx.fillStyle=g;ctx.fillRect(0,0,256,256);
     const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
-    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false,blending:THREE.AdditiveBlending}));
-    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(28,28,1);scene.add(halo);
+    // The previous full-size additive halo could contaminate the entire mobile frame.
+    // Keep the sun texture available for future refinement, but do not composite a
+    // camera-facing additive wash over the authored world.
+    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false,blending:THREE.AdditiveBlending,opacity:.16}));
+    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(6,6,1);scene.add(halo);
   }
   window.__HEARTHMERE_GRAPHICS_MASTER={version:1,gradePass:true,heroRig:!!player?.userData.graphicsMasterRig,canopyAccents:[...scene.children].filter(o=>o.userData?.graphicsCanopyDetail).length,landmarkRims:rigs.length};
 }

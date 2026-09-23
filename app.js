@@ -3374,8 +3374,10 @@ hemi.intensity=.66+.48*day;
 hemi.color.setHSL(.50,.025,.82);
 hemi.groundColor.setHSL(.08,.025,.18+.04*day);
 renderer.toneMappingExposure=.84+.16*day;
-scene.environmentIntensity=.26+.10*day;
-window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:true,sunSaturation:.055,fillSaturation:.075,hemiSaturation:.025};
+// Forensic isolation: the PMREM environment is a persistent global indirect-light
+// source. Hold it OFF every frame so no later presentation pass can restore it.
+scene.environmentIntensity=0;
+window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:true,sunSaturation:.055,fillSaturation:.075,hemiSaturation:.025,environmentDisabled:true};
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 
  if(player){

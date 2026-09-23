@@ -113,13 +113,6 @@ ssaoPass.minDistance=.0012;
 ssaoPass.maxDistance=.14;
 ssaoPass.output=SSAOPass.OUTPUT.Default;
 composer.addPass(ssaoPass);
-// FORENSIC A/B: preserve the full scene, but bypass camera-space beauty composites.
-// RenderPass remains intact; this isolates whether the stagnant wash originates after scene shading.
-ssaoPass.enabled=false;
-bloomPass.enabled=false;
-// The cinematic grade is intentionally bypassed during the color-pipeline investigation.
-// Keep this assignment after construction; referencing the const before initialization caused
-// a runtime ReferenceError and could prevent the renderer from reaching the authored world.
 // SSAO is deliberately evaluated below the beauty-buffer resolution. Its output is
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
@@ -149,9 +142,6 @@ const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
   fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
 composer.addPass(cinematicGradePass);
-// Keep the grade explicitly disabled while diagnosing the reported stagnant color wash.
-// This makes the A/B state unambiguous: scene shading -> OutputPass, with no camera-space grade.
-cinematicGradePass.enabled=false;
 // EffectComposer renders into an intermediate color space. OutputPass is the
 // authoritative final presentation stage: it applies the renderer's configured
 // tone mapping and output color-space conversion to the composited image.
@@ -162,11 +152,8 @@ let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-// Diagnostic baseline: bypass ACES exposure while isolating the white image wash.
-// The scene's authored lights already provide the intended dynamic range; the final output
-// should not be additionally lifted during this investigation.
-renderer.toneMapping=THREE.NoToneMapping;
-renderer.toneMappingExposure=1.0;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.02;
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -3395,16 +3382,9 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
-
-// FORENSIC PRESENTATION ISOLATION:
-// All authored world-building passes above are complete before this point and some of them
-// intentionally configure cinematic tone mapping. For this diagnostic frame, bypass the entire
-// EffectComposer and force a neutral renderer output. If the world returns, the white wash is
-// definitively inside the composer/output chain rather than terrain, lighting, assets, or fog.
-renderer.toneMapping=THREE.NoToneMapping;
-renderer.toneMappingExposure=1.0;
 try{
-  renderer.render(scene,camera);
+  if(!postProcessingFailed) composer.render();
+  else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;
   postProcessingError=err?.message||String(err);

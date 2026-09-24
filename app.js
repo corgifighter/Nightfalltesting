@@ -10,7 +10,6 @@ import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/
 import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
 
 const root=document.querySelector('#scene');
-if(rawRender) window.__HEARTHMERE_FORENSIC_RAW_RENDER=true;
 // Stage 2 engineering foundation: deterministic world generation.
 // Visual iteration must be reproducible so screenshots, performance samples, and bug reports
 // describe the same authored world instead of a new random layout on every reload.
@@ -28,6 +27,7 @@ const params=new URLSearchParams(location.search);
 const forensicMode=params.get('forensic')||'';
 const hideClouds=params.get('clouds')==='0';
 const rawRender=params.get('raw')==='1';
+window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');

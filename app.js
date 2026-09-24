@@ -3442,7 +3442,10 @@ try{
         mats.forEach(mat=>{
           if(!mat)return;
           changed.push([mat,mat.onBeforeCompile,mat.needsUpdate]);
-          mat.onBeforeCompile=null;
+          // Three.js 0.181's program-cache path expects onBeforeCompile to remain callable.
+          // A null hook can throw "Cannot read properties of null" during shader-key generation.
+          // Use a no-op hook for this forensic pass instead of nulling the property.
+          mat.onBeforeCompile=()=>{};
           mat.needsUpdate=true;
         });
       });

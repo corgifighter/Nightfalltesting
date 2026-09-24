@@ -37,6 +37,7 @@ const rawLambertDirect=params.get('lambertdirect')==='1';
 const rawFlatDirect=params.get('flatdirect')==='1';
 const rawFrameDirect=params.get('framedirect')==='1';
 const rawFixedDirect=params.get('fixeddirect')==='1';
+const rawFixedProd=params.get('fixedprod')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3704,6 +3705,29 @@ try{
       });
       scene.visible=true;
       window.__HEARTHMERE_FORENSIC_FIXED_STATS={meshCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
+      renderer.setClearColor(0x101820,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+    }else if(rawFixedProd){
+      // BUILD 116: fixed camera + untouched production materials, direct renderer.
+      // This isolates camera/control state from the material/shader pipeline.
+      let marker=document.getElementById('hm-fixedprod-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-fixedprod-forensic-marker';
+        marker.textContent='BUILD 116 • FIXED CAMERA / PRODUCTION MATERIALS';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#0b6b5b',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;
+      const fixedTarget=new THREE.Vector3(0,.72,30);
+      camera.position.set(14.6,8.2,44.8);
+      camera.near=.05;
+      camera.far=1800;
+      camera.lookAt(fixedTarget);
+      camera.updateProjectionMatrix();
+      scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_FIXED_PROD_STATS={camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.(),sceneChildren:scene.children.length};
       renderer.setClearColor(0x101820,1);
       renderer.clear(true,true,true);
       renderer.render(scene,camera);

@@ -1098,3 +1098,13 @@ Build 122 shows clouds, faint river and tiny location labels but no visible arch
 URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archframe=1
 
 Commit: ea99a54a17a3f70879a944b041388b8e8304ef21
+
+
+## Build 124 - ARCHITECTURE BASIC GEOMETRY
+
+Build 123 successfully reveals the silhouettes/shapes of the authored hero buildings, but they appear as filled orange forms on the gray diagnostic background. This proves the architecture roots and transforms exist, but does not yet establish whether the production architecture material/shader stack is rendering correctly.
+
+Build 124 keeps the same architecture-only framing and replaces every visible architecture mesh with ONE shared fresh MeshBasicMaterial. It removes production material colors, maps, custom shader hooks, lighting response, and fog from the test.
+
+URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archbasic=1
+Commit: 7a924819f19e915754f405b62cd5304610cf77a3

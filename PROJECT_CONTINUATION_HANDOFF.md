@@ -638,3 +638,38 @@ Expected diagnostic behavior if the probe path is now valid: a plainly visible w
 If the cube appears, immediately proceed to the next controlled source-level comparison rather than randomly changing materials. If it still does not appear, inspect renderer/WebGL state and framebuffer/viewport/scissor state around the direct render call.
 
 Do not restart the investigation from fog, PMREM, lighting, cinematic grade, or missing world geometry.
+
+
+---
+
+# 22. BUILD 106 FORENSIC RESULT — BASICDIRECT TEST ALSO REQUIRED HARDENING
+
+The corrected `?raw=1&materialprobe=1` test was successfully verified by the user: the white cube is visible, with no other world geometry visible.
+
+This establishes that the fundamental direct-render path is working: WebGL context, Three.js renderer, canvas/framebuffer, camera/projection/viewport, and a known-good MeshBasicMaterial all function. The previous missing-cube result was caused by the Scene-root visibility bug in the diagnostic.
+
+The next test was `?raw=1&basicdirect=1`, intended to replace production world materials with a plain white MeshBasicMaterial. User result: no geometry visible.
+
+Source inspection revealed that the original `basicdirect` diagnostic used `scene.traverseVisible(...)`. That is not a sufficiently strong geometry test because a hidden ancestor/group prevents its descendants from being visited. The diagnostic could therefore report no geometry even when meshes exist under an invisible parent.
+
+## Surgical forensic fix
+
+Commit: `89f4aa31f078be20d8abead7214db2a1c6ba5462`
+
+`basicdirect` now walks the complete scene graph with `scene.traverse(...)`, records every object's prior visibility, temporarily forces the traversed hierarchy visible, replaces every mesh material with the known-good white MeshBasicMaterial, disables frustum culling on tested meshes, renders with the sky hidden and post-processing bypassed, records `window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_STATS`, and restores the original scene state afterward.
+
+This is still a reversible diagnostic only. No production world material or art system has been altered.
+
+## NEXT REQUIRED TEST
+
+Launch:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&basicdirect=1`
+
+Do not interpret the previous no-geometry result as proof that world geometry is absent. It was not a sufficiently strong test because of `traverseVisible`.
+
+Interpret the hardened test:
+- World appears white: geometry/transforms/hierarchy are valid; move into production material/shader isolation.
+- World still absent: use the new forensic stats and inspect object transforms/bounds/root organization. At that point the problem is genuinely upstream of production materials.
+- Partial world: identify which root/group survives and isolate the missing layer.
+
+Do not change fog, PMREM, tone mapping, cinematic grade, or lighting until this hardened geometry test identifies the responsible layer.

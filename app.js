@@ -3542,20 +3542,48 @@ try{
       for(const [o,m,f,v] of changed){o.material=m;o.frustumCulled=f;o.visible=v;}
       sky.visible=priorSkyVisible;
     }else if(rawBasicDirect){
+      // FORENSIC WORLD-GEOMETRY ISOLATION.
+      // Do NOT use traverseVisible here: a hidden parent group makes every descendant
+      // disappear from traverseVisible, which would make this test falsely report that
+      // the world has no renderable geometry. Walk the complete scene graph, force the
+      // ancestor chain visible for the duration of the test, and disable frustum culling.
       const priorSkyVisible=sky.visible;
       const changed=[];
       const mat=window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_MAT=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true}));
       sky.visible=false;
-      scene.traverseVisible(o=>{
-        if(!o.isMesh||o===sky)return;
-        changed.push([o,o.material,o.frustumCulled,o.visible]);
-        o.material=mat;
-        o.frustumCulled=false;
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        changed.push([o,o.visible]);
         o.visible=true;
+        if(o.isMesh){
+          meshCount++;
+          changed.push([o,o.material,o.frustumCulled,o.visible,'mesh']);
+          o.material=mat;
+          o.frustumCulled=false;
+          o.visible=true;
+        }
       });
+      window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_STATS={
+        meshCount,
+        cameraPosition:camera.position.toArray(),
+        cameraTarget:controls.target.toArray(),
+        sceneChildren:scene.children.length
+      };
       renderer.clear(true,true,true);
       renderer.render(scene,camera);
-      for(const [o,m,f,v] of changed){o.material=m;o.frustumCulled=f;o.visible=v;}
+      // Restore the entire scene graph, not merely the meshes.
+      for(let i=changed.length-1;i>=0;i--){
+        const entry=changed[i];
+        if(entry[4]==='mesh'){
+          const o=entry[0];
+          o.material=entry[1];
+          o.frustumCulled=entry[2];
+          o.visible=entry[3];
+        }else{
+          entry[0].visible=entry[1];
+        }
+      }
       sky.visible=priorSkyVisible;
     }else if(rawNormal||rawBasic){
       const priorOverride=scene.overrideMaterial;

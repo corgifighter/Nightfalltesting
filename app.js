@@ -27,6 +27,7 @@ const params=new URLSearchParams(location.search);
 const forensicMode=params.get('forensic')||'';
 const hideClouds=params.get('clouds')==='0';
 const rawRender=params.get('raw')==='1';
+const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
 const toast=document.querySelector('#toast');
@@ -153,6 +154,14 @@ composer.addPass(cinematicGradePass);
 // tone mapping and output color-space conversion to the composited image.
 const outputPass=new OutputPass();
 composer.addPass(outputPass);
+if(renderPassOnly){
+  ssaoPass.enabled=false;
+  bloomPass.enabled=false;
+  cinematicGradePass.enabled=false;
+  outputPass.enabled=false;
+  renderPass.renderToScreen=true;
+  window.__HEARTHMERE_FORENSIC_RENDERPASS_ONLY=true;
+}
 
 // FORENSIC FINAL-OUTPUT ISOLATION.
 // ?forensic=final replaces only the final OutputPass with a raw screen copy.

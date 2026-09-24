@@ -1065,3 +1065,27 @@ URL:
 This is the control before interpreting Builds 117–120. If it restores the green world, Build 120/119 were confounded by excessive unique material creation, and the next tests must use shared materials only.
 
 Commit: `e2cdd898abc4c4099e6929f2fa54a921144a3073`
+
+
+## CORRECTION — Builds 115–121 INTERPRETATION
+
+The previous handoff incorrectly stated that Build 115 proved the fixed camera could see world geometry. It did not. The user's screenshots for Builds 115 and 120 are visually the same: essentially a green field with no recognizable terrain/buildings. Build 115 therefore was NOT a positive geometry proof.
+
+The actual positive proof remains Build 114 / auto-frame: the aggregate world-bounds camera produced recognizable terrain geometry. Therefore the fixed camera coordinates (14.6,8.2,44.8) targeting (0,.72,30) were never established as a valid world-view camera.
+
+Consequently Builds 116–121, all of which retained that fixed camera, cannot validly isolate the production material pipeline. Their negative results are contaminated by the unproven camera relationship.
+
+### Build 122 — AUTO-FRAME + PRODUCTION MATERIALS
+
+Build 122 restores the exact known-positive auto-frame camera computation from Build 114 while leaving production materials untouched. This is the first valid test of production materials from a camera already demonstrated to see the world.
+
+URL:
+https://corgifighter.github.io/Nightfalltesting/?raw=1&frameprod=1
+
+Commit: 623352cda57003823f49e02c650cde7999967189
+
+Interpretation:
+- recognizable world appears: production materials are viable; the production camera positioning/follow system is the likely remaining fault.
+- world disappears: production material/shader state is implicated, now with the camera confound removed.
+
+Build 121's shared-basic test should not be treated as a new diagnostic conclusion; it merely reproduces the same fixed-camera condition that was already unproven.

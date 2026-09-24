@@ -10,6 +10,7 @@ import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/
 import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
 
 const root=document.querySelector('#scene');
+if(rawRender) window.__HEARTHMERE_FORENSIC_RAW_RENDER=true;
 // Stage 2 engineering foundation: deterministic world generation.
 // Visual iteration must be reproducible so screenshots, performance samples, and bug reports
 // describe the same authored world instead of a new random layout on every reload.
@@ -26,6 +27,7 @@ const captureMode=new URLSearchParams(location.search).get('capture')==='1';
 const params=new URLSearchParams(location.search);
 const forensicMode=params.get('forensic')||'';
 const hideClouds=params.get('clouds')==='0';
+const rawRender=params.get('raw')==='1';
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
@@ -3414,7 +3416,8 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
-  if(!postProcessingFailed) composer.render();
+  if(rawRender){ renderer.render(scene,camera); }
+  else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

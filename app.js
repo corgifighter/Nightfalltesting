@@ -149,6 +149,24 @@ composer.addPass(cinematicGradePass);
 // tone mapping and output color-space conversion to the composited image.
 const outputPass=new OutputPass();
 composer.addPass(outputPass);
+
+// FORENSIC FINAL-OUTPUT ISOLATION.
+// ?forensic=final replaces only the final OutputPass with a raw screen copy.
+// This deliberately removes the final tone-mapping/output-color conversion stage
+// while leaving world lighting, materials, fog, clouds, SSAO, bloom and cinematic grade intact.
+// It is a reversible diagnostic; normal launches remain completely unchanged.
+let forensicFinalPass=null;
+if(forensicMode==='final'){
+  forensicFinalPass=new ShaderPass(new THREE.ShaderMaterial({
+    uniforms:{tDiffuse:{value:null}},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:'uniform sampler2D tDiffuse;varying vec2 vUv;void main(){gl_FragColor=texture2D(tDiffuse,vUv);}'
+  }));
+  forensicFinalPass.renderToScreen=true;
+  outputPass.enabled=false;
+  composer.addPass(forensicFinalPass);
+  window.__HEARTHMERE_FORENSIC_FINAL_OUTPUT=true;
+}
 let postProcessingFailed=false;
 let postProcessingError=null;
 renderer.shadowMap.enabled=true;

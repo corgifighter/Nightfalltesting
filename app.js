@@ -39,28 +39,46 @@ const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
 function runPostBuildWorldProbe(){
   if(!rawWorldProbe)return;
-  const prior=[];let meshes=0;let visibleBefore=0;const bounds=new THREE.Box3();const center=new THREE.Vector3();
+  // BUILD 108 FORENSIC WORLD-FRAME TEST.
+  // The previous probe proved the direct path with the red anchor, but a uniform
+  // white override cannot tell us whether world meshes are actually in the current
+  // camera frustum. This diagnostic therefore uses vivid per-mesh colors, disables
+  // depth testing/culling, excludes the sky from the bounds calculation, and keeps
+  // the diagnostic branch active for every raw frame.
+  const prior=[];let meshes=0;let visibleBefore=0;const bounds=new THREE.Box3();
+  const center=new THREE.Vector3();let colored=0;
   scene.updateMatrixWorld(true);
   scene.traverse(o=>{
     if(o===scene)return;
+    if(o===sky){if(o.visible===false){prior.push([o,o.visible]);o.visible=true;}return;}
     if(o.isMesh&&o.geometry){
       meshes++;
       if(o.visible)visibleBefore++;
       prior.push([o,o.visible,o.material,o.frustumCulled]);
       o.visible=true;o.frustumCulled=false;
-      o.material=new THREE.MeshBasicMaterial({color:0xffffff,fog:false,side:THREE.DoubleSide});
+      const c=new THREE.Color().setHSL((colored++%17)/17,.82,.56);
+      o.material=new THREE.MeshBasicMaterial({color:c,fog:false,side:THREE.DoubleSide,depthTest:false,depthWrite:false});
       o.updateWorldMatrix(true,false);
       const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty())bounds.union(b);
     }else if(o.visible===false){prior.push([o,o.visible]);o.visible=true;}
   });
   scene.visible=true;sky.visible=false;
   bounds.getCenter(center);
-  window.__HEARTHMERE_FORENSIC_WORLD_PROBE_STATS={meshes,visibleBefore,sceneRootChildren:scene.children.length,boundsEmpty:bounds.isEmpty(),boundsMin:bounds.min.toArray(),boundsMax:bounds.max.toArray(),boundsCenter:center.toArray(),camera:camera.position.toArray(),target:controls.target.toArray()};
-  const marker=new THREE.Mesh(new THREE.BoxGeometry(3,3,3),new THREE.MeshBasicMaterial({color:0xff3030,fog:false}));
+  window.__HEARTHMERE_FORENSIC_WORLD_PROBE_STATS={
+    meshes,visibleBefore,sceneRootChildren:scene.children.length,
+    boundsEmpty:bounds.isEmpty(),boundsMin:bounds.min.toArray(),boundsMax:bounds.max.toArray(),
+    boundsCenter:center.toArray(),camera:camera.position.toArray(),target:controls.target.toArray()
+  };
+  const marker=new THREE.Mesh(
+    new THREE.BoxGeometry(3,3,3),
+    new THREE.MeshBasicMaterial({color:0xff3030,fog:false,depthTest:false,depthWrite:false})
+  );
   marker.position.copy(controls.target);marker.name='WORLD_PROBE_ANCHOR';scene.add(marker);
-  renderer.setClearColor(0x202428,1);renderer.render(scene,camera);
+  renderer.setClearColor(0x202428,1);
   window.__HEARTHMERE_FORENSIC_WORLD_PROBE=true;
-  // Keep the probe visible for this diagnostic URL; a reload returns the production scene.
+  // Leave the diagnostic materials and visibility active. The render loop sees the
+  // forensic flag and renders this scene directly on every frame, so composer or
+  // later animation frames cannot overwrite the probe result.
 }
 
 const renderPassOnly=forensicMode==='renderpass';

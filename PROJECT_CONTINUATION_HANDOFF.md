@@ -1108,3 +1108,13 @@ Build 124 keeps the same architecture-only framing and replaces every visible ar
 
 URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archbasic=1
 Commit: 7a924819f19e915754f405b62cd5304610cf77a3
+
+
+## Build 125 - ARCHITECTURE DEPTH ENABLED
+
+User reports Build 124 produces filled green silhouettes, not visibly 3D models. Critical correction: Builds 123/124 intentionally disabled depth testing and depth writes. That can cause many overlapping 3D faces to collapse visually into filled silhouettes and therefore cannot establish 3D depth appearance.
+
+Build 125 repeats the architecture-only frame with ONE shared fresh MeshBasicMaterial but restores normal `depthTest:true` and `depthWrite:true`. This is the first architecture diagnostic that preserves actual depth ordering.
+
+URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archdepth=1
+Commit: aa26d37f3155f161b0c08b6c2e634df15dce95dd

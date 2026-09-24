@@ -29,6 +29,7 @@ const hideClouds=params.get('clouds')==='0';
 const rawRender=params.get('raw')==='1';
 const rawNormal=params.get('normal')==='1';
 const rawBasic=params.get('basic')==='1';
+const rawBasicDirect=params.get('basicdirect')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3428,13 +3429,30 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawNormal||rawBasic){
+    if(rawBasicDirect){
+      const priorSkyVisible=sky.visible;
+      const changed=[];
+      const mat=window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_BASIC_DIRECT_MAT=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true}));
+      sky.visible=false;
+      scene.traverseVisible(o=>{
+        if(!o.isMesh||o===sky)return;
+        changed.push([o,o.material,o.frustumCulled,o.visible]);
+        o.material=mat;
+        o.frustumCulled=false;
+        o.visible=true;
+      });
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      for(const [o,m,f,v] of changed){o.material=m;o.frustumCulled=f;o.visible=v;}
+      sky.visible=priorSkyVisible;
+    }else if(rawNormal||rawBasic){
       const priorOverride=scene.overrideMaterial;
       const priorSkyVisible=sky.visible;
       scene.overrideMaterial=rawBasic
         ? (window.__HEARTHMERE_FORENSIC_BASIC_MAT||(window.__HEARTHMERE_FORENSIC_BASIC_MAT=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide})))
         : (window.__HEARTHMERE_FORENSIC_NORMAL_MAT||(window.__HEARTHMERE_FORENSIC_NORMAL_MAT=new THREE.MeshNormalMaterial({flatShading:false,side:THREE.DoubleSide})));
       sky.visible=false;
+      renderer.clear(true,true,true);
       renderer.render(scene,camera);
       sky.visible=priorSkyVisible;
       scene.overrideMaterial=priorOverride;

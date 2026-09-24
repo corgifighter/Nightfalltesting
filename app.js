@@ -48,6 +48,7 @@ const rawArchitectureFrame=params.get('archframe')==='1';
 const rawArchitectureBasic=params.get('archbasic')==='1';
 const rawArchitectureDepth=params.get('archdepth')==='1';
 const rawArchitectureWire=params.get('archwire')==='1';
+const rawArchitectureView=params.get('archview')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3947,6 +3948,73 @@ try{
       camera.lookAt(center);camera.updateProjectionMatrix();
       window.__HEARTHMERE_FORENSIC_FRAME_PROD_STATS={meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance,far:camera.far};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawArchitectureView){
+      // BUILD 127: meaningful HERO ARCHITECTURE VIEW.
+      // The previous architecture diagnostics proved the authored buildings are real 3D,
+      // but their synthetic all-buildings framing is not representative of the game camera.
+      // This branch selects the Warm Lantern hero building, computes its real world bounds,
+      // then places a deliberate oblique/front camera outside the facade and aims at the
+      // building's visual center. Production materials remain untouched; post-processing is
+      // bypassed so the screenshot answers one question cleanly: can the authored building
+      // present as a dimensional building from a sensible game-like viewpoint?
+      let marker=document.getElementById('hm-archview-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-archview-forensic-marker';
+        marker.textContent='BUILD 127 • HERO ARCHITECTURE VIEW';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#8a4f22',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;sky.visible=false;scene.visible=true;
+      const candidates=[];
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        if(o.userData?.architectureTier==='hero')candidates.push(o);
+        else if(o.parent===scene)o.visible=false;
+      });
+      const focus=candidates.find(o=>o.userData?.assetName==='inn')||candidates.find(o=>o.userData?.architectureType==='inn')||candidates[0];
+      // If the root itself is the replacement, its name/userData may not identify the type;
+      // use its authored world position as the stable Warm Lantern location when necessary.
+      const fallback=candidates.reduce((best,o)=>{
+        if(!best)return o;
+        const dx=o.position.x-(-14),dz=o.position.z-(-13);
+        const bd=Math.hypot(best.position.x+14,best.position.z+13);
+        return Math.hypot(dx,dz)<bd?o:best;
+      },null);
+      const targetRoot=focus||fallback;
+      const bounds=new THREE.Box3();
+      if(targetRoot){
+        targetRoot.visible=true;
+        targetRoot.updateWorldMatrix(true,true);
+        bounds.setFromObject(targetRoot);
+      }
+      const center=bounds.getCenter(new THREE.Vector3());
+      const size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,4);
+      // Oblique view from the authored +Z/front side, with a slight +X offset and elevated eye.
+      const viewDir=new THREE.Vector3(.62,.30,1.0).normalize();
+      const fov=THREE.MathUtils.degToRad(camera.fov);
+      const distance=Math.max(radius/Math.tan(fov/2)*1.05,10);
+      camera.position.copy(center).addScaledVector(viewDir,distance);
+      camera.position.y=Math.max(camera.position.y,center.y+radius*.42);
+      camera.near=.05;camera.far=Math.max(500,distance+radius*4);
+      camera.lookAt(center);
+      camera.updateProjectionMatrix();
+      scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_ARCH_VIEW_STATS={
+        rootCount:candidates.length,
+        focus:targetRoot?.uuid||null,
+        boundsEmpty:bounds.isEmpty(),
+        center:center.toArray(),
+        size:size.toArray(),
+        camera:camera.position.toArray(),
+        target:center.toArray(),
+        distance,
+        near:camera.near,
+        far:camera.far
+      };
+      renderer.setClearColor(0x101820,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
     }else if(rawArchitectureFrame){
       // BUILD 123: isolate the authored architecture layer and frame ONLY those
       // roots. The full-world auto-frame is dominated by the 230x230 terrain,

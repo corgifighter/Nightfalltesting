@@ -28,6 +28,7 @@ const forensicMode=params.get('forensic')||'';
 const hideClouds=params.get('clouds')==='0';
 const rawRender=params.get('raw')==='1';
 const rawNormal=params.get('normal')==='1';
+const rawBasic=params.get('basic')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3427,10 +3428,12 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawNormal){
+    if(rawNormal||rawBasic){
       const priorOverride=scene.overrideMaterial;
       const priorSkyVisible=sky.visible;
-      scene.overrideMaterial=window.__HEARTHMERE_FORENSIC_NORMAL_MAT||(window.__HEARTHMERE_FORENSIC_NORMAL_MAT=new THREE.MeshNormalMaterial({flatShading:false,side:THREE.DoubleSide}));
+      scene.overrideMaterial=rawBasic
+        ? (window.__HEARTHMERE_FORENSIC_BASIC_MAT||(window.__HEARTHMERE_FORENSIC_BASIC_MAT=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide})))
+        : (window.__HEARTHMERE_FORENSIC_NORMAL_MAT||(window.__HEARTHMERE_FORENSIC_NORMAL_MAT=new THREE.MeshNormalMaterial({flatShading:false,side:THREE.DoubleSide})));
       sky.visible=false;
       renderer.render(scene,camera);
       sky.visible=priorSkyVisible;

@@ -41,6 +41,7 @@ const rawFixedProd=params.get('fixedprod')==='1';
 const rawFixedHooks=params.get('fixedhooks')==='1';
 const rawFixedMat=params.get('fixedmat')==='1';
 const rawFixedUntextured=params.get('fixeduntextured')==='1';
+const rawFixedBasic=params.get('fixedbasic')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3847,6 +3848,34 @@ try{
       });
       scene.visible=true;scene.updateMatrixWorld(true);
       window.__HEARTHMERE_FORENSIC_FIXED_UNTEXTURED_STATS={meshCount,textureCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
+      renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawFixedBasic){
+      // BUILD 120: exact Build-115 fixed-camera geometry test, but use a FRESH
+      // MeshBasicMaterial per mesh. No production material state, textures, lights,
+      // fog, hooks, or composer can affect visibility.
+      let marker=document.getElementById('hm-fixedbasic-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-fixedbasic-forensic-marker';
+        marker.textContent='BUILD 120 • FRESH BASIC GEOMETRY';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#198754',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;
+      const fixedTarget=new THREE.Vector3(0,.72,30);
+      camera.position.set(14.6,8.2,44.8);camera.near=.05;camera.far=1800;
+      camera.lookAt(fixedTarget);camera.updateProjectionMatrix();
+      sky.visible=false;scene.visible=true;
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(o.isMesh&&o.geometry){
+          meshCount++;o.frustumCulled=false;
+          o.material=new THREE.MeshBasicMaterial({color:0x43ff88,fog:false,side:THREE.DoubleSide,transparent:false,opacity:1,depthTest:false,depthWrite:false});
+        }
+      });
+      scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_FIXED_BASIC_STATS={meshCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;

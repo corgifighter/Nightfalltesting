@@ -45,6 +45,7 @@ const rawFixedBasic=params.get('fixedbasic')==='1';
 const rawFixedBasicShared=params.get('fixedbasicshared')==='1';
 const rawFrameProd=params.get('frameprod')==='1';
 const rawArchitectureFrame=params.get('archframe')==='1';
+const rawArchitectureBasic=params.get('archbasic')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3982,6 +3983,33 @@ try{
       camera.lookAt(center);camera.updateProjectionMatrix();
       scene.updateMatrixWorld(true);
       window.__HEARTHMERE_FORENSIC_ARCH_STATS={rootCount,meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance};
+      renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawArchitectureBasic){
+      // BUILD 124: architecture-only geometry with one fresh untextured Basic material.
+      // This isolates geometry/transforms from every production architecture shader/material.
+      let marker=document.getElementById('hm-archbasic-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-archbasic-forensic-marker';
+        marker.textContent='BUILD 124 • ARCHITECTURE BASIC GEOMETRY';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#198754',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;sky.visible=false;scene.visible=true;
+      const bounds=new THREE.Box3();let rootCount=0,meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        const isArch=o.userData?.architectureTier==='hero';
+        if(isArch){o.visible=true;rootCount++;o.updateWorldMatrix(true,true);const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty())bounds.union(b);}
+        else if(o.parent===scene)o.visible=false;
+      });
+      const mat=new THREE.MeshBasicMaterial({color:0x43ff88,side:THREE.DoubleSide,fog:false,transparent:false,depthTest:false,depthWrite:false});
+      scene.traverse(o=>{if(o.isMesh){o.frustumCulled=false;if(o.visible){meshCount++;o.material=mat;}}});
+      const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,3),fov=THREE.MathUtils.degToRad(camera.fov),distance=Math.max(radius/Math.tan(fov/2)*1.25,8);
+      camera.position.copy(center).addScaledVector(new THREE.Vector3(1,.52,1).normalize(),distance);
+      camera.near=.05;camera.far=Math.max(500,distance+radius*4);camera.lookAt(center);camera.updateProjectionMatrix();
+      scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_ARCH_BASIC_STATS={rootCount,meshCount,boundsEmpty:bounds.isEmpty(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;

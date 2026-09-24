@@ -1249,3 +1249,762 @@ Interpretation rule:
 - Build 128 remains the known-good visual/material baseline; Build 129 restored production material objects and showed dark roofs/tan walls; Build 130 removed maps and was essentially unchanged, weakening the texture-map hypothesis.
 
 **Current priority:** solve the large-scale rendering/material pipeline issue first. Cosmetic granular design is explicitly deferred until this root cause is resolved.
+
+
+---
+
+# 23. MASTER FORENSIC SYNTHESIS / CONTINUATION PLAN
+Date: 2026-09-24
+Purpose: consolidate the entire rendering investigation so the next instance does not repeat completed work.
+
+## A. WHY THIS SECTION EXISTS
+
+The project entered forensic rendering mode because the real game repeatedly presented a persistent gray/orange/yellow/green washed appearance, at times with very little or no recognizable geometry. The user described it as a stagnant layer applied to the camera view rather than ordinary world lighting.
+
+The investigation must therefore be understood as one continuous chain, not as unrelated material and architecture experiments.
+
+The older rendering/debugging work established that the production renderer contains a substantial modern pipeline. The newer Builds 105–131 then progressively removed confounding variables and proved which lower-level systems are healthy.
+
+The correct interpretation is:
+
+**the investigation has moved from “is the renderer/world actually capable of drawing the scene?” to “which production state/path is causing the real scene to become visually wrong?”**
+
+Do not reset this chain.
+
+---
+
+## B. WHAT THE OLD WORK ALREADY ESTABLISHED
+
+Before Builds 105–131, the project had already received major visual and renderer reconstruction.
+
+### Renderer / presentation foundation
+
+The production renderer contains:
+- Three.js 0.181.1 WebGLRenderer
+- capped pixel ratio
+- sRGB output
+- ACES tone mapping
+- EffectComposer
+- RenderPass
+- SSAO
+- UnrealBloom
+- FXAA
+- OutputPass
+- PCF soft shadows
+- custom sky/environment
+- PMREM environment
+- dynamic sun/moon/hemi/fill lighting
+- fog
+- shader precompilation
+- readiness/error diagnostics
+- adaptive quality and GPU telemetry
+
+The production presentation layer also contains:
+- cinematic grading
+- exposure/tone mapping
+- environment intensity
+- bloom
+- SSAO
+- fog
+- dynamic lighting/day-cycle changes
+- camera follow
+- mobile/cinematic presentation modes
+
+The old work also investigated and corrected several unrelated runtime failures, including initialization order, service-worker caching, readiness, capture telemetry, stale references, and interaction systems.
+
+### Important old visual finding
+
+The user repeatedly described the world as being covered by a persistent color cast/haze that did not behave like normal changing world illumination. This led to testing and disabling various systems during earlier troubleshooting.
+
+Those earlier attempts were useful because they established that simply changing scene lighting values did not produce the expected relationship between camera movement and the perceived wash.
+
+However, the old work did NOT prove a single culprit such as fog, bloom, SSAO, cinematic grade, or environment lighting.
+
+Therefore:
+
+**Do not now treat any one of those systems as the established culprit.**
+
+The correct lesson from the old work is that the symptom is persistent enough to justify source-level isolation, not that a particular effect has already been convicted.
+
+---
+
+## C. THE FORENSIC CHAIN — BUILDS 105–131
+
+The following tests are cumulative.
+
+### Builds 105–106 — prove the renderer can display trivial geometry
+
+Build 105 initially appeared to show nothing, but source inspection found the diagnostic itself was hiding the root Scene.
+
+Commit:
+b9eccd388e478305e582fb4c374129b516ddf5de
+
+The corrected material probe was then verified by the user.
+
+Build 106 result:
+- visible white cube
+- no world geometry
+
+This is the first hard foundation point.
+
+It proves:
+- WebGL context works
+- Three.js renderer works
+- canvas/framebuffer works
+- camera/projection works
+- viewport path works
+- direct render works
+- MeshBasicMaterial works
+
+Therefore a completely broken renderer/framebuffer/camera explanation is ruled out.
+
+### Build 107 — first whole-world forced-material probe
+
+Commit:
+2611cce6993bc887bc0f4678d22932d21bf6bde3
+
+The world was traversed, forced visible, production meshes replaced with Basic materials, frustum culling disabled, and a diagnostic cube added.
+
+User saw:
+- red diagnostic cube
+- player silhouette
+- no recognizable surrounding world
+
+This showed that the scene was not simply empty, but did not yet prove why most world geometry was absent.
+
+### Build 108 — vivid whole-world probe
+
+Commit:
+8f7c42d527cf23cd737b7bb518b0f6fcc507b520
+
+Per-mesh vivid Basic colors, depth isolation, persistent direct render and bounds telemetry were added.
+
+This prepared the investigation for the later auto-frame test.
+
+### Build 109/110-era hierarchy hardening — eliminate traversal false negatives
+
+A major diagnostic flaw was discovered: `scene.traverseVisible` skips descendants under invisible ancestors.
+
+Commit:
+89f4aa31f078be20d8abead7214db2a1c6ba5462
+
+The hardened diagnostics use `scene.traverse`, explicitly restore hierarchy visibility, disable culling, and render directly.
+
+This matters because otherwise “no geometry” could merely mean “the diagnostic never visited it.”
+
+### Build 111 — execution proof
+
+Commit:
+5c0e1dafc93bc19cb231707f3ecb9b0a85476ec8
+
+Visible banner:
+BUILD 111 • LAMBERT DIRECT ACTIVE
+
+User confirmed the banner.
+
+Therefore the diagnostic branch itself was definitely executing. The world appearance was not merely caused by the wrong URL or a stale code path.
+
+### Build 112 — depth isolation
+
+Commit:
+4eb6c2293a8531cea29658248d6c722769b1e5e8
+
+Basic materials with depth test/write disabled.
+
+Result:
+mostly blank white/gray.
+
+This weakened the hypothesis that ordinary depth-buffer occlusion was the fundamental explanation for the missing/washed world.
+
+### Builds 113–114 — aggregate auto-frame
+
+Commits:
+733018fc71fb7a5bb55512722312b315f27979a4
+584b2f120a81c8d1b75ee443357381aa37da8f12
+
+The entire transformed world was bounded and the camera was automatically positioned around it.
+
+User saw:
+- large vivid green terrain
+- pale atmospheric/cloud meshes
+- floating/diagonal geometry
+
+This is a major complementary result.
+
+It proves:
+- substantial world geometry exists
+- the world can be directly rendered
+- the terrain dominates the aggregate bounds
+- earlier blank/faint results were partly contaminated by framing/scale
+- architecture can become tiny relative to the full terrain envelope
+
+This is why the investigation later switched from “why is there no geometry?” to “which specific layer is visually failing?”
+
+### Build 115 — fixed camera isolation
+
+Commit:
+d8050f380139ded6e82e26c06a4ae5a94166c607
+
+A fixed camera was used.
+
+Result was negative/ambiguous.
+
+Important retrospective correction:
+the fixed camera itself was not yet proven meaningful, so Builds 115–121 cannot be used as strong evidence that architecture/materials were fundamentally invisible.
+
+This is explicitly retained in the manifest to prevent future instances from over-interpreting those tests.
+
+### Builds 116–121 — material experiments under the same unproven camera
+
+These progressively tried:
+- production materials with hooks neutralized
+- normalized production materials
+- fresh StandardMaterial
+- fresh BasicMaterial
+- one shared fresh BasicMaterial
+
+None revealed useful architecture.
+
+Because the camera was not a proven meaningful architecture view, these tests are weak evidence for architecture/material failure.
+
+Do not repeat them.
+
+### Build 122 — known-positive world auto-frame + production materials
+
+Commit:
+623352cda57003823f49e02c650cde7999967189
+
+User saw:
+- clouds
+- faint river
+- tiny location tags
+- no meaningful architecture
+
+This connected the earlier world-bounds result to the production-material world:
+the production world existed, but the aggregate framing was dominated by terrain/atmospheric extent and was not useful for judging hero architecture.
+
+This motivated a clean architecture-only branch.
+
+---
+
+## D. ARCHITECTURE FORENSICS — BUILDS 123–128
+
+These tests are the bridge between the whole-world haze investigation and the later material diagnosis.
+
+### Build 123 — architecture-only frame
+
+Commit:
+ea99a54a17a3f70879a944b041388b8e8304ef21
+
+Hero architecture roots were isolated and framed.
+
+User saw:
+- recognizable building shapes
+- filled orange forms against gray
+
+This proved the authored hero architecture roots have visible spatial form.
+
+### Builds 124–125 — Basic/depth architecture tests
+
+Build 124:
+7a924819f19e915754f405b62cd5304610cf77a3
+
+Build 125:
+aa26d37f3155f161b0c08b6c2e634df15dce95dd
+
+Both produced green silhouettes.
+
+At this stage it was still unsafe to call the buildings flat because depth/material state and camera presentation could make real geometry look like silhouettes.
+
+### Build 126 — wireframe topology proof
+
+Commit:
+17d28e317442943140017af7f3f399856a984af8
+
+User explicitly saw:
+“Yeah i see they are 3d.”
+
+This is decisive.
+
+Hero architecture meshes have genuine 3D topology.
+
+Therefore:
+- geometry is not a flat-card failure
+- the building meshes are not merely camera-facing impostors
+- the architecture branch is real
+
+### Build 127 — meaningful architecture camera
+
+Commit:
+b67b567f24f93d7cd3544784189921c3a7769f64
+
+This was the critical correction to the earlier fixed-camera contamination.
+
+Instead of an arbitrary fixed camera, the diagnostic:
+- selected the Warm Lantern/inn area
+- used its authored location
+- computed transformed bounds
+- positioned an oblique/front camera from the meaningful +Z side
+- aimed at the actual building center
+- bypassed post-processing
+- retained production materials
+
+User observed the architecture becoming black initially and changing orange/brown when touching.
+
+Source inspection then found the existing pointer-hover system:
+- pointermove raycasts interaction roots
+- selected roots are passed through `setHover`
+- emissive-capable materials are blended toward `0x9d7b39`
+
+Therefore the touch-triggered orange was NOT geometry appearing.
+It was the existing hover/emissive interaction response.
+
+This removed another major false lead.
+
+### Build 128 — known-good architecture baseline
+
+Commit:
+bcd9e9153a906612c8459d434021034c8e25168a
+
+The exact meaningful camera from Build 127 was preserved.
+
+Every hero architecture mesh received a fresh neutral MeshStandardMaterial.
+
+The test removed:
+- authored material objects
+- authored texture maps
+- custom shader hooks
+- hover
+- fog
+- sky
+- composer/post-processing
+
+But it retained:
+- actual architecture geometry
+- actual authored transforms
+- the meaningful camera
+- actual scene lights
+
+User result:
+“the buildings” were clearly visible with basic brownish materials.
+
+This is the single most important visual control in the entire investigation.
+
+**Build 128 is the known-good architecture rendering baseline.**
+
+It proves:
+- geometry works
+- transforms work
+- meaningful camera works
+- normals are adequate
+- scene lighting can illuminate the buildings
+- direct rendering works
+- the black production appearance is not a fundamental geometry/camera failure
+
+Any future diagnostic that cannot explain itself relative to Build 128 is suspect.
+
+---
+
+## E. PRODUCTION MATERIAL DECOMPOSITION — BUILDS 129–131
+
+### Build 129 — production materials, shader hooks neutralized
+
+Commit:
+f3f115c9f9ea639a82e10a8034d489b5c46c76ca
+
+Preserved Build-128 camera/isolation.
+
+Cloned each source production material while retaining:
+- maps
+- colors
+- roughness
+- metalness
+- normal/emissive maps
+
+But neutralized:
+- `onBeforeCompile`
+- `customProgramCacheKey`
+
+Also retained:
+- no fog
+- no sky
+- no composer
+- no hover
+- direct rendering
+
+User result:
+- roofs appeared filled black
+- walls appeared solid tan
+- no expected rich texture appearance
+
+This is important because the diagnostic was already stripped of the broad scene haze systems.
+
+Therefore the dark architecture appearance survives even when:
+- fog is absent
+- post-processing is absent
+- hover is absent
+- custom shader hooks are neutralized
+
+That makes a simple “cinematic grade is painting the whole screen black/orange” explanation insufficient to explain the architecture-specific material behavior.
+
+### Build 130 — mapless production-material isolation
+
+Commit:
+831f6ae36f938a0b85c6d335990d630753883dc0
+
+Same known-good camera and direct render.
+
+Production materials were cloned and then stripped of:
+- map
+- normalMap
+- roughnessMap
+- metalnessMap
+- aoMap
+- emissiveMap
+
+Shader hooks were neutralized.
+
+User result:
+“basically looks the same.”
+
+Important clarification from the user:
+the roofs DO have enough color variation and edge lines to make out what they are; the previous description of them as simply featureless black was too strong.
+
+This weakens the hypothesis that the CC0 slate texture itself is the primary cause of the dark roof behavior.
+
+The wall flatness is also not proof of a map failure because the plaster architecture materials are substantially scalar-color/roughness driven with procedural shader variation in the normal production path.
+
+### Build 131 — fresh scalar-material isolation
+
+Commit:
+479ecac5c2428269951cb64df76f062335596574
+Diagnostic implementation commit:
+50af2d56d544dfff8588c0c5521c21326afea20b
+
+URL:
+https://corgifighter.github.io/Nightfalltesting/?raw=1&archscalar=1
+
+Build 131 constructs entirely fresh MeshStandardMaterial instances for each hero mesh using only authored scalar material properties:
+- color
+- roughness
+- metalness
+- side
+- flatShading
+- emissive scalar state
+
+It deliberately does NOT reuse:
+- authored material objects
+- maps
+- normal maps
+- roughness maps
+- metalness maps
+- AO maps
+- emissive maps
+- shader hooks
+- composer
+- post-processing
+- fog
+
+It keeps the same proven Build-128 camera/isolation and direct-render path.
+
+**Build 131 has not yet been user-verified in this manifest. Do not invent its result.**
+
+Its purpose is the cleanest current split:
+
+If Build 131 resembles Build 128:
+→ authored material object/state/mutation is implicated.
+
+If Build 131 remains dark:
+→ the investigation moves outward toward the actual light/color-management/material-assignment/render state affecting those meshes, because both authored material objects and authored maps have now been removed.
+
+Either result is useful.
+
+---
+
+## F. WHAT ALL OF THE TESTS MEAN TOGETHER
+
+The tests do NOT point to one simple “bad texture” or “bad building” problem.
+
+They form a hierarchy of exclusions.
+
+### Proven healthy
+
+1. WebGL context.
+2. Three.js direct renderer.
+3. Canvas/framebuffer.
+4. Camera/projection/viewport in a known-good trivial case.
+5. MeshBasicMaterial.
+6. Existence of substantial world geometry.
+7. Ability to frame and render the world.
+8. Existence of hero architecture roots.
+9. Genuine 3D architecture topology.
+10. Meaningful architecture camera.
+11. Actual scene lighting can illuminate architecture.
+12. Fresh neutral Standard materials can render architecture correctly.
+13. The orange touch response is an existing hover/emissive interaction effect, not geometry creation.
+14. Ordinary depth-buffer occlusion is not sufficient to explain the early blank result.
+15. Architecture remains visually problematic after fog/composer/hover/shader-hook removal.
+16. Removing architecture texture maps did not materially change the user's reported appearance.
+
+### Therefore the current unresolved zone is much narrower
+
+The remaining question is not:
+
+“Can Three.js render the world?”
+
+It can.
+
+The remaining question is:
+
+**What production state or render/material assignment difference causes the real scene/material pipeline to diverge from the known-good Build-128 direct-render baseline?**
+
+This distinction is the central result of the entire investigation.
+
+---
+
+## G. HOW THE HAZE INVESTIGATION AND ARCHITECTURE TESTS COMPLEMENT EACH OTHER
+
+The architecture branch was not a detour.
+
+The original haze symptom was global/camera-like. It was therefore necessary to determine whether the visible scene underneath that symptom was itself healthy.
+
+The whole-world probes showed that geometry exists and can render.
+
+The architecture branch then supplied a controlled, high-information object whose:
+- bounds are known
+- geometry is known
+- camera is known
+- lighting can be held constant
+- materials can be replaced deterministically
+
+That makes architecture an excellent diagnostic witness for the larger rendering problem.
+
+Build 128 is effectively the control image.
+
+Builds 129–131 are controlled perturbations of that control.
+
+The next investigation should preserve that discipline.
+
+---
+
+## H. CURRENT HYPOTHESIS TREE
+
+Do NOT treat these as conclusions; they are the remaining branches to test.
+
+### Branch 1 — authored material object/state contamination
+Tested by Build 131.
+
+If positive, inspect:
+- when production materials are mutated
+- shared material references
+- `applyCC0Materials()`
+- beauty shader hooks
+- `addBeautyShader`
+- `addSurfaceVariation`
+- `addPlasterVariation`
+- environment-intensity mutation
+- hover state mutation
+- post-build material passes
+- order of material assignment versus shader compilation
+
+### Branch 2 — material assignment / mesh classification
+If fresh scalar materials still render incorrectly, inspect whether the actual source meshes receive unexpected:
+- material arrays
+- side/culling state
+- flatShading state
+- transforms
+- visibility
+- renderOrder
+- depth state
+- shadow state
+- layer state
+
+This must be inspected on the exact affected hero meshes, not guessed globally.
+
+### Branch 3 — light/color-management state
+If Build 131 is still dark, compare the exact Build-128 light/material state with production state:
+- renderer tone mapping
+- output color space
+- exposure
+- environment intensity
+- light intensities/colors
+- light positions/directions
+- shadow configuration
+- color conversion
+- scene/environment state
+
+Do this as a source-level differential, not a random lighting tweak.
+
+### Branch 4 — image-wide stage remains relevant to the ORIGINAL haze
+The architecture diagnostics deliberately bypass composer/post-processing.
+
+That proves the architecture material problem can exist independently of the beauty pipeline.
+
+It does NOT prove that the original global haze is caused by architecture materials.
+
+Therefore the global haze branch must eventually be reconciled with the direct-render baseline.
+
+The correct eventual comparison is:
+**known-good direct render → production direct render → production composed render**
+
+with identical camera, scene, materials and frame state wherever possible.
+
+The purpose is to identify the first stage at which the global image diverges, not to randomly disable effects.
+
+### Branch 5 — camera-follow/day-cycle mutation
+The normal game loop mutates:
+- player position
+- controls target
+- camera follow
+- day/night lighting
+- animations
+
+Diagnostics bypass much of that.
+
+If a direct production frame is healthy but the live game is not, the next target becomes runtime state mutation rather than static material configuration.
+
+---
+
+## I. COHESIVE NEXT PLAN
+
+### Phase 1 — finish the existing forensic branch
+
+1. Do NOT repeat Builds 105–130.
+2. Preserve Build 128 as the control.
+3. Verify/record Build 131 result if it has not already been supplied by the user.
+4. Based on that result, perform one source-level differential against Build 128.
+5. Inspect exact affected hero meshes/materials rather than the entire world.
+6. Record the first meaningful divergence in telemetry.
+
+### Phase 2 — identify the production-state mutation
+
+Trace the lifecycle of the affected architecture materials from creation to final render:
+
+creation
+→ architecture assignment
+→ CC0 material application
+→ shader hooks
+→ presentation/material passes
+→ lighting passes
+→ interaction registration
+→ freezeStaticVisuals
+→ renderer.compileAsync
+→ render loop
+
+The objective is to find whether a later stage changes the material or renderer state after the building was initially valid.
+
+### Phase 3 — reconcile architecture and global haze
+
+Once the architecture control is understood, use the same methodology on the whole world.
+
+Do not make a pile of simultaneous changes.
+
+Establish three reproducible states:
+
+A. Build-128-style direct controlled render.
+B. Full production scene rendered directly.
+C. Full production scene through the normal composer/presentation pipeline.
+
+Compare them under the same camera and frame state.
+
+The first state that introduces the characteristic wash becomes the next investigation target.
+
+### Phase 4 — only then repair the production pipeline
+
+The repair should be structural:
+- eliminate unintended persistent image-wide color state
+- prevent material mutation from contaminating shared resources
+- correct color-space/state ownership
+- correct render-pass ordering if implicated
+- restore fog/lighting/post effects only at their intended strength
+- preserve the renderer architecture rather than deleting features blindly
+
+### Phase 5 — production visual restoration
+
+After the root cause is fixed:
+- restore all systems disabled during diagnosis
+- verify normal world
+- verify architecture
+- verify terrain/vegetation/water
+- verify character
+- verify atmosphere
+- verify mobile camera
+- verify cinematic mode
+- verify capture
+- only then resume visual art-direction work
+
+---
+
+## J. EXPLICITLY ABANDONED / LOW-VALUE PATHS
+
+Do not repeat:
+- the original Build-105 invalid cube test
+- `traverseVisible`-based world tests
+- arbitrary fixed-camera architecture tests
+- repeated BasicMaterial swaps under the old fixed camera
+- assuming orange touch response is geometry
+- assuming missing architecture is caused by terrain aggregate framing
+- assuming black roofs automatically mean the slate map is broken
+- cosmetic roof/trim/gutter work
+- polygon-count work as a substitute for visual diagnosis
+- generic “try fog / try bloom / try SSAO” cycling without a controlled comparison
+
+The project has already paid for these experiments.
+
+Use their conclusions.
+
+---
+
+## K. CRITICAL CONTROL MATRIX
+
+| Test | Geometry | Camera | Lighting | Materials | Maps | Fog | Composer | Result |
+|---|---|---|---|---|---|---|---|---|
+| Build 106 | cube | known-good | irrelevant | fresh Basic | none | none | none | WHITE CUBE VERIFIED |
+| Build 114 | full world | auto-frame | direct | fresh Basic | none | isolated | none | WORLD GEOMETRY VERIFIED |
+| Build 126 | hero architecture | architecture frame | direct | wire Basic | none | isolated | none | 3D TOPOLOGY VERIFIED |
+| Build 128 | hero architecture | meaningful | real scene lights | fresh neutral Standard | none | off | none | BUILDING VISIBILITY VERIFIED |
+| Build 129 | hero architecture | same | same | cloned production | retained | off | none | dark roofs / tan walls |
+| Build 130 | hero architecture | same | same | cloned production | removed | off | none | essentially unchanged |
+| Build 131 | hero architecture | same | same | fresh scalar Standard | none | off | none | **AWAITING RUNTIME RESULT** |
+
+This matrix is the shortest reliable map of the investigation.
+
+---
+
+## L. CURRENT DEFINITION OF SUCCESS
+
+The next success is NOT “the building looks prettier.”
+
+The next success is:
+
+**identify and explain the first production-state divergence from Build 128 that accounts for the observed dark/material behavior, then connect that result back to the original global haze without introducing new confounding variables.**
+
+Only after that is achieved should the project leave forensic mode.
+
+The ultimate visual target remains unchanged:
+an exceptionally beautiful, cohesive, handcrafted fantasy world with RuneScape/OSRS-like readability and substantially more modern visual architecture, lighting, materials and atmosphere.
+
+Do not lower that target.
+
+Do not resume cosmetic work merely because the scene becomes technically visible.
+
+---
+
+# 24. HANDOFF RULE FOR THE NEXT INSTANCE
+
+A new instance must read this section together with the earlier handoff, then:
+
+1. Inspect the current repository HEAD.
+2. Read the current `app.js`.
+3. Confirm whether any commits exist after Build 131.
+4. Do not assume Build 131's runtime result.
+5. Treat Build 128 as the visual control.
+6. Treat Builds 129–131 as a controlled material-state ladder.
+7. Use the original haze symptom as the eventual global-image validation target.
+8. Never repeat a diagnostic already listed as completed here unless new source evidence invalidates its conclusion.
+9. Do not return to cosmetic architecture work while the rendering root cause remains unresolved.
+10. When making the next change, make it a targeted, source-backed experiment or structural fix with a clearly stated hypothesis and a clean control.
+
+**The investigation is now narrower than it was at the beginning. That narrowing is progress.**
+
+The objective is to finish the causal chain, repair the real production path, restore every temporarily disabled system, and only then return to the original visual reconstruction campaign.

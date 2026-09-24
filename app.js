@@ -50,6 +50,7 @@ const rawArchitectureDepth=params.get('archdepth')==='1';
 const rawArchitectureWire=params.get('archwire')==='1';
 const rawArchitectureView=params.get('archview')==='1';
 const rawArchitectureLit=params.get('archlit')==='1';
+const rawArchitectureProd=params.get('archprod')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -2478,7 +2479,7 @@ let dest=null;let cinematicMode=false;let hovered=null;
 window.__HEARTHMERE_INTERACTION_TARGETS=interactionRoots;
 function registerInteractionRoot(o){if(o&&!interactionRoots.includes(o))interactionRoots.push(o);return o}
 function setHover(o){if(hovered===o)return;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive)m.material.emissive.setHex(m.userData.baseEmissive||0x000000)});hovered=o;if(hovered?.traverse)hovered.traverse(m=>{if(m.isMesh&&m.material?.emissive){m.userData.baseEmissive=m.material.emissive.getHex();m.material.emissive.lerp(new THREE.Color(0x9d7b39),.35)}})}
-renderer.domElement.addEventListener('pointermove',e=>{if(rawArchitectureLit)return;mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactionRoots,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
+renderer.domElement.addEventListener('pointermove',e=>{if(rawArchitectureLit||rawArchitectureProd)return;mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactionRoots,true);let o=hits[0]?.object||null;while(o&&!o.userData.interaction)o=o.parent;setHover(o)});
 const destinationMarker=new THREE.Mesh(new THREE.RingGeometry(.34,.52,28),new THREE.MeshBasicMaterial({color:0xe7cb76,transparent:true,opacity:.86,side:THREE.DoubleSide,depthWrite:false}));destinationMarker.rotation.x=-Math.PI/2;destinationMarker.position.y=.18;destinationMarker.visible=false;scene.add(destinationMarker);
 function terrainHeight(x,z){return macroTerrainHeight(x,z);}
 const NAV={
@@ -3949,6 +3950,87 @@ try{
       camera.lookAt(center);camera.updateProjectionMatrix();
       window.__HEARTHMERE_FORENSIC_FRAME_PROD_STATS={meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance,far:camera.far};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawArchitectureProd){
+      // BUILD 129: HERO ARCHITECTURE PRODUCTION-MATERIAL ISOLATION.
+      // Build 128 established that the authored hero building is healthy when production
+      // materials are replaced by a fresh neutral Standard material. This branch restores
+      // the authored production materials and textures, but deliberately strips custom
+      // shader hooks. It keeps the exact same meaningful camera, direct render path, no
+      // fog, no sky, no composer/post-processing, and hover disabled. The result isolates
+      // "authored material + maps" from "custom onBeforeCompile shader logic".
+      let marker=document.getElementById('hm-archprod-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-archprod-forensic-marker';
+        marker.textContent='BUILD 129 • HERO ARCHITECTURE PRODUCTION MATERIALS';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#6b4f2a',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;sky.visible=false;scene.visible=true;
+      const candidates=[];
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        if(o.userData?.architectureTier==='hero')candidates.push(o);
+        else if(o.parent===scene)o.visible=false;
+      });
+      const focus=candidates.find(o=>o.userData?.assetName==='inn')||candidates.find(o=>o.userData?.architectureType==='inn')||candidates.reduce((best,o)=>{
+        if(!best)return o;
+        const dx=o.position.x+14,dz=o.position.z+13;
+        const bx=best.position.x+14,bz=best.position.z+13;
+        return Math.hypot(dx,dz)<Math.hypot(bx,bz)?o:best;
+      },null);
+      let meshCount=0,cloned=0,hooked=0,textureMaps=0;
+      candidates.forEach(root=>{
+        root.visible=true;
+        root.traverse(o=>{
+          if(!o.isMesh||!o.geometry)return;
+          o.frustumCulled=false;
+          const source=o.material;
+          const materials=Array.isArray(source)?source:[source];
+          const copies=materials.map(m=>{
+            if(!m)return m;
+            const c=m.clone();
+            // Preserve authored textures, colors, roughness, metalness, normal maps,
+            // emissive maps, etc., but remove the project's custom shader mutation.
+            c.onBeforeCompile=()=>{};
+            if(c.customProgramCacheKey)c.customProgramCacheKey=()=> 'hm_build129_neutral_hook';
+            if(c.map)textureMaps++;
+            if(c.normalMap)textureMaps++;
+            if(c.roughnessMap)textureMaps++;
+            if(c.metalnessMap)textureMaps++;
+            if(c.aoMap)textureMaps++;
+            if(c.emissiveMap)textureMaps++;
+            hooked++;
+            return c;
+          });
+          o.material=Array.isArray(source)?copies:copies[0];
+          meshCount++;cloned++;
+        });
+      });
+      const targetRoot=focus||candidates[0]||null;
+      const bounds=new THREE.Box3();
+      if(targetRoot){targetRoot.updateWorldMatrix(true,true);bounds.setFromObject(targetRoot);}
+      const center=bounds.getCenter(new THREE.Vector3());
+      const size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,4);
+      const viewDir=new THREE.Vector3(.62,.30,1).normalize();
+      const distance=Math.max(radius/Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*1.05,10);
+      camera.position.copy(center).addScaledVector(viewDir,distance);
+      camera.position.y=Math.max(camera.position.y,center.y+radius*.42);
+      camera.near=.05;camera.far=Math.max(500,distance+radius*4);
+      camera.lookAt(center);camera.updateProjectionMatrix();
+      scene.updateMatrixWorld(true);
+      const oldFog=scene.fog;scene.fog=null;
+      window.__HEARTHMERE_FORENSIC_ARCH_PROD_STATS={
+        rootCount:candidates.length,meshCount,cloned,hooked,textureMaps,
+        focus:targetRoot?.uuid||null,boundsEmpty:bounds.isEmpty(),
+        center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),
+        target:center.toArray(),distance,near:camera.near,far:camera.far,
+        hoverDisabled:true,productionMaterialsRestored:true,customShaderHooksNeutralized:true
+      };
+      renderer.setClearColor(0x687276,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      scene.fog=oldFog;
     }else if(rawArchitectureLit){
       // BUILD 128: HERO ARCHITECTURE NEUTRAL-LIT ISOLATION.
       // Build 127 proved the authored 3D building can be framed from a meaningful view,

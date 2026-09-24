@@ -2963,8 +2963,12 @@ function buildCinematicWorldDepthPass(){
     m.scale.y=.45;
     root.add(m);
   };
-  makeMistBand(.8,-58,170,12,0xd5d6c0,.055);
-  makeMistBand(1.5,-88,210,16,0xb9c8bd,.035);
+  // BUILD 89 FORENSIC: remove only the two broad world-space mist bands.
+  // The ridge geometry and distant tree line remain untouched. These planes are
+  // transparent MeshBasicMaterial layers spanning most of the playable view and
+  // are the closest current source-level match to a static camera-lens wash.
+  // Restore them after the source is isolated.
+
 
   // A restrained distant tree line gives the settlement a believable enclosed valley
   // without spending geometry on the playable center.

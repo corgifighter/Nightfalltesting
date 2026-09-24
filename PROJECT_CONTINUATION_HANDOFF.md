@@ -1027,3 +1027,18 @@ Interpretation:
 
 Commit: `9b41e2c33b54fa6e183a465f40b9eb7f41d3c967`
 
+
+## Build 120 — FRESH BASIC GEOMETRY / FIXED CAMERA
+
+Build 119 remained blank with fresh MeshStandard materials. Before interpreting that as a texture issue, Build 120 reproduces the proven Build 115 geometry test with fresh `MeshBasicMaterial` objects, per mesh.
+
+No production material state, textures, lighting, fog, custom shader hooks, or EffectComposer are relevant to this test. Same fixed camera `(14.6,8.2,44.8)` targeting `(0,.72,30)`, all scene meshes forced visible, frustum culling disabled.
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixedbasic=1`
+
+If geometry appears, the geometry/camera path is definitively healthy and the failure is specifically in the lit production material/shader pipeline.
+If geometry does not appear, investigate the exact difference between Build 115 and the new branch, including runtime branch ordering/state.
+
+Commit: `a64d3d10ce10d3d6ba178d19009094cda1e03bdd`
+

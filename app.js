@@ -33,6 +33,7 @@ const rawBasicDirect=params.get('basicdirect')==='1';
 const rawDepth=params.get('depth')==='1';
 const rawNormalDirect=params.get('normaldirect')==='1';
 const rawUncompiled=params.get('uncompiled')==='1';
+const rawLambertDirect=params.get('lambertdirect')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3452,6 +3453,25 @@ try{
       renderer.clear(true,true,true);
       renderer.render(scene,camera);
       for(const [mat,hook,needs] of changed){mat.onBeforeCompile=hook;mat.needsUpdate=true;}
+      sky.visible=priorSkyVisible;
+    }else if(rawLambertDirect){
+      // Geometry/material-control test: replace every visible mesh with a plain Lambert
+      // material. Unlike MeshNormalMaterial this still exercises the renderer's lighting
+      // path, but removes PBR, texture, normal-map, and custom shader complexity.
+      const priorSkyVisible=sky.visible;
+      const changed=[];
+      const mat=window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT=new THREE.MeshLambertMaterial({color:0xbfc1bd,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true}));
+      sky.visible=false;
+      scene.traverseVisible(o=>{
+        if(!o.isMesh||o===sky)return;
+        changed.push([o,o.material,o.frustumCulled,o.visible]);
+        o.material=mat;
+        o.frustumCulled=false;
+        o.visible=true;
+      });
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      for(const [o,m,f,v] of changed){o.material=m;o.frustumCulled=f;o.visible=v;}
       sky.visible=priorSkyVisible;
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;

@@ -3314,6 +3314,19 @@ function updateAdaptiveQuality(now){
   rendererDiagnostics.p95FrameMs=p95FrameMs;
   rendererDiagnostics.shadowMapSize=sun.shadow.mapSize.x;
 }
+
+// BUILD 88 FORENSIC LIGHT ISOLATION.
+// This deliberately runs once after the entire world is constructed. Build 86 ran
+// scene.traverse() every animation frame on the mobile scene, which could stall the
+// renderer badly enough to present as a black screen. A one-time traversal preserves
+// the diagnostic without putting a full-scene traversal in the hot path.
+function applyForensicSecondaryLightIsolation(){
+  scene.traverse(o=>{
+    if(o.isLight && o!==sun && o!==fill && o!==hemi && o!==moon)o.visible=false;
+  });
+  window.__HEARTHMERE_FORENSIC_LIGHT_ISOLATION={active:true,secondaryLightsHidden:true,appliedOnce:true};
+}
+
 function frame(t){
  if(document.hidden)return;
  const rawDt=Math.max(0,t-last)/1000;
@@ -4212,7 +4225,7 @@ async function buildWorldArtDirectionV5(){
   };
 }
 
-(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();
+(async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();applyForensicSecondaryLightIsolation();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

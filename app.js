@@ -27,6 +27,7 @@ const params=new URLSearchParams(location.search);
 const forensicMode=params.get('forensic')||'';
 const hideClouds=params.get('clouds')==='0';
 const rawRender=params.get('raw')==='1';
+const rawNormal=params.get('normal')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3425,7 +3426,17 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
-  if(rawRender){ renderer.render(scene,camera); }
+  if(rawRender){
+    if(rawNormal){
+      const priorOverride=scene.overrideMaterial;
+      const priorSkyVisible=sky.visible;
+      scene.overrideMaterial=window.__HEARTHMERE_FORENSIC_NORMAL_MAT||(window.__HEARTHMERE_FORENSIC_NORMAL_MAT=new THREE.MeshNormalMaterial({flatShading:false,side:THREE.DoubleSide}));
+      sky.visible=false;
+      renderer.render(scene,camera);
+      sky.visible=priorSkyVisible;
+      scene.overrideMaterial=priorOverride;
+    }else renderer.render(scene,camera);
+  }
   else if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

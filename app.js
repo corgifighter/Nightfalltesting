@@ -34,6 +34,7 @@ const rawDepth=params.get('depth')==='1';
 const rawNormalDirect=params.get('normaldirect')==='1';
 const rawUncompiled=params.get('uncompiled')==='1';
 const rawLambertDirect=params.get('lambertdirect')==='1';
+const rawFlatDirect=params.get('flatdirect')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3591,6 +3592,31 @@ try{
       // This prevents later animation/composer passes from restoring the production
       // material state and makes the screenshot a deterministic A/B comparison.
       sky.visible=false;
+    }else if(rawFlatDirect){
+      // BUILD 112 DEPTH-OCCLUSION ISOLATION.
+      // Plain MeshBasic with depth testing/writing disabled. If the world appears here,
+      // a foreground depth-writing mesh was occluding the scene in normal/Lambert passes.
+      let marker=document.getElementById('hm-flat-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-flat-forensic-marker';
+        marker.textContent='BUILD 112 • DEPTH TEST DISABLED';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#145a8d',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      const mat=window.__HEARTHMERE_FORENSIC_FLAT_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_FLAT_DIRECT_MAT=new THREE.MeshBasicMaterial({color:0xd8d8d8,side:THREE.DoubleSide,fog:false,transparent:false,opacity:1,depthTest:false,depthWrite:false}));
+      sky.visible=false;
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(o.isMesh){meshCount++;o.material=mat;o.frustumCulled=false;}
+      });
+      scene.visible=true;
+      window.__HEARTHMERE_FORENSIC_FLAT_DIRECT_STATS={meshCount,cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray(),sceneChildren:scene.children.length};
+      renderer.setClearColor(0x101820,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;
       const changed=[];

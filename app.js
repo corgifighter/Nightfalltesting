@@ -53,6 +53,11 @@ const rawArchitectureLit=params.get('archlit')==='1';
 const rawArchitectureProd=params.get('archprod')==='1';
 const rawArchitectureMapless=params.get('archmapless')==='1';
 const rawArchitectureScalar=params.get('archscalar')==='1';
+// BUILD 132 PIPELINE CONTROL: render the untouched production scene directly, bypassing
+// EffectComposer while preserving the normal frame state. `nofog=1` disables fog only for
+// that direct render. This is the controlled Phase-3 comparison against the normal composer.
+const rawProductionDirect=params.get('productiondirect')==='1';
+const rawProductionDirectNoFog=rawProductionDirect&&params.get('nofog')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3499,7 +3504,41 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawMaterialProbe){
+    if(rawProductionDirect){
+      // BUILD 132: FULL PRODUCTION DIRECT-RENDER CONTROL.
+      // No material replacement, no scene isolation, no composer. This is deliberately
+      // the production scene as authored, rendered through renderer.render() so the first
+      // divergence between direct rendering and the normal EffectComposer path can be found.
+      // The frame loop's authored day/fog state remains intact unless `nofog=1` is requested.
+      let marker=document.getElementById('hm-production-direct-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-production-direct-forensic-marker';
+        marker.textContent=rawProductionDirectNoFog?'BUILD 132 • PRODUCTION DIRECT • FOG OFF':'BUILD 132 • PRODUCTION DIRECT';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#294f45',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      const priorFog=scene.fog;
+      if(rawProductionDirectNoFog)scene.fog=null;
+      scene.visible=true;sky.visible=true;
+      window.__HEARTHMERE_FORENSIC_PRODUCTION_DIRECT_STATS={
+        fogEnabled:!!scene.fog,
+        fogDensity:scene.fog?.density??0,
+        fogColor:scene.fog?.color?.getHex?.()??null,
+        toneMapping:renderer.toneMapping,
+        toneMappingExposure:renderer.toneMappingExposure,
+        outputColorSpace:renderer.outputColorSpace,
+        environmentIntensity:scene.environmentIntensity,
+        sunIntensity:sun.intensity,
+        fillIntensity:fill.intensity,
+        hemiIntensity:hemi.intensity,
+        camera:camera.position.toArray(),
+        target:controls.target.toArray(),
+        composerBypassed:true
+      };
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      scene.fog=priorFog;
+    }else if(rawMaterialProbe){
       // FORENSIC MATERIAL PROBE: isolated known-good geometry/material.
       // This does not modify or replace any production world material.
       const priorSkyVisible=sky.visible;

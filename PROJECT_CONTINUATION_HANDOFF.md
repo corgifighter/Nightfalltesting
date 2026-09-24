@@ -1118,3 +1118,11 @@ Build 125 repeats the architecture-only frame with ONE shared fresh MeshBasicMat
 
 URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archdepth=1
 Commit: aa26d37f3155f161b0c08b6c2e634df15dce95dd
+
+
+## Build 126 - ARCHITECTURE WIREFRAME
+
+Build 125 still appears as green silhouettes from the fixed camera. Do not assume this means the geometry is flat. Build 126 switches the visible hero architecture meshes to wireframe Basic materials with normal depth testing. This directly exposes triangle topology and will distinguish a true 3D mesh from a camera-facing/flat surface while preserving the same architecture-only bounds/framing.
+
+URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archwire=1
+Commit: 17d28e317442943140017af7f3f399856a984af8

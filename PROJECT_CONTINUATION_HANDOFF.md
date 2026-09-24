@@ -785,3 +785,28 @@ Interpretation:
 
 Do not change production art, fog, lighting, or assets until this test is resolved.
 
+
+## Build 110 — CACHE INVALIDATION CORRECTION
+
+User tested the hardened Lambert diagnostic URL and reported **no visual change**.
+
+Before drawing another renderer/material conclusion, the repository was inspected for delivery/caching. The project has a service worker that precaches `./app.js`. Its cache key was still `hearthmere-nightfalltesting-v106`, while the forensic app.js has been modified through Builds 108/109. Therefore an Android browser can legitimately continue executing a previously cached app.js despite later GitHub commits.
+
+Build 110 bumps the service-worker cache to:
+`hearthmere-nightfalltesting-v110`
+
+Commit:
+`916c4dcd7144abf5a6326ca86fad050b0c4a6314`
+
+This is a delivery/infrastructure correction, not a production rendering change.
+
+### Required next test
+
+Reload the site once so the updated service worker can install/activate, then launch:
+
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&lambertdirect=1`
+
+Do not interpret the prior Lambert screenshot as evidence until this cache-invalidated build has been tested.
+
+If the Lambert frame now changes substantially, the prior result was stale-code execution. If it remains identical after confirmed cache refresh, continue the render-state investigation.
+

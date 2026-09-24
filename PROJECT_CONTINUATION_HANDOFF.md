@@ -895,3 +895,24 @@ Interpretation:
 - vivid green world appears: the previous camera/view state was the issue; inspect camera follow/target/clip behavior next.
 - still blank: the world bounds may be pathological or renderer draw state remains the next suspect. The on-screen marker proves execution; the diagnostic stats are also stored in `window.__HEARTHMERE_FORENSIC_FRAME_STATS`.
 
+
+## Build 114 — AUTO-FRAME BOUNDS HARDENING
+
+Build 113 executed (user saw the `BUILD 113 • WORLD AUTO-FRAME` marker) but the screen remained blank/gray.
+
+The most likely remaining flaw in that diagnostic is its aggregate `Box3.setFromObject()` collection: one pathological/non-finite/huge mesh bound can poison the aggregate center/size and drive the camera to invalid or useless coordinates, even though the underlying world geometry is valid.
+
+Build 114 keeps the same test but rejects:
+- non-finite bounds;
+- empty bounds;
+- individual mesh bounds with any dimension >= 600 world units.
+
+This is diagnostic-only and does not alter production rendering.
+
+Commit: `584b2f120a81c8d1b75ee443357381aa37da8f12`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&framedirect=1`
+
+If this remains blank, the next diagnostic should stop trying to infer camera placement from aggregate bounds and instead explicitly render a known-good subset (terrain/roads/landscape) with a fixed known-good camera, while reporting finite mesh counts/bounds on-screen.
+

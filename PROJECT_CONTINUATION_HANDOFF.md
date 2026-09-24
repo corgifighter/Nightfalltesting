@@ -1232,3 +1232,20 @@ Interpretation:
 - Do not change geometry, camera, terrain, or world lighting based on this test.
 
 Next after Build 130: if the roof recovers when mapless, inspect/fix CC0 texture loading, UVs, color-space configuration, and map assignment before adding new art. Then restore a real slate texture and add a genuine plaster/wall surface treatment rather than accepting solid tan walls. The final target remains cohesive, readable, richly textured fantasy architecture—not this diagnostic appearance.
+
+
+## Build 131 — macro root-cause material isolation (2026-09-24)
+
+The project remains in **forensic rendering/root-cause mode**. Do not resume cosmetic architecture design, granular detailing, town expansion, or broad world-content work until the large-scale rendering problem is understood and the production pipeline is trustworthy again.
+
+Build 131 commit: `479ecac5c2428269951cb64df76f062335596574`
+Test URL: `https://corgifighter.github.io/Nightfalltesting/?raw=1&archscalar=1`
+
+Build 131 is deliberately a diagnostic, not an art pass. It uses the proven Build 128 architecture camera/isolation and direct renderer path, but replaces every hero architecture material with a **fresh MeshStandardMaterial** constructed only from authored scalar properties (color, roughness, metalness, side, flatShading, and emissive scalar state). It does not reuse authored material objects, texture maps, custom shader hooks, composer/post-processing, or fog. The purpose is to distinguish an authored material-object/state problem from a lighting/color-space problem without changing the world itself.
+
+Interpretation rule:
+- If Build 131 makes the roofs behave materially like Build 128, the problem is inside authored material state/object configuration or prior material mutation; investigate that pipeline rather than redesigning assets.
+- If Build 131 remains dark like Builds 129–130, the next investigation should move outward to the actual lighting/color-management/material assignment path on specific meshes. Do not start cosmetic texture work.
+- Build 128 remains the known-good visual/material baseline; Build 129 restored production material objects and showed dark roofs/tan walls; Build 130 removed maps and was essentially unchanged, weakening the texture-map hypothesis.
+
+**Current priority:** solve the large-scale rendering/material pipeline issue first. Cosmetic granular design is explicitly deferred until this root cause is resolved.

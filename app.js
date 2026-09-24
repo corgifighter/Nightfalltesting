@@ -40,6 +40,7 @@ const rawFixedDirect=params.get('fixeddirect')==='1';
 const rawFixedProd=params.get('fixedprod')==='1';
 const rawFixedHooks=params.get('fixedhooks')==='1';
 const rawFixedMat=params.get('fixedmat')==='1';
+const rawFixedUntextured=params.get('fixeduntextured')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3809,6 +3810,44 @@ try{
       scene.visible=true; scene.updateMatrixWorld(true);
       window.__HEARTHMERE_FORENSIC_FIXED_MAT_STATS={meshCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
       renderer.setClearColor(0x101820,1); renderer.clear(true,true,true); renderer.render(scene,camera);
+    }else if(rawFixedUntextured){
+      // BUILD 119: fixed camera + untextured lit geometry. Preserve each material's
+      // base color/roughness/metalness where available, but remove every map, shader
+      // hook, alpha state, and physical texture dependency.
+      let marker=document.getElementById('hm-fixeduntextured-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-fixeduntextured-forensic-marker';
+        marker.textContent='BUILD 119 • UNTEXTURED LIT GEOMETRY';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#b05a22',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;
+      const fixedTarget=new THREE.Vector3(0,.72,30);
+      camera.position.set(14.6,8.2,44.8);
+      camera.near=.05; camera.far=1800; camera.lookAt(fixedTarget); camera.updateProjectionMatrix();
+      sky.visible=false;
+      let meshCount=0,textureCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(!o.isMesh)return;
+        meshCount++;o.frustumCulled=false;
+        const mats=Array.isArray(o.material)?o.material:[o.material];
+        o.material=mats.map(old=>{
+          if(!old)return new THREE.MeshStandardMaterial({color:0x808080,roughness:1,metalness:0});
+          const color=old.color?.isColor?old.color.clone():new THREE.Color(0x808080);
+          if(old.map||old.normalMap||old.roughnessMap||old.metalnessMap||old.aoMap||old.emissiveMap||old.alphaMap||old.bumpMap||old.displacementMap)textureCount++;
+          return new THREE.MeshStandardMaterial({
+            color, roughness:Number.isFinite(old.roughness)?old.roughness:.82,
+            metalness:Number.isFinite(old.metalness)?old.metalness:0,
+            side:THREE.DoubleSide
+          });
+        });
+      });
+      scene.visible=true;scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_FIXED_UNTEXTURED_STATS={meshCount,textureCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
+      renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;
       const changed=[];

@@ -32,6 +32,7 @@ const rawBasic=params.get('basic')==='1';
 const rawBasicDirect=params.get('basicdirect')==='1';
 const rawDepth=params.get('depth')==='1';
 const rawNormalDirect=params.get('normaldirect')==='1';
+const rawUncompiled=params.get('uncompiled')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3431,7 +3432,25 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawNormalDirect){
+    if(rawUncompiled){
+      const priorSkyVisible=sky.visible;
+      const changed=[];
+      sky.visible=false;
+      scene.traverseVisible(o=>{
+        if(!o.isMesh||o===sky)return;
+        const mats=Array.isArray(o.material)?o.material:[o.material];
+        mats.forEach(mat=>{
+          if(!mat)return;
+          changed.push([mat,mat.onBeforeCompile,mat.needsUpdate]);
+          mat.onBeforeCompile=null;
+          mat.needsUpdate=true;
+        });
+      });
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      for(const [mat,hook,needs] of changed){mat.onBeforeCompile=hook;mat.needsUpdate=true;}
+      sky.visible=priorSkyVisible;
+    }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;
       const changed=[];
       const mat=window.__HEARTHMERE_FORENSIC_NORMAL_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_NORMAL_DIRECT_MAT=new THREE.MeshNormalMaterial({flatShading:false,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true}));

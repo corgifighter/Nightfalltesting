@@ -43,6 +43,7 @@ const rawFixedMat=params.get('fixedmat')==='1';
 const rawFixedUntextured=params.get('fixeduntextured')==='1';
 const rawFixedBasic=params.get('fixedbasic')==='1';
 const rawFixedBasicShared=params.get('fixedbasicshared')==='1';
+const rawFrameProd=params.get('frameprod')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3902,6 +3903,45 @@ try{
       });
       scene.visible=true;scene.updateMatrixWorld(true);
       window.__HEARTHMERE_FORENSIC_FIXED_BASIC_SHARED_STATS={meshCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
+      renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawFrameProd){
+      // BUILD 122: use the exact known-positive auto-frame camera computation from
+      // Build 114, but leave production materials completely untouched. This is the
+      // first valid production-material test from a camera proven to see the world.
+      let marker=document.getElementById('hm-frameprod-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-frameprod-forensic-marker';
+        marker.textContent='BUILD 122 • AUTO-FRAME / PRODUCTION MATERIALS';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#146c94',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;
+      sky.visible=false;
+      const bounds=new THREE.Box3(), box=new THREE.Box3();
+      let meshCount=0;
+      scene.updateMatrixWorld(true);
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(o.isMesh&&o.geometry){
+          meshCount++;o.frustumCulled=false;o.updateWorldMatrix(true,false);
+          box.setFromObject(o);
+          const finite=Number.isFinite(box.min.x)&&Number.isFinite(box.min.y)&&Number.isFinite(box.min.z)&&Number.isFinite(box.max.x)&&Number.isFinite(box.max.y)&&Number.isFinite(box.max.z)&&
+            (box.max.x-box.min.x)<600&&(box.max.y-box.min.y)<600&&(box.max.z-box.min.z)<600;
+          if(finite)bounds.union(box);
+        }
+      });
+      scene.visible=true;
+      const center=bounds.getCenter(new THREE.Vector3());
+      const size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,8);
+      const fov=THREE.MathUtils.degToRad(camera.fov);
+      const distance=Math.max(radius/Math.tan(fov/2)*1.15,12);
+      const dir=new THREE.Vector3(1,.62,1).normalize();
+      camera.position.copy(center).addScaledVector(dir,distance);
+      camera.near=.05;camera.far=Math.max(3000,distance+radius*3);
+      camera.lookAt(center);camera.updateProjectionMatrix();
+      window.__HEARTHMERE_FORENSIC_FRAME_PROD_STATS={meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance,far:camera.far};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;

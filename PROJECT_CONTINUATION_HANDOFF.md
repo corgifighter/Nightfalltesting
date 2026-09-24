@@ -2008,3 +2008,83 @@ A new instance must read this section together with the earlier handoff, then:
 **The investigation is now narrower than it was at the beginning. That narrowing is progress.**
 
 The objective is to finish the causal chain, repair the real production path, restore every temporarily disabled system, and only then return to the original visual reconstruction campaign.
+
+
+# 25. BUILD 132 — CONTROLLED PRODUCTION PIPELINE COMPARISON
+
+Commit:
+f3d4b2642075dcc0b8251394ab8a3ff70fbf27e9
+
+The next diagnostic was deliberately chosen from the existing forensic plan rather than repeating earlier material tests.
+
+## Why this was necessary
+
+Source inspection of the current production loop revealed an important fact that earlier one-shot tests could not fully expose:
+
+Every live frame re-authors several global presentation values:
+
+- `scene.fog.density = .00105 + .00058 * (1-day)`
+- `scene.fog.color.setHSL(...)`
+- `sun.intensity = 1.35 + 2.15 * day`
+- `fill.intensity = .30 + .28 * day`
+- `hemi.intensity = .66 + .48 * day`
+- `hemi.color.setHSL(...)`
+- `hemi.groundColor.setHSL(...)`
+- `renderer.toneMappingExposure = .84 + .16 * day`
+- `scene.environmentIntensity = .26 + .10 * day`
+
+The source itself notes that earlier one-shot light tests were invalidated by frame-loop reauthoring. This is directly relevant to the original “stagnant camera layer”/haze symptom because fog is not merely configured once at startup; it is actively rewritten every frame.
+
+Therefore the correct next step is not another isolated “turn fog off” experiment. It is a controlled comparison of the complete production scene through two render paths while holding the rest of the live frame state intact.
+
+## What Build 132 adds
+
+New query:
+
+`?productiondirect=1`
+
+This:
+
+- leaves the complete production scene intact
+- leaves production materials intact
+- leaves the normal live camera/day/light state intact
+- bypasses EffectComposer
+- calls `renderer.render(scene,camera)` directly
+- records the active fog/light/tone/environment state in:
+  `window.__HEARTHMERE_FORENSIC_PRODUCTION_DIRECT_STATS`
+
+Variant:
+
+`?productiondirect=1&nofog=1`
+
+This performs the same direct production render but temporarily removes `scene.fog` for the actual draw, then restores it.
+
+This creates a clean three-state ladder:
+
+A. Normal launch — production scene + normal EffectComposer.
+B. `productiondirect=1` — production scene + direct renderer, same live frame state.
+C. `productiondirect=1&nofog=1` — same direct production scene with only fog removed for the draw.
+
+The purpose is causal:
+
+- If A is hazy but B is clear, the divergence is in EffectComposer/presentation.
+- If A and B are both hazy but C becomes clear, fog is the dominant image-wide cause.
+- If A, B and C are all similarly hazy, the problem is upstream of both fog and composer and the next target is lighting/material/camera state.
+- If the result changes over time, the day-cycle mutations themselves become part of the causal chain.
+
+## Important source-level discovery
+
+The original handoff correctly warned that “try fog / bloom / SSAO” cycling without controlled comparison is low value. Build 132 is different: it is the first direct-vs-composer production comparison that also acknowledges that the frame loop continuously rewrites fog and lighting.
+
+This should be treated as a high-information experiment, not as another generic effect toggle.
+
+## Current control hierarchy
+
+- Build 128 remains the known-good architecture material/camera control.
+- Build 131 remains the fresh scalar material branch and its runtime result must not be invented.
+- Build 132 is now the global production-pipeline control.
+- The original haze is now testable at the actual production-scene level without replacing materials or hiding the world.
+
+## Do not resume cosmetic art work yet
+
+The user’s stated priority remains the large-scale green/yellow/gray haze/root-cause problem. Build 132 is intended to finish the Phase-3 direct-versus-composer comparison before any cosmetic architecture work resumes.

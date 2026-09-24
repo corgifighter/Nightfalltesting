@@ -718,3 +718,38 @@ Interpretation:
 - Vivid colored world appears: world geometry is in the camera frustum; the previous white result was a visibility/readability issue and production material isolation can begin.
 - Only red cube/player remains: world meshes are not reaching the current camera frustum despite forced visibility/culling bypass; inspect aggregate bounds and transforms next.
 - Vivid partial geometry: identify which world roots/layers occupy the frustum before touching production rendering.
+
+## Build 108 — VERIFIED VIVID WORLD RESULT
+
+User has now supplied a real Android browser screenshot from:
+`?raw=1&worldprobe=1`
+
+The screenshot **does show the world geometry clearly in vivid per-mesh diagnostic colors** across the frame: terrain masses, paths/roads, river, trees/foliage, structures and other environment geometry are visibly present. The red WORLD_PROBE_ANCHOR is also visible, and the player silhouette is visible when overlapping/near it.
+
+This resolves the ambiguity from the prior white diagnostic result.
+
+### Proven by this result
+
+- World meshes are actually present after the complete asynchronous world build.
+- The forced-visibility traversal reaches the world geometry.
+- World geometry is not simply absent from the scene.
+- The camera/frustum relationship is sufficiently valid for substantial world geometry to render.
+- The direct renderer path is valid.
+- The earlier uniform-white result was a diagnostic/readability limitation, not proof that the world was outside the camera frustum.
+
+The screenshot is intentionally ugly because Build 108 replaces production materials with vivid diagnostic MeshBasicMaterial colors. That is expected and is **not** a production visual regression.
+
+### Investigation status
+
+The geometry layer is now cleared enough to move to the **production material/shader/color pipeline** without guessing about fog, lighting, PMREM, camera placement, or missing world geometry.
+
+Do NOT undo the production material system or redesign assets. The next comparison must be controlled:
+
+1. Launch the same build with `?raw=1` **without** `worldprobe=1`.
+2. This uses the actual production materials/shaders and lighting while bypassing EffectComposer/post-processing.
+3. Compare it directly against the vivid worldprobe frame.
+4. If the production direct frame is already structurally correct but hazy/wrong-colored, isolate production material/shader hooks next.
+5. If production direct is clean but normal presentation is hazy, then the remaining culprit is in the composer/final image pipeline and can be isolated without touching world materials.
+
+Do not return to random fog/lighting changes. We now have a controlled A/B path.
+

@@ -916,3 +916,26 @@ Next test:
 
 If this remains blank, the next diagnostic should stop trying to infer camera placement from aggregate bounds and instead explicitly render a known-good subset (terrain/roads/landscape) with a fixed known-good camera, while reporting finite mesh counts/bounds on-screen.
 
+
+## Build 115 — FIXED CAMERA ISOLATION
+
+Build 114 produced the first clear evidence that the world geometry really does render: the auto-frame screenshot showed a large vivid-green terrain surface and atmospheric meshes. This means the previous blank result was not a universal renderer/geometry failure.
+
+The important remaining distinction is the normal camera-follow/OrbitControls state. The runtime updates the player-follow camera and calls `controls.update()` every frame before the forensic render branches. Build 115 adds `?raw=1&fixeddirect=1` and explicitly:
+- disables OrbitControls;
+- ignores player-follow camera movement;
+- sets the camera to the authored original relationship around the player's starting position `(0,30)`: camera `(14.6,8.2,44.8)`, target `(0,.72,30)`;
+- hides the sky;
+- forces all meshes visible and unculls them;
+- uses plain depth-disabled MeshBasicMaterial;
+- directly renders.
+
+Commit: `d8050f380139ded6e82e26c06a4ae5a94166c607`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixeddirect=1`
+
+Interpretation:
+- World appears: player-follow/OrbitControls state is the root of the blank normal view. Fix the production camera system, not materials.
+- World remains absent: the issue is specific to this world region/camera relationship; compare the fixed camera against the successful auto-frame and explicitly frame a known authored region.
+

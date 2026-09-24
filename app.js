@@ -3379,6 +3379,12 @@ renderer.toneMappingExposure=.84+.16*day;
 scene.environmentIntensity=.26+.10*day;
 window.__HEARTHMERE_FORENSIC_DAYLIGHT={active:false,reason:'Build 80: restored authored PMREM contribution and switched presentation transform to AgX'};
 cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
+ // BUILD 86 FORENSIC: isolate the persistent cast from secondary/local light sources.
+ // Keep the four authored global daylight sources above untouched. Every other light is
+ // hidden for this test, without changing its color/intensity, so the result can cleanly
+ // distinguish a lighting-origin cast from a camera/output-origin cast.
+ scene.traverse(o=>{if(o.isLight && o!==sun && o!==fill && o!==hemi && o!==moon)o.visible=false;});
+ window.__HEARTHMERE_FORENSIC_LIGHT_ISOLATION={active:true,secondaryLightsHidden:true};
 
  if(player){
   const oldTargetX=controls.target.x,oldTargetZ=controls.target.z;

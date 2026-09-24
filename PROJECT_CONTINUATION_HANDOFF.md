@@ -1215,3 +1215,20 @@ Interpretation:
 - Do not change geometry, camera, terrain, or world lighting based on a Build-129 result; those fundamentals are already positively established.
 
 After Build 129, the next branch should be a controlled production-material decomposition, not broad random edits. Preserve the successful camera and direct render path while isolating maps/features one class at a time.
+
+
+## BUILD 130 — architecture mapless material isolation (current)
+Commit: `831f6ae36f938a0b85c6d335990d630753883dc0`
+URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archmapless=1
+
+User result from Build 129: roofs are filled black; walls are solid tan with no visible texture. This is not the intended visual target. Build 128 remains the known-good baseline: the same hero building renders dimensionally with fresh neutral Standard materials.
+
+Build 130 deliberately preserves Build-128/129 camera, lighting, direct renderer, no-fog, no-sky, no-composer path and removes every texture map from cloned authored hero materials while also neutralizing custom shader hooks. It records how many color/normal maps were present before removal. This isolates authored base material color/roughness from the texture-map/color-space path.
+
+Interpretation:
+- If roofs become properly visible as their authored dark-brown/gray base colors, the black roof appearance is specifically tied to the roof texture/map path.
+- If the roofs remain black even mapless, inspect authored roof base color/roughness and lighting from this proven camera.
+- The walls may still appear relatively plain because the plaster materials are fundamentally color/roughness materials with procedural variation rather than a direct plaster image map. That plainness is a separate visual-quality issue from the black roof failure.
+- Do not change geometry, camera, terrain, or world lighting based on this test.
+
+Next after Build 130: if the roof recovers when mapless, inspect/fix CC0 texture loading, UVs, color-space configuration, and map assignment before adding new art. Then restore a real slate texture and add a genuine plaster/wall surface treatment rather than accepting solid tan walls. The final target remains cohesive, readable, richly textured fantasy architecture—not this diagnostic appearance.

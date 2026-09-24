@@ -39,6 +39,7 @@ const rawFrameDirect=params.get('framedirect')==='1';
 const rawFixedDirect=params.get('fixeddirect')==='1';
 const rawFixedProd=params.get('fixedprod')==='1';
 const rawFixedHooks=params.get('fixedhooks')==='1';
+const rawFixedMat=params.get('fixedmat')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3774,6 +3775,40 @@ try{
       renderer.setClearColor(0x101820,1);
       renderer.clear(true,true,true);
       renderer.render(scene,camera);
+    }else if(rawFixedMat){
+      // BUILD 118: fixed camera + production material classes, but normalize all
+      // visibility/alpha/depth state and neutralize custom shader hooks.
+      let marker=document.getElementById('hm-fixedmat-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-fixedmat-forensic-marker';
+        marker.textContent='BUILD 118 • MATERIAL VISIBILITY NORMALIZED';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#7b3fa0',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;
+      const fixedTarget=new THREE.Vector3(0,.72,30);
+      camera.position.set(14.6,8.2,44.8);
+      camera.near=.05; camera.far=1800; camera.lookAt(fixedTarget); camera.updateProjectionMatrix();
+      sky.visible=false;
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(o.isMesh){
+          meshCount++; o.frustumCulled=false;
+          const mats=Array.isArray(o.material)?o.material:[o.material];
+          mats.forEach(mat=>{
+            if(!mat)return;
+            mat.transparent=false; mat.opacity=1; mat.alphaTest=0;
+            mat.depthWrite=true; mat.depthTest=true; mat.colorWrite=true;
+            mat.side=THREE.DoubleSide; mat.onBeforeCompile=()=>{}; mat.needsUpdate=true;
+          });
+        }
+      });
+      scene.visible=true; scene.updateMatrixWorld(true);
+      window.__HEARTHMERE_FORENSIC_FIXED_MAT_STATS={meshCount,camera:camera.position.toArray(),target:fixedTarget.toArray(),player:player?.position?.toArray?.()||null};
+      renderer.setClearColor(0x101820,1); renderer.clear(true,true,true); renderer.render(scene,camera);
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;
       const changed=[];

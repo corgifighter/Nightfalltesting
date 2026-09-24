@@ -810,3 +810,32 @@ Do not interpret the prior Lambert screenshot as evidence until this cache-inval
 
 If the Lambert frame now changes substantially, the prior result was stale-code execution. If it remains identical after confirmed cache refresh, continue the render-state investigation.
 
+
+## Build 111 — DELIVERY + EXECUTION VERIFICATION
+
+User retested `?raw=1&lambertdirect=1` after the v110 service-worker bump and again reported **no visual change**.
+
+Inspection confirmed the Lambert branch is present and the URL parameter is parsed. However, the previous test still lacked a visible proof that the phone was executing that exact branch.
+
+Two corrections were therefore made:
+
+1. Service worker is now **network-first for `app.js`**, with cached fallback only if the network fails. This prevents stale forensic app modules from masking new commits.
+2. The Lambert branch now displays a fixed diagnostic marker:
+   `BUILD 111 • LAMBERT DIRECT ACTIVE`
+   and sets a dark diagnostic clear color.
+
+Commit:
+`5c0e1dafc93bc19cb231707f3ecb9b0a85476ec8`
+
+The SW network-first change is in commit:
+`e81652ca0429cc10350dece7ee98b3ff4a8978ee`
+
+### Required test
+
+Reload the normal site once, then open:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&lambertdirect=1`
+
+This test is now binary:
+- If the **BUILD 111 • LAMBERT DIRECT ACTIVE** marker appears, the branch definitely executed; the rendered result can then be interpreted.
+- If the marker does not appear, stop renderer/material analysis: the phone is still not receiving/executing the current app.js and delivery/cache must be investigated further.
+

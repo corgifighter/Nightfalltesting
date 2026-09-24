@@ -3187,7 +3187,7 @@ function buildHighEndAtmospherePass(){
     sky.material.uniforms.horizon.value.set(0xb9c4bd);
     sky.material.uniforms.sun.value.set(0xffe0bd);
   }
-  sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
+  sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);sunDisc.visible=false; // BUILD 90 forensic: isolate the large transparent sun-disc layer
 }
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();

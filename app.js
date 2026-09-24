@@ -34,6 +34,7 @@ const rawDepth=params.get('depth')==='1';
 const rawNormalDirect=params.get('normaldirect')==='1';
 const rawUncompiled=params.get('uncompiled')==='1';
 const rawLambertDirect=params.get('lambertdirect')==='1';
+const rawMaterialProbe=params.get('materialprobe')==='1';
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -3433,7 +3434,27 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawUncompiled){
+    if(rawMaterialProbe){
+      // FORENSIC MATERIAL PROBE: isolated known-good geometry/material.
+      // This does not modify or replace any production world material.
+      const priorSkyVisible=sky.visible;
+      const priorClear=renderer.getClearColor(new THREE.Color());
+      const priorAlpha=renderer.getClearAlpha();
+      const probeMat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,fog:false,depthTest:false,depthWrite:false});
+      const probe=new THREE.Mesh(new THREE.BoxGeometry(3,3,3),probeMat);
+      probe.position.set(camera.position.x,camera.position.y,camera.position.z-10);
+      probe.name='ForensicMaterialProbe';
+      sky.visible=false;
+      scene.add(probe);
+      renderer.setClearColor(0x101010,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      scene.remove(probe);
+      probe.geometry.dispose();
+      probeMat.dispose();
+      sky.visible=priorSkyVisible;
+      renderer.setClearColor(priorClear,priorAlpha);
+    }else if(rawUncompiled){
       const priorSkyVisible=sky.visible;
       const changed=[];
       sky.visible=false;

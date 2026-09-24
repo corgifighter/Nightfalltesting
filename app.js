@@ -35,6 +35,7 @@ const rawNormalDirect=params.get('normaldirect')==='1';
 const rawUncompiled=params.get('uncompiled')==='1';
 const rawLambertDirect=params.get('lambertdirect')==='1';
 const rawFlatDirect=params.get('flatdirect')==='1';
+const rawFrameDirect=params.get('framedirect')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3614,6 +3615,54 @@ try{
       });
       scene.visible=true;
       window.__HEARTHMERE_FORENSIC_FLAT_DIRECT_STATS={meshCount,cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray(),sceneChildren:scene.children.length};
+      renderer.setClearColor(0x101820,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+    }else if(rawFrameDirect){
+      // BUILD 113 CAMERA/BOUNDS ISOLATION.
+      // Rebuild the successful world-geometry proof, but compute aggregate world bounds
+      // and explicitly frame those bounds. This removes camera target/orientation and
+      // clipping-distance ambiguity from the remaining diagnostic.
+      let marker=document.getElementById('hm-frame-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-frame-forensic-marker';
+        marker.textContent='BUILD 113 • WORLD AUTO-FRAME';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#6a3d9a',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      const mat=window.__HEARTHMERE_FORENSIC_FRAME_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_FRAME_DIRECT_MAT=new THREE.MeshBasicMaterial({color:0x39ff88,side:THREE.DoubleSide,fog:false,transparent:false,depthTest:false,depthWrite:false}));
+      sky.visible=false;
+      const bounds=new THREE.Box3();
+      const box=new THREE.Box3();
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        o.visible=true;
+        if(o.isMesh){
+          meshCount++;
+          o.material=mat;
+          o.frustumCulled=false;
+          o.updateWorldMatrix(true,false);
+          box.setFromObject(o);
+          if(!box.isEmpty())bounds.union(box);
+        }
+      });
+      scene.visible=true;
+      const center=bounds.getCenter(new THREE.Vector3());
+      const size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,8);
+      const fov=THREE.MathUtils.degToRad(camera.fov);
+      const distance=Math.max(radius/Math.tan(fov/2)*1.15,12);
+      const dir=new THREE.Vector3(1,.62,1).normalize();
+      camera.position.copy(center).addScaledVector(dir,distance);
+      camera.near=.05;
+      camera.far=Math.max(3000,distance+radius*3);
+      camera.lookAt(center);
+      camera.updateProjectionMatrix();
+      controls.target.copy(center);
+      controls.update();
+      window.__HEARTHMERE_FORENSIC_FRAME_STATS={meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance,near:camera.near,far:camera.far};
       renderer.setClearColor(0x101820,1);
       renderer.clear(true,true,true);
       renderer.render(scene,camera);

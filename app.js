@@ -3549,7 +3549,24 @@ try{
         color:0xbfc1bd,side:THREE.DoubleSide,fog:false,transparent:false,opacity:1,
         depthTest:true,depthWrite:true
       }));
+      // BUILD 111 execution marker: this banner is deliberately impossible to
+      // confuse with the production UI. It proves that this exact forensic branch
+      // is executing on the phone, independent of the rendered world result.
+      let marker=document.getElementById('hm-lambert-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');
+        marker.id='hm-lambert-forensic-marker';
+        marker.textContent='BUILD 111 • LAMBERT DIRECT ACTIVE';
+        Object.assign(marker.style,{
+          position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',
+          zIndex:'99999',padding:'8px 14px',borderRadius:'8px',
+          background:'#8b1e1e',color:'#fff',font:'700 13px/1.2 monospace',
+          letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'
+        });
+        document.body.appendChild(marker);
+      }
       sky.visible=false;
+      renderer.setClearColor(0x101820,1);
       let meshCount=0;
       scene.traverse(o=>{
         if(o===scene||o===sky)return;

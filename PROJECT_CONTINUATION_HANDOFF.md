@@ -673,3 +673,19 @@ Interpret the hardened test:
 - Partial world: identify which root/group survives and isolate the missing layer.
 
 Do not change fog, PMREM, tone mapping, cinematic grade, or lighting until this hardened geometry test identifies the responsible layer.
+
+
+## Build 107 — post-build world probe
+
+The hardened `basicdirect` test still produced no visible world geometry on the phone. This does **not** yet justify changing fog, lighting, post-processing, or assets. A new forensic mode was added that runs **after the entire async world-construction pipeline has completed**, then traverses the complete scene, forces hierarchy visibility, replaces every mesh material with a known-good white `MeshBasicMaterial`, disables frustum culling, computes aggregate world bounds, adds a red 3-unit anchor cube at the camera target, and performs a direct `renderer.render(scene,camera)`.
+
+Test URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&worldprobe=1`
+
+Interpretation:
+- Red anchor + white world: production geometry exists and the failure is in the earlier diagnostic timing/path; move into material/shader isolation.
+- Red anchor only: world meshes exist but their aggregate placement/visibility is not in the camera view; inspect recorded bounds and transforms.
+- Blank: if the red anchor is also absent, this is a direct-render invocation/timing problem despite the previously successful isolated cube, so inspect the render-loop/diagnostic branch itself rather than guessing about fog.
+- Any visible subset: isolate the surviving world roots by name/type before touching production rendering.
+
+Commit: `2611cce6993bc887bc0f4678d22932d21bf6bde3`

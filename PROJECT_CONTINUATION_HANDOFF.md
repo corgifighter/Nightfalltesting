@@ -689,3 +689,32 @@ Interpretation:
 - Any visible subset: isolate the surviving world roots by name/type before touching production rendering.
 
 Commit: `2611cce6993bc887bc0f4678d22932d21bf6bde3`
+
+## Build 108 — WORLD PROBE RESULT AND NEXT ISOLATION
+
+User verified `?raw=1&worldprobe=1`: the red 3-unit probe cube is visible; walking the player over the cube makes the player silhouette visibly contrast against it; no other world geometry is visibly apparent.
+
+Important interpretation:
+- Uniform white is NOT a sufficient explanation. The probe uses MeshBasicMaterial on a dark clear color, so any world mesh actually inside the camera frustum should still have been visible.
+- The result therefore points toward a remaining distinction between world mesh placement/frustum visibility and the production material/color pipeline.
+- Because the red anchor renders, the direct renderer/camera path is still proven.
+- Do not change fog, lighting, tone mapping, cinematic grade, PMREM, or production assets based on this result.
+
+Build 108 changed only the forensic world probe:
+- excludes the sky from aggregate world bounds;
+- forces the complete hierarchy visible;
+- disables frustum culling;
+- replaces every world mesh with a vivid, distinct MeshBasicMaterial color;
+- disables depth testing/writing for the diagnostic materials so one hidden foreground mesh cannot mask all others;
+- keeps the diagnostic direct-render path active through subsequent raw frames instead of relying on a single one-time render;
+- records aggregate bounds/camera/target telemetry.
+
+Commit: `8f7c42d527cf23cd737b7bb518b0f6fcc507b520`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&worldprobe=1`
+
+Interpretation:
+- Vivid colored world appears: world geometry is in the camera frustum; the previous white result was a visibility/readability issue and production material isolation can begin.
+- Only red cube/player remains: world meshes are not reaching the current camera frustum despite forced visibility/culling bypass; inspect aggregate bounds and transforms next.
+- Vivid partial geometry: identify which world roots/layers occupy the frustum before touching production rendering.

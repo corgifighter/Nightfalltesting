@@ -23,7 +23,9 @@ function worldRandom(){
   return ((t^(t>>>14))>>>0)/4294967296;
 }
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
-const forensicMode=new URLSearchParams(location.search).get('forensic')||'';
+const params=new URLSearchParams(location.search);
+const forensicMode=params.get('forensic')||'';
+const hideClouds=params.get('clouds')==='0';
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
@@ -272,7 +274,7 @@ function cloudTexture(){
 }
 const cloudMap=cloudTexture(),clouds=[];
 for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudMap,color:0xffffff,transparent:true,opacity:.13+.035*(i%4),depthWrite:false,fog:false}));sp.position.set(-95+i*16,42+(i%5)*7,-78-(i%4)*22);sp.scale.set(18+(i%3)*9,6+(i%2)*3,1);sp.userData.speed=.12+(i%3)*.035;scene.add(sp);clouds.push(sp);}
-if(forensicMode==='clouds'){clouds.forEach(o=>o.visible=false);window.__HEARTHMERE_FORENSIC_CLOUDS=true;}
+if(forensicMode==='clouds'||hideClouds){clouds.forEach(o=>o.visible=false);window.__HEARTHMERE_FORENSIC_CLOUDS=true;}
 const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xfff0d9,transparent:true,opacity:.72}));
 sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 

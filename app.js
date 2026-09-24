@@ -3537,24 +3537,43 @@ try{
       for(const [mat,hook,needs] of changed){mat.onBeforeCompile=hook;mat.needsUpdate=true;}
       sky.visible=priorSkyVisible;
     }else if(rawLambertDirect){
-      // Geometry/material-control test: replace every visible mesh with a plain Lambert
-      // material. Unlike MeshNormalMaterial this still exercises the renderer's lighting
-      // path, but removes PBR, texture, normal-map, and custom shader complexity.
+      // BUILD 109 HARDENED LAMBERT DIRECT.
+      // This is the decisive material-family test after the uncompiled-hook test.
+      // Walk the complete scene graph (not traverseVisible), force every ancestor and
+      // mesh visible, disable culling, and replace every mesh material with one shared
+      // plain Lambert material. This removes PBR textures, normal maps, transparency,
+      // custom shader hooks, and material-specific state while retaining real geometry,
+      // transforms, camera, and renderer lighting.
       const priorSkyVisible=sky.visible;
-      const changed=[];
-      const mat=window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT=new THREE.MeshLambertMaterial({color:0xbfc1bd,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true}));
+      const mat=window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT||(window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_MAT=new THREE.MeshLambertMaterial({
+        color:0xbfc1bd,side:THREE.DoubleSide,fog:false,transparent:false,opacity:1,
+        depthTest:true,depthWrite:true
+      }));
       sky.visible=false;
-      scene.traverseVisible(o=>{
-        if(!o.isMesh||o===sky)return;
-        changed.push([o,o.material,o.frustumCulled,o.visible]);
-        o.material=mat;
-        o.frustumCulled=false;
+      let meshCount=0;
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
         o.visible=true;
+        if(o.isMesh){
+          meshCount++;
+          o.material=mat;
+          o.frustumCulled=false;
+          o.visible=true;
+        }
       });
+      scene.visible=true;
+      window.__HEARTHMERE_FORENSIC_LAMBERT_DIRECT_STATS={
+        meshCount,
+        cameraPosition:camera.position.toArray(),
+        cameraTarget:controls.target.toArray(),
+        sceneChildren:scene.children.length
+      };
       renderer.clear(true,true,true);
       renderer.render(scene,camera);
-      for(const [o,m,f,v] of changed){o.material=m;o.frustumCulled=f;o.visible=v;}
-      sky.visible=priorSkyVisible;
+      // Intentionally leave the forensic material state active for the URL session.
+      // This prevents later animation/composer passes from restoring the production
+      // material state and makes the screenshot a deterministic A/B comparison.
+      sky.visible=false;
     }else if(rawNormalDirect){
       const priorSkyVisible=sky.visible;
       const changed=[];

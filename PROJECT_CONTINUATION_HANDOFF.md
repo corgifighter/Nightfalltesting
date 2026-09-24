@@ -939,3 +939,27 @@ Interpretation:
 - World appears: player-follow/OrbitControls state is the root of the blank normal view. Fix the production camera system, not materials.
 - World remains absent: the issue is specific to this world region/camera relationship; compare the fixed camera against the successful auto-frame and explicitly frame a known authored region.
 
+
+## Build 116 — FIXED CAMERA + PRODUCTION MATERIALS
+
+Build 115 showed the complete world can be rendered from a fixed camera at the authored starting relationship, using forensic materials. This means the camera can physically see world geometry from that relationship.
+
+Build 116 adds `?raw=1&fixedprod=1`:
+- disables OrbitControls;
+- fixes camera at `(14.6,8.2,44.8)`;
+- looks directly at `(0,.72,30)`;
+- leaves all production world materials/shaders untouched;
+- bypasses EffectComposer;
+- directly renders with the production renderer.
+
+Purpose: cleanly separate **camera/control state** from **production material/shader state**.
+
+Commit: `82028560681386e8403aff72c68e658e7f9fdb7b`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixedprod=1`
+
+Interpretation:
+- world appears: production materials are valid and normal camera/control orientation/state is the remaining problem.
+- world disappears: fixed camera works geometrically but production materials/shaders are the remaining issue; then test one controlled production material at a time from this fixed camera.
+

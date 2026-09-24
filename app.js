@@ -3442,14 +3442,23 @@ try{
       const priorAlpha=renderer.getClearAlpha();
       const probeMat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,fog:false,depthTest:false,depthWrite:false});
       const probe=new THREE.Mesh(new THREE.BoxGeometry(3,3,3),probeMat);
-      probe.position.set(camera.position.x,camera.position.y,camera.position.z-10);
+      const probeDirection=new THREE.Vector3();
+      camera.getWorldDirection(probeDirection);
+      probe.position.copy(camera.position).addScaledVector(probeDirection,8);
       probe.name='ForensicMaterialProbe';
       sky.visible=false;
+      const hidden=[];
+      scene.traverse(o=>{
+        if(o===probe || o===sky || !o.visible)return;
+        hidden.push([o,o.visible]);
+        o.visible=false;
+      });
       scene.add(probe);
       renderer.setClearColor(0x101010,1);
       renderer.clear(true,true,true);
       renderer.render(scene,camera);
       scene.remove(probe);
+      for(const [o,v] of hidden)o.visible=v;
       probe.geometry.dispose();
       probeMat.dispose();
       sky.visible=priorSkyVisible;

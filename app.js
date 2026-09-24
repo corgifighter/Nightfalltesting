@@ -56,7 +56,14 @@ const rawArchitectureScalar=params.get('archscalar')==='1';
 // BUILD 132 PIPELINE CONTROL: render the untouched production scene directly, bypassing
 // EffectComposer while preserving the normal frame state. `nofog=1` disables fog only for
 // that direct render. This is the controlled Phase-3 comparison against the normal composer.
+const rawForensicInventory=params.get('forensicinventory')==='1';
 const rawProductionDirect=params.get('productiondirect')==='1';
+
+function runForensicInventory(){
+ const materials=new Map(),transparent=[],shaderHooks=[],cameraChildren=[],planes=[],sprites=[];let meshCount=0;
+ scene.traverse(o=>{if(o===scene)return;if(o.parent===camera)cameraChildren.push({name:o.name||o.type,type:o.type,visible:o.visible});if(o.isSprite)sprites.push({name:o.name||'Sprite',visible:o.visible});if(o.isMesh&&o.geometry?.type?.includes('Plane'))planes.push({name:o.name||'Plane',visible:o.visible,renderOrder:o.renderOrder||0});if(!o.isMesh)return;meshCount++;const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{if(!m)return;if(!materials.has(m.uuid))materials.set(m.uuid,{uuid:m.uuid,type:m.type,name:m.name||'',color:m.color?.getHexString?.()||null,opacity:m.opacity,transparent:m.transparent,depthTest:m.depthTest,depthWrite:m.depthWrite,side:m.side,renderOrder:o.renderOrder||0,map:!!m.map,normalMap:!!m.normalMap,emissive:m.emissive?.getHexString?.()||null,emissiveIntensity:m.emissiveIntensity??null,hook:m.onBeforeCompile!==THREE.Material.prototype.onBeforeCompile,customKey:!!m.customProgramCacheKey,owners:[]});materials.get(m.uuid).owners.push(o.name||o.type);if(m.transparent||(m.opacity??1)<.999)transparent.push({object:o.name||o.type,material:m.name||m.type,opacity:m.opacity,depthWrite:m.depthWrite,depthTest:m.depthTest,renderOrder:o.renderOrder||0});if(m.onBeforeCompile!==THREE.Material.prototype.onBeforeCompile||m.customProgramCacheKey)shaderHooks.push({object:o.name||o.type,material:m.name||m.type,type:m.type});});});
+ const result={build:133,meshCount,materialCount:materials.size,cameraChildren,planeMeshes:planes,sprites,transparentCount:transparent.length,transparentCandidates:transparent.slice(0,200),shaderHookCount:shaderHooks.length,shaderCandidates:shaderHooks.slice(0,200),materials:[...materials.values()].sort((a,b)=>b.owners.length-a.owners.length).slice(0,200)};window.__HEARTHMERE_FORENSIC_INVENTORY=result;let el=document.getElementById('hm-forensic-inventory');if(!el){el=document.createElement('pre');el.id='hm-forensic-inventory';Object.assign(el.style,{position:'fixed',inset:'8px',zIndex:'100000',overflow:'auto',background:'rgba(7,10,12,.96)',color:'#dce8e4',padding:'12px',font:'11px/1.35 monospace',whiteSpace:'pre-wrap',pointerEvents:'none'});document.body.appendChild(el);}el.textContent='BUILD 133 • PRODUCTION STATE INVENTORY\\n'+JSON.stringify(result,null,2);
+}
 const rawProductionDirectNoFog=rawProductionDirect&&params.get('nofog')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
@@ -3504,7 +3511,7 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawProductionDirect){
+    if(rawForensicInventory){runForensicInventory();renderer.clear(true,true,true);renderer.render(scene,camera);}else if(rawProductionDirect){
       // BUILD 132: FULL PRODUCTION DIRECT-RENDER CONTROL.
       // No material replacement, no scene isolation, no composer. This is deliberately
       // the production scene as authored, rendered through renderer.render() so the first

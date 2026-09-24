@@ -963,3 +963,19 @@ Interpretation:
 - world appears: production materials are valid and normal camera/control orientation/state is the remaining problem.
 - world disappears: fixed camera works geometrically but production materials/shaders are the remaining issue; then test one controlled production material at a time from this fixed camera.
 
+
+## Build 117 — FIXED CAMERA / CUSTOM HOOKS NEUTRALIZED
+
+Build 116 produced no visible geometry with production materials, while Build 115 showed the same fixed camera with forensic MeshBasic materials. Build 117 therefore keeps production materials/properties but replaces every material's `onBeforeCompile` with a no-op and marks materials `needsUpdate`.
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixedhooks=1`
+
+Purpose: isolate the project's many custom shader injections (foliage, foundation, grounding, etc.) from the underlying production material state.
+
+Interpretation:
+- geometry appears: one or more custom shader hooks is causing the production invisibility/compile failure.
+- still blank: the failure is in base material state (textures/transparency/material parameters) rather than custom shader injection.
+
+Commit: `d12667129dc653c148e909b82ac1267aa21ded9b`
+

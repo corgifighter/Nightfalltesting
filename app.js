@@ -139,7 +139,7 @@ composer.addPass(bloomPass);
 const cinematicGradePass=new ShaderPass(new THREE.ShaderMaterial({
   uniforms:{tDiffuse:{value:null},uSaturation:{value:1.055},uContrast:{value:1.045},uWarmth:{value:0.0},uVignette:{value:.065}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-  fragmentShader:'uniform sampler2D tDiffuse;varying vec2 vUv;void main(){vec4 c=texture2D(tDiffuse,vUv);gl_FragColor=c;}'
+  fragmentShader:'uniform sampler2D tDiffuse;uniform float uSaturation;uniform float uContrast;uniform float uWarmth;uniform float uVignette;varying vec2 vUv;void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,uSaturation);c=(c-.5)*uContrast+.5;c*=vec3(1.0+uWarmth,1.0,uWarmth*-0.55);float d=distance(vUv,vec2(.5));c*=1.0-smoothstep(.30,.82,d)*uVignette;gl_FragColor=vec4(max(c,0.0),1.0);}'
 }));
 composer.addPass(cinematicGradePass);
 // EffectComposer renders into an intermediate color space. OutputPass is the
@@ -152,7 +152,7 @@ let postProcessingError=null;
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.AgXToneMapping;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.02;
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
@@ -2782,7 +2782,7 @@ function buildBeautyLightingPass(){
   hemi.color.set(0xf4f7ef);hemi.groundColor.set(0x2c3028);hemi.intensity=1.12;
   moon.intensity=.055;
   scene.environmentIntensity=.38;
-  renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.08;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   // Soft directional rim separates the hero and major silhouettes from the landscape.
   if(!scene.getObjectByName('BeautyRim')){
     const rim=new THREE.DirectionalLight(0x9cc7d6,.42);rim.name='BeautyRim';rim.position.set(34,54,-72);scene.add(rim);
@@ -2991,7 +2991,7 @@ function buildGraphicsFoundationV2(){
   // Renderer/presentation: preserve a rich HDR-like response while keeping the
   // mobile target conservative. Three.js recommends environment lighting for PBR
   // materials, and the scene already supplies a PMREM environment.
-  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.075;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.transmissionResolutionScale=.55;
@@ -3964,7 +3964,7 @@ function buildWorldArtDirectionV3(){
 
   // 7) Presentation: stronger but controlled cinematic separation. This is intentionally
   // below "effect overload"; the geometry and composition carry the image.
-  renderer.toneMapping=THREE.AgXToneMapping;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.10;
   scene.environmentIntensity=.44;
   sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;

@@ -51,6 +51,7 @@ const rawArchitectureWire=params.get('archwire')==='1';
 const rawArchitectureView=params.get('archview')==='1';
 const rawArchitectureLit=params.get('archlit')==='1';
 const rawArchitectureProd=params.get('archprod')==='1';
+const rawArchitectureMapless=params.get('archmapless')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
 const rawWorldProbe=params.get('worldprobe')==='1';
 window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
@@ -3950,6 +3951,84 @@ try{
       camera.lookAt(center);camera.updateProjectionMatrix();
       window.__HEARTHMERE_FORENSIC_FRAME_PROD_STATS={meshCount,boundsEmpty:bounds.isEmpty(),min:bounds.min.toArray(),max:bounds.max.toArray(),center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),distance,far:camera.far};
       renderer.setClearColor(0x101820,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+    }else if(rawArchitectureMapless){
+      // BUILD 130: HERO ARCHITECTURE AUTHORED COLORS / NO TEXTURE MAPS.
+      // Build 128 is the known-good material baseline. Build 129 restored authored
+      // production maps with shader hooks neutralized and the user reports black roofs
+      // plus flat tan walls. This branch keeps the exact proven camera/light/direct-render
+      // setup, clones the authored materials, but removes every image map. It therefore
+      // isolates the map/color-space side of the authored material stack from the plain
+      // material colors and geometry. No geometry, camera, fog, lighting, or post-processing
+      // changes are permitted here.
+      let marker=document.getElementById('hm-archmapless-forensic-marker');
+      if(!marker){
+        marker=document.createElement('div');marker.id='hm-archmapless-forensic-marker';
+        marker.textContent='BUILD 130 • HERO ARCHITECTURE MAPLESS MATERIALS';
+        Object.assign(marker.style,{position:'fixed',left:'50%',top:'8px',transform:'translateX(-50%)',zIndex:'99999',padding:'8px 14px',borderRadius:'8px',background:'#4d5b3a',color:'#fff',font:'700 13px/1.2 monospace',letterSpacing:'.04em',pointerEvents:'none',boxShadow:'0 2px 10px rgba(0,0,0,.45)'});
+        document.body.appendChild(marker);
+      }
+      controls.enabled=false;sky.visible=false;scene.visible=true;
+      const candidates=[];
+      scene.traverse(o=>{
+        if(o===scene||o===sky)return;
+        if(o.userData?.architectureTier==='hero')candidates.push(o);
+        else if(o.parent===scene)o.visible=false;
+      });
+      const focus=candidates.find(o=>o.userData?.assetName==='inn')||candidates.find(o=>o.userData?.architectureType==='inn')||candidates.reduce((best,o)=>{
+        if(!best)return o;
+        const dx=o.position.x+14,dz=o.position.z+13;
+        const bx=best.position.x+14,bz=best.position.z+13;
+        return Math.hypot(dx,dz)<Math.hypot(bx,bz)?o:best;
+      },null);
+      let meshCount=0,mapCount=0,normalCount=0;
+      candidates.forEach(root=>{
+        root.visible=true;
+        root.traverse(o=>{
+          if(!o.isMesh||!o.geometry)return;
+          o.frustumCulled=false;
+          const source=o.material;
+          const materials=Array.isArray(source)?source:[source];
+          const copies=materials.map(m=>{
+            if(!m)return m;
+            const c=m.clone();
+            if(c.map)mapCount++;
+            if(c.normalMap)normalCount++;
+            c.map=null;c.normalMap=null;c.roughnessMap=null;c.metalnessMap=null;
+            c.aoMap=null;c.emissiveMap=null;
+            c.onBeforeCompile=()=>{};
+            if(c.customProgramCacheKey)c.customProgramCacheKey=()=> 'hm_build130_mapless';
+            c.needsUpdate=true;
+            return c;
+          });
+          o.material=Array.isArray(source)?copies:copies[0];
+          meshCount++;
+        });
+      });
+      const targetRoot=focus||candidates[0]||null;
+      const bounds=new THREE.Box3();
+      if(targetRoot){targetRoot.updateWorldMatrix(true,true);bounds.setFromObject(targetRoot);}
+      const center=bounds.getCenter(new THREE.Vector3());
+      const size=bounds.getSize(new THREE.Vector3());
+      const radius=Math.max(size.length()*.5,4);
+      const viewDir=new THREE.Vector3(.62,.30,1).normalize();
+      const distance=Math.max(radius/Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*1.05,10);
+      camera.position.copy(center).addScaledVector(viewDir,distance);
+      camera.position.y=Math.max(camera.position.y,center.y+radius*.42);
+      camera.near=.05;camera.far=Math.max(500,distance+radius*4);
+      camera.lookAt(center);camera.updateProjectionMatrix();
+      scene.updateMatrixWorld(true);
+      const oldFog=scene.fog;scene.fog=null;
+      window.__HEARTHMERE_FORENSIC_ARCH_MAPLESS_STATS={
+        rootCount:candidates.length,meshCount,mapCount,normalCount,
+        focus:targetRoot?.uuid||null,boundsEmpty:bounds.isEmpty(),
+        center:center.toArray(),size:size.toArray(),camera:camera.position.toArray(),
+        target:center.toArray(),distance,near:camera.near,far:camera.far,
+        hoverDisabled:true,textureMapsRemoved:true,customShaderHooksNeutralized:true
+      };
+      renderer.setClearColor(0x687276,1);
+      renderer.clear(true,true,true);
+      renderer.render(scene,camera);
+      scene.fog=oldFog;
     }else if(rawArchitectureProd){
       // BUILD 129: HERO ARCHITECTURE PRODUCTION-MATERIAL ISOLATION.
       // Build 128 established that the authored hero building is healthy when production

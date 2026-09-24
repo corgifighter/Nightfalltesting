@@ -601,3 +601,40 @@ DO NOT reset the plan.
 DO NOT downgrade the ambition.
 DO NOT settle.
 CONTINUE THE DEEP WORK.
+
+
+---
+
+# 21. BUILD 105 FORENSIC BREAKTHROUGH — SCENE ROOT VISIBILITY BUG
+
+**Identified after source inspection of commit `126e07a04c8df7609e9bdd2cde2ae2aaf2d226ce`.**
+
+The Build 105 material-probe test was not actually testing the known-good cube correctly. Its code traversed the entire scene and set visible=false without excluding the root `scene` object. Because `scene` itself is traversed, the diagnostic set **`scene.visible = false`**. It then added the cube as a child of that invisible Scene and called `renderer.render(scene,camera)`. An invisible root Scene suppresses the entire render tree, including the probe. The cleanup restored the child objects but never restored the Scene root visibility.
+
+This precisely explains the user's latest observation: **“No cube or geometry in sight.”**
+
+It is therefore **not evidence that MeshBasicMaterial, the renderer, the camera, or the WebGL framebuffer cannot display a trivial cube.** The diagnostic itself was invalid.
+
+### Surgical fix committed
+Commit: `b9eccd388e478305e582fb4c374129b516ddf5de`
+
+The probe now:
+- explicitly excludes `scene` from the hide traversal;
+- records `priorSceneVisible`;
+- explicitly sets `scene.visible=true` before the probe render;
+- restores `scene.visible` after the probe;
+- otherwise leaves the Build 105 diagnostic architecture unchanged.
+
+No production material, lighting, post-processing, world geometry, or modern renderer system was changed by this fix.
+
+### NEXT REQUIRED TEST
+
+Retest the corrected known-good cube probe:
+
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&materialprobe=1`
+
+Expected diagnostic behavior if the probe path is now valid: a plainly visible white cube on a dark gray background. This is a **diagnostic expectation, not yet a verified runtime result** until the user launches the deployed commit.
+
+If the cube appears, immediately proceed to the next controlled source-level comparison rather than randomly changing materials. If it still does not appear, inspect renderer/WebGL state and framebuffer/viewport/scissor state around the direct render call.
+
+Do not restart the investigation from fog, PMREM, lighting, cinematic grade, or missing world geometry.

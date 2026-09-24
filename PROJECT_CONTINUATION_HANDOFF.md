@@ -1089,3 +1089,12 @@ Interpretation:
 - world disappears: production material/shader state is implicated, now with the camera confound removed.
 
 Build 121's shared-basic test should not be treated as a new diagnostic conclusion; it merely reproduces the same fixed-camera condition that was already unproven.
+
+
+## Build 123 - ARCHITECTURE-ONLY FRAME
+
+Build 122 shows clouds, faint river and tiny location labels but no visible architecture. The full-world auto-frame is dominated by the large terrain bounds, making village buildings very small. Build 123 isolates roots marked architectureTier=hero and frames only those building bounds, while leaving production materials untouched.
+
+URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archframe=1
+
+Commit: ea99a54a17a3f70879a944b041388b8e8304ef21

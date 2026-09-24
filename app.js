@@ -23,6 +23,8 @@ function worldRandom(){
   return ((t^(t>>>14))>>>0)/4294967296;
 }
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
+const forensicMode=new URLSearchParams(location.search).get('forensic')||'';
+window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -252,6 +254,7 @@ function cloudTexture(){
 }
 const cloudMap=cloudTexture(),clouds=[];
 for(let i=0;i<14;i++){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudMap,color:0xffffff,transparent:true,opacity:.13+.035*(i%4),depthWrite:false,fog:false}));sp.position.set(-95+i*16,42+(i%5)*7,-78-(i%4)*22);sp.scale.set(18+(i%3)*9,6+(i%2)*3,1);sp.userData.speed=.12+(i%3)*.035;scene.add(sp);clouds.push(sp);}
+if(forensicMode==='clouds'){clouds.forEach(o=>o.visible=false);window.__HEARTHMERE_FORENSIC_CLOUDS=true;}
 const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,20),new THREE.MeshBasicMaterial({color:0xfff0d9,transparent:true,opacity:.72}));
 sunDisc.position.set(-152,112,-180);sunDisc.renderOrder=-1;scene.add(sunDisc);
 
@@ -2963,12 +2966,8 @@ function buildCinematicWorldDepthPass(){
     m.scale.y=.45;
     root.add(m);
   };
-  // BUILD 89 FORENSIC: remove only the two broad world-space mist bands.
-  // The ridge geometry and distant tree line remain untouched. These planes are
-  // transparent MeshBasicMaterial layers spanning most of the playable view and
-  // are the closest current source-level match to a static camera-lens wash.
-  // Restore them after the source is isolated.
-
+  makeMistBand(.8,-58,170,12,0xd5d6c0,.055);
+  makeMistBand(1.5,-88,210,16,0xb9c8bd,.035);
 
   // A restrained distant tree line gives the settlement a believable enclosed valley
   // without spending geometry on the playable center.
@@ -3187,7 +3186,7 @@ function buildHighEndAtmospherePass(){
     sky.material.uniforms.horizon.value.set(0xb9c4bd);
     sky.material.uniforms.sun.value.set(0xffe0bd);
   }
-  sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);sunDisc.visible=false; // BUILD 90 forensic: isolate the large transparent sun-disc layer
+  sunDisc.material.opacity=.72;sunDisc.scale.setScalar(1.15);
 }
 const tmpTarget=new THREE.Vector3();
 const tmpMove=new THREE.Vector3();

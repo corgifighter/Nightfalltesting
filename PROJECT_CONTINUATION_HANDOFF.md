@@ -1003,3 +1003,27 @@ Purpose: determine whether the production material pipeline is hiding geometry t
 
 Commit: `82be4747c07c9a5183c537346faad6e792ef0ab7`
 
+
+## Build 119 — UNTEXTURED LIT GEOMETRY
+
+Build 118 normalized transparency/depth/visibility state but still showed only a small black diamond and minor FX. The production texture path is now the next controlled suspect, especially because `applyCC0Materials()` replaces the terrain/architecture maps with remote Poly Haven textures before shader compilation.
+
+Build 119:
+- fixed camera unchanged;
+- all meshes visible / frustum culling disabled;
+- replaces every mesh material with a fresh `MeshStandardMaterial`;
+- preserves each source material's base color, roughness, and metalness;
+- removes all color/normal/roughness/metalness/alpha/displacement maps;
+- removes all custom shader hooks;
+- uses DoubleSide;
+- direct renderer, no composer.
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixeduntextured=1`
+
+Interpretation:
+- terrain/buildings return: production texture/map pipeline is the culprit; investigate CC0 texture loading/replacement first.
+- still blank: texture maps are not the root cause; next isolate production geometry/material assignment itself.
+
+Commit: `9b41e2c33b54fa6e183a465f40b9eb7f41d3c967`
+

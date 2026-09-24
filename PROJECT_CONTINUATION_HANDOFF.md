@@ -753,3 +753,35 @@ Do NOT undo the production material system or redesign assets. The next comparis
 
 Do not return to random fog/lighting changes. We now have a controlled A/B path.
 
+
+## Build 109 — UNCOMPILED HOOK TEST RESULT
+
+User tested:
+`?raw=1&uncompiled=1`
+
+Result: **no visual change**. The production world remained essentially a uniform gray-green field with only the player marker/small silhouettes visible.
+
+This means simply replacing the `onBeforeCompile` hooks with no-op hooks during a direct render does **not** restore the missing world.
+
+### Build 109 next isolation
+
+The existing Lambert forensic branch was hardened so it now:
+- traverses the complete scene graph rather than `traverseVisible`;
+- forces every ancestor/object visible;
+- replaces every world mesh with one shared plain `MeshLambertMaterial`;
+- disables frustum culling;
+- removes PBR textures, normal maps, transparency, custom shader hooks, and material-specific shader state;
+- bypasses EffectComposer via the raw direct render;
+- leaves the forensic state active for the URL session.
+
+Commit: `232f135be63be542d4e19aaf061779f82f986f0f`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&lambertdirect=1`
+
+Interpretation:
+- If the world appears: production PBR/material configuration is the culprit; isolate texture/opacity/material state next.
+- If the world still disappears: the failure is not specific to production shader hooks or PBR materials. Move downward to renderer state/scene render-state or inspect the actual mesh draw state and transforms, while retaining the successful Build 108 world probe as the geometry baseline.
+
+Do not change production art, fog, lighting, or assets until this test is resolved.
+

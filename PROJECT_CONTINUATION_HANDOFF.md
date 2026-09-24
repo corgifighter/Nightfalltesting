@@ -1042,3 +1042,26 @@ If geometry does not appear, investigate the exact difference between Build 115 
 
 Commit: `a64d3d10ce10d3d6ba178d19009094cda1e03bdd`
 
+
+
+## Build 121 — SHARED BASIC REPRODUCTION
+
+Build 120 unexpectedly stayed blank despite using fresh MeshBasicMaterials. Comparison with the known-positive Build 115 revealed a meaningful implementation difference: Build 115 uses **one shared MeshBasicMaterial**, while Build 120 creates a new material for every mesh. On mobile this can create a huge number of unique shader/material programs and produce a false diagnostic failure.
+
+Build 121 exactly reproduces the positive Build 115 setup:
+- one shared fresh MeshBasicMaterial;
+- fixed camera `(14.6,8.2,44.8)`;
+- target `(0,.72,30)`;
+- controls disabled;
+- sky hidden;
+- all scene nodes forced visible;
+- frustum culling disabled;
+- depth disabled;
+- direct renderer.
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixedbasicshared=1`
+
+This is the control before interpreting Builds 117–120. If it restores the green world, Build 120/119 were confounded by excessive unique material creation, and the next tests must use shared materials only.
+
+Commit: `e2cdd898abc4c4099e6929f2fa54a921144a3073`

@@ -3645,7 +3645,15 @@ try{
           o.frustumCulled=false;
           o.updateWorldMatrix(true,false);
           box.setFromObject(o);
-          if(!box.isEmpty())bounds.union(box);
+          const finiteBox=box.isEmpty() &&
+            Number.isFinite(box.min.x)&&Number.isFinite(box.min.y)&&Number.isFinite(box.min.z)&&
+            Number.isFinite(box.max.x)&&Number.isFinite(box.max.y)&&Number.isFinite(box.max.z)
+            ? false : (
+              Number.isFinite(box.min.x)&&Number.isFinite(box.min.y)&&Number.isFinite(box.min.z)&&
+              Number.isFinite(box.max.x)&&Number.isFinite(box.max.y)&&Number.isFinite(box.max.z) &&
+              (box.max.x-box.min.x)<600 && (box.max.y-box.min.y)<600 && (box.max.z-box.min.z)<600
+            );
+          if(finiteBox)bounds.union(box);
         }
       });
       scene.visible=true;

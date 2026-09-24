@@ -1179,3 +1179,39 @@ Next action:
 4. Once the neutral-lit test is positive, restore production materials and isolate their shader features one layer at a time, preserving the known-good camera.
 5. Do not interpret the orange touch response as a new geometry problem; it is consistent with the existing hover-emissive code.
 
+
+
+## Build 128 result — decisive rendering milestone
+The user tested `?raw=1&archlit=1` and clearly saw the hero buildings with dimensional form and basic brownish/neutral materials.
+
+This establishes that, from the meaningful Warm Lantern camera:
+- hero architecture geometry is real and spatially correct;
+- the authored building bounds/camera framing are valid;
+- normals/transforms are sufficient for dimensional shading;
+- actual scene lighting can illuminate the building;
+- the black appearance seen with production materials is NOT a fundamental geometry/camera failure.
+
+Build 128 used fresh neutral `MeshStandardMaterial`, disabled hover, removed fog, hid sky, and direct-rendered without composer/postprocessing. Therefore the next investigation must move upward into the authored production material stack rather than returning to geometry/camera diagnostics.
+
+## Build 129 — current test
+Commit: `f3f115c9f9ea639a82e10a8034d489b5c46c76ca`
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&archprod=1`
+
+Purpose:
+- keep the exact successful Build-128 meaningful architecture camera;
+- restore the building's authored production materials and texture maps;
+- clone those materials so the diagnostic does not mutate the source materials;
+- neutralize `onBeforeCompile` / custom shader cache hooks;
+- keep hover disabled;
+- hide sky and temporarily remove fog;
+- bypass composer/post-processing;
+- direct render.
+
+Interpretation:
+- If Build 129 remains properly visible/dimensional, authored textures/material properties are fundamentally healthy and the custom shader hooks are implicated.
+- If Build 129 becomes black/dark again, the problem is in the authored material properties/textures/color-space/map stack even without custom shader mutation.
+- Do not change geometry, camera, terrain, or world lighting based on a Build-129 result; those fundamentals are already positively established.
+
+After Build 129, the next branch should be a controlled production-material decomposition, not broad random edits. Preserve the successful camera and direct render path while isolating maps/features one class at a time.

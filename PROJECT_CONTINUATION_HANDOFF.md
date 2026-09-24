@@ -979,3 +979,27 @@ Interpretation:
 
 Commit: `d12667129dc653c148e909b82ac1267aa21ded9b`
 
+
+## Build 118 — MATERIAL VISIBILITY NORMALIZED
+
+Build 117 showed a small number of production-material objects/FX but no terrain/buildings after custom shader hooks were neutralized. This means custom hooks alone did not restore the world.
+
+Build 118 keeps the production material classes and maps but forcibly normalizes visibility-critical material state:
+- transparent=false
+- opacity=1
+- alphaTest=0
+- depthTest=true
+- depthWrite=true
+- colorWrite=true
+- side=DoubleSide
+- custom onBeforeCompile disabled
+- frustum culling disabled
+- fixed camera retained
+
+URL:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&fixedmat=1`
+
+Purpose: determine whether the production material pipeline is hiding geometry through alpha/transparency/depth/material-state configuration rather than geometry/camera.
+
+Commit: `82be4747c07c9a5183c537346faad6e792ef0ab7`
+

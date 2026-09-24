@@ -868,3 +868,30 @@ Interpretation:
 
 Do not alter production materials, fog, lighting, or assets yet.
 
+
+## Build 113 — AUTO-FRAME WORLD BOUNDS DIAGNOSTIC
+
+Build 112 executed (user saw the diagnostic result) but showed no world geometry even with depth testing and writing disabled.
+
+Build 113 therefore adds `?raw=1&framedirect=1`. It:
+- traverses the complete built world;
+- forces every object visible;
+- disables frustum culling;
+- assigns one vivid MeshBasic material with depth disabled;
+- computes actual transformed aggregate bounds for all world meshes;
+- explicitly moves/reorients the camera to frame the aggregate bounds;
+- expands camera far plane substantially;
+- renders directly, bypassing the composer;
+- displays `BUILD 113 • WORLD AUTO-FRAME`.
+
+This is intended to eliminate camera target/orientation/clipping as the remaining ambiguity.
+
+Commit: `733018fc71fb7a5bb55512722312b315f27979a4`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&framedirect=1`
+
+Interpretation:
+- vivid green world appears: the previous camera/view state was the issue; inspect camera follow/target/clip behavior next.
+- still blank: the world bounds may be pathological or renderer draw state remains the next suspect. The on-screen marker proves execution; the diagnostic stats are also stored in `window.__HEARTHMERE_FORENSIC_FRAME_STATS`.
+

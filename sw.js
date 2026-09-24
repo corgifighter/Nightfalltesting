@@ -40,6 +40,15 @@ self.addEventListener('activate',e=>e.waitUntil(
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
   const url=e.request.url;
+  // app.js is the live renderer/debug target. Always prefer the network so a
+  // newly committed forensic build cannot be hidden behind an older cached module.
+  if(new URL(url).pathname.endsWith('/app.js')){
+    e.respondWith(fetch(e.request).then(res=>{
+      if(res.ok) caches.open(CACHE).then(c=>c.put('./app.js',res.clone()));
+      return res;
+    }).catch(()=>caches.match('./app.js')));
+    return;
+  }
   e.respondWith(caches.match(e.request).then(r=>{
     if(r) return r;
     return fetch(e.request).then(res=>{

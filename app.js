@@ -3448,11 +3448,16 @@ try{
       probe.name='ForensicMaterialProbe';
       sky.visible=false;
       const hidden=[];
+      // Do not traverse/hide the Scene root itself. Scene.visible=false prevents
+      // every descendant—including the probe we add below—from being rendered.
+      // This was the reason the Build 105 known-good cube could disappear.
       scene.traverse(o=>{
-        if(o===probe || o===sky || !o.visible)return;
+        if(o===scene || o===probe || o===sky || !o.visible)return;
         hidden.push([o,o.visible]);
         o.visible=false;
       });
+      const priorSceneVisible=scene.visible;
+      scene.visible=true;
       scene.add(probe);
       renderer.setClearColor(0x101010,1);
       renderer.clear(true,true,true);
@@ -3462,6 +3467,7 @@ try{
       probe.geometry.dispose();
       probeMat.dispose();
       sky.visible=priorSkyVisible;
+      scene.visible=priorSceneVisible;
       renderer.setClearColor(priorClear,priorAlpha);
     }else if(rawUncompiled){
       const priorSkyVisible=sky.visible;

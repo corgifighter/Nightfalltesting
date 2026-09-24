@@ -1126,3 +1126,20 @@ Build 125 still appears as green silhouettes from the fixed camera. Do not assum
 
 URL: https://corgifighter.github.io/Nightfalltesting/?raw=1&archwire=1
 Commit: 17d28e317442943140017af7f3f399856a984af8
+
+
+## BUILD 127 — meaningful hero architecture camera
+Commit: `b67b567f24f93d7cd3544784189921c3a7769f64`
+URL: `https://corgifighter.github.io/Nightfalltesting/?raw=1&archview=1`
+
+Purpose: move beyond the proven-but-artificial architecture diagnostics. Builds 123–126 established that hero architecture roots exist, can be isolated, and are genuinely 3D; however, their synthetic all-architecture camera was not representative of the intended game view. Build 127 adds a clean diagnostic that:
+- isolates the hero architecture layer;
+- selects the authored Warm Lantern vicinity using the stable landmark position when the replacement root has no asset name;
+- computes that building's actual transformed bounds;
+- places a deliberate elevated oblique/front camera from the authored +Z side with a slight +X offset;
+- aims directly at the building's geometric center;
+- leaves production materials untouched;
+- bypasses composer/post-processing for a clean camera/material evidence frame;
+- records camera, target, bounds, and distance telemetry in `window.__HEARTHMERE_FORENSIC_ARCH_VIEW_STATS`.
+
+This is the next required runtime test. If it shows a convincing dimensional building, the camera problem is isolated and the next pass should compare this meaningful view against the normal production camera and then restore the full beauty pipeline. If it still presents as a flat/washed shape despite the wireframe proof, inspect material/light/fog state from this valid camera rather than returning to arbitrary fixed-camera tests.

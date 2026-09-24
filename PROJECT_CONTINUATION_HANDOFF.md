@@ -839,3 +839,32 @@ This test is now binary:
 - If the **BUILD 111 • LAMBERT DIRECT ACTIVE** marker appears, the branch definitely executed; the rendered result can then be interpreted.
 - If the marker does not appear, stop renderer/material analysis: the phone is still not receiving/executing the current app.js and delivery/cache must be investigated further.
 
+
+## Build 112 — LAMBERT EXECUTION CONFIRMED, DEPTH-OCCLUSION TEST
+
+User confirmed the Build 111 banner appeared, so the hardened Lambert branch definitely executes on the phone. The world view nevertheless remained unchanged.
+
+This is significant: the failure survives:
+- direct renderer path;
+- real world geometry;
+- forced hierarchy visibility;
+- disabled frustum culling;
+- plain MeshLambertMaterial;
+- removal of PBR textures/normal maps/custom shader hooks;
+- EffectComposer bypass.
+
+Therefore the investigation should move below material/shader configuration.
+
+Build 112 adds `?raw=1&flatdirect=1`, which uses the real world geometry but forces every mesh to a shared plain `MeshBasicMaterial` with **depthTest=false and depthWrite=false**, plus forced visibility/culling bypass and a visible execution marker.
+
+Commit: `4eb6c2293a8531cea29658248d6c722769b1e5e8`
+
+Next test:
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&flatdirect=1`
+
+Interpretation:
+- World becomes visible: a foreground depth-writing mesh/state is occluding the world. Next step is identify the occluding mesh and correct its render order/depth behavior.
+- World remains invisible: depth occlusion is not the explanation; inspect camera/view transforms, render lists, clipping, or other renderer state while retaining Build 108 as the geometry baseline.
+
+Do not alter production materials, fog, lighting, or assets yet.
+

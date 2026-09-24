@@ -35,6 +35,34 @@ const rawNormalDirect=params.get('normaldirect')==='1';
 const rawUncompiled=params.get('uncompiled')==='1';
 const rawLambertDirect=params.get('lambertdirect')==='1';
 const rawMaterialProbe=params.get('materialprobe')==='1';
+const rawWorldProbe=params.get('worldprobe')==='1';
+window.__HEARTHMERE_FORENSIC_WORLD_PROBE=false;
+function runPostBuildWorldProbe(){
+  if(!rawWorldProbe)return;
+  const prior=[];let meshes=0;let visibleBefore=0;const bounds=new THREE.Box3();const center=new THREE.Vector3();
+  scene.updateMatrixWorld(true);
+  scene.traverse(o=>{
+    if(o===scene)return;
+    if(o.isMesh&&o.geometry){
+      meshes++;
+      if(o.visible)visibleBefore++;
+      prior.push([o,o.visible,o.material,o.frustumCulled]);
+      o.visible=true;o.frustumCulled=false;
+      o.material=new THREE.MeshBasicMaterial({color:0xffffff,fog:false,side:THREE.DoubleSide});
+      o.updateWorldMatrix(true,false);
+      const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty())bounds.union(b);
+    }else if(o.visible===false){prior.push([o,o.visible]);o.visible=true;}
+  });
+  scene.visible=true;sky.visible=false;
+  bounds.getCenter(center);
+  window.__HEARTHMERE_FORENSIC_WORLD_PROBE_STATS={meshes,visibleBefore,sceneRootChildren:scene.children.length,boundsEmpty:bounds.isEmpty(),boundsMin:bounds.min.toArray(),boundsMax:bounds.max.toArray(),boundsCenter:center.toArray(),camera:camera.position.toArray(),target:controls.target.toArray()};
+  const marker=new THREE.Mesh(new THREE.BoxGeometry(3,3,3),new THREE.MeshBasicMaterial({color:0xff3030,fog:false}));
+  marker.position.copy(controls.target);marker.name='WORLD_PROBE_ANCHOR';scene.add(marker);
+  renderer.setClearColor(0x202428,1);renderer.render(scene,camera);
+  window.__HEARTHMERE_FORENSIC_WORLD_PROBE=true;
+  // Keep the probe visible for this diagnostic URL; a reload returns the production scene.
+}
+
 const renderPassOnly=forensicMode==='renderpass';
 window.__HEARTHMERE_FORENSIC_RAW_RENDER=rawRender;
 window.__HEARTHMERE_FORENSIC_MODE=forensicMode||'baseline';
@@ -4429,6 +4457,7 @@ window.__HEARTHMERE_READY_STATE.shadersReady=true;
 window.__HEARTHMERE_READY=window.__HEARTHMERE_READY_STATE.requiredAssetsReady && window.__HEARTHMERE_READY_STATE.visualWorldReady && window.__HEARTHMERE_READY_STATE.shadersReady;
 if(!window.__HEARTHMERE_READY)bootStatus.textContent='World loaded with asset failures — capture disabled.';
 window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
+runPostBuildWorldProbe();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));

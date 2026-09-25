@@ -72,7 +72,7 @@ jobs:
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: ${{ github.ref_name == 'render-lab-modern-2026-09-25' && 'site' || '.' }}
 
       - name: Deploy
         id: deployment

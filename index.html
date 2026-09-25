@@ -40,6 +40,19 @@ window.addEventListener("unhandledrejection",e=>{
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js"}}
 </script>
-<script type="module" src="./app.js?build=69"></script>
-<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
+<script>
+(async()=>{
+  try{
+    if("serviceWorker" in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(_){ }
+  const s=document.createElement("script");
+  s.type="module";
+  s.src="./app.js?build=70";
+  document.body.appendChild(s);
+})();
+</script>
+
 </body></html>

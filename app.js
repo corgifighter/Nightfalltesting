@@ -67,6 +67,8 @@ const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
+// Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
+const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const stageProbeMode=false;
 let stageProbeComplete=false;
 const gl=renderer.getContext();
@@ -3321,6 +3323,48 @@ function readStagePixelStats(target=null){
 }
 function runRenderStageProvenance(){}
 
+function applyColorErrorControl(){
+  if(!colorErrorControl||window.__HEARTHMERE_COLOR_CONTROL_APPLIED)return;
+  window.__HEARTHMERE_COLOR_CONTROL_APPLIED=true;
+  scene.fog=null;scene.background=new THREE.Color(0x6f756f);scene.environment=null;scene.environmentIntensity=0;scene.environmentRotation.set(0,0,0);
+  renderPass.enabled=false;ssaoPass.enabled=false;bloomPass.enabled=false;cinematicGradePass.enabled=false;outputPass.enabled=false;postProcessingFailed=true;
+  renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.transmissionResolutionScale=1;
+  renderer.shadowMap.enabled=false;
+  scene.traverse(o=>{
+    if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);o.intensity=Math.max(.35,Math.min(2.25,o.intensity));o.castShadow=false;}
+    if(o.isMesh||o.isSprite||o.isPoints||o.isLine){o.castShadow=false;o.receiveShadow=false;}
+  });
+  scene.traverse(o=>{
+    if(o.isSprite||o.isPoints||o.isLine){o.visible=false;return;}
+    if(!o.isMesh||!o.material)return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    if(mats.some(m=>m&&(m.transparent||(m.opacity??1)<.999||m.depthTest===false||m.depthWrite===false||m.blending!==THREE.NormalBlending||m.transmission>0||m.alphaHash||m.toneMapped===false)))o.visible=false;
+  });
+  let materialCount=0,customHookCount=0;const seen=new Set();
+  scene.traverse(o=>{
+    if(!o.material)return;const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.forEach(m=>{if(!m||seen.has(m.uuid))return;seen.add(m.uuid);materialCount++;if(typeof m.onBeforeCompile==='function')customHookCount++;
+      m.onBeforeCompile=null;m.onBeforeRender=null;m.customProgramCacheKey=THREE.Material.prototype.customProgramCacheKey;m.needsUpdate=true;
+      if('emissive' in m){m.emissive.set(0x000000);m.emissiveIntensity=0;m.emissiveMap=null;}
+      if('envMap' in m)m.envMap=null;if('envMapIntensity' in m)m.envMapIntensity=0;if('clearcoat' in m)m.clearcoat=0;if('clearcoatMap' in m)m.clearcoatMap=null;
+      if('sheen' in m)m.sheen=0;if('sheenColor' in m)m.sheenColor.set(0x000000);if('iridescence' in m)m.iridescence=0;if('transmission' in m)m.transmission=0;
+      if('attenuationColor' in m)m.attenuationColor.set(0xffffff);if('specularIntensity' in m)m.specularIntensity=0;if('fog' in m)m.fog=false;
+      m.toneMapped=true;m.blending=THREE.NormalBlending;m.depthTest=true;m.depthWrite=true;
+    });
+  });
+  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+  const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;if(destinationMarker)destinationMarker.visible=false;
+  document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+  window.__HEARTHMERE_COLOR_CONTROL={active:true,materialCount,customHookCount,fog:false,environment:false,post:false,toneMapping:'NoToneMapping',outputColorSpace:'sRGB',shadows:false,lights:'neutral-white',customMaterialHooks:false,emissive:false,reflections:false,transmission:false,transparentVisuals:false,cssOverlays:false};
+}
+function enforceColorErrorControlFrame(){
+  if(!colorErrorControl)return;
+  scene.fog=null;scene.environment=null;scene.environmentIntensity=0;renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;
+  scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
+  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+  const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;
+}
+
 function frame(t){
  if(document.hidden)return;
  // Presentation hardening: reset cached WebGL state before the multi-pass chain.
@@ -3399,7 +3443,7 @@ controls.update();
 if(window.__HEARTHMERE_READY)applySterileVisualMode();
 runRenderStageProvenance();
 try{
-  if(!postProcessingFailed) composer.render();
+  if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

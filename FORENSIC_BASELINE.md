@@ -763,3 +763,38 @@ High-value hypothesis: a shared renderer/material lifecycle or WebGL-state inter
 The user has limited screenshot/attachment availability. Perform as much source-level work as possible before requesting another screenshot. Do not make the user launch a chain of low-information tests. Prefer one high-information controlled build after source investigation. Do not claim a visual fix without real runtime evidence.
 
 Do not drift back into micro-detail art work. The current blocker is the rendering/material/state problem. Once it is surgically understood and corrected, restore all legitimate modern systems and return to the original goal: stunningly beautiful, cohesive, immersive RuneScape-inspired visuals with a modern rendering foundation.
+
+# 23. SEPTEMBER 24, 2026 — BUILD 136 DIAGNOSTIC-HARNESS CORRECTION
+
+Build 136 corrected a concrete flaw in the Build-135 fresh-Standard whole-world probe.
+
+The previous `runWorldScalarProbe()` created and assigned a brand-new `MeshStandardMaterial` to every mesh **on every animation frame**. That means the diagnostic itself continuously changed material identity/program requirements while rendering. Three.js documents that material changes requiring different shader configurations can trigger recompilation, and `needsUpdate`/material lifecycle changes are not intended to be performed as an uncontrolled per-frame replacement pattern. This could make a forensic material test collapse into a perpetual shader/program churn condition rather than a valid visual comparison.
+
+Build 136 now:
+- constructs the fresh Standard-material replacements exactly once per diagnostic session;
+- leaves those replacements stable for subsequent frames;
+- explicitly resets renderer state once during diagnostic setup;
+- explicitly targets the default framebuffer;
+- disables scissor testing and restores the full drawing-buffer viewport before each diagnostic draw;
+- records active render target, viewport, scissor and scissor-test state in `window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS`;
+- leaves the production renderer completely unchanged when the diagnostic URL is not used.
+
+This is a **diagnostic-harness correction, not a claim that the root cause has been found**.
+
+## Build 136 test
+
+`https://corgifighter.github.io/Nightfalltesting/?raw=1&worldscalar=1`
+
+Interpretation:
+- If the world becomes visible with fresh Standard materials, Build 135's result was contaminated by its own per-frame material recreation and the material-state investigation can proceed from a valid control.
+- If the world still fails, the stable control has eliminated per-frame material churn as an explanation and the next source-level target remains renderer/material lifecycle and WebGL state.
+- Do not interpret a failure as missing geometry; the normal-material and architecture controls already prove the geometry exists.
+
+## Current repository state
+
+Build 136 commits:
+- app.js: `8d074dcea59b03ddb6d6675262172478865efa03`
+- index.html: `03d723f0dacab2fb1bacac02509e3e42c4ff2153`
+- sw.js: `edbbcf1ddf5579093c6c7723a7c0b21af690b037`
+
+This correction preserves the advanced production world and does not alter the normal launch path.

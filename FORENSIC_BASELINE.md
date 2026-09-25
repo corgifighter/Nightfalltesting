@@ -716,3 +716,50 @@ Do not restart the investigation from fog, PMREM, lighting, cinematic grade, sun
 Do not sacrifice the modern build.
 
 Continue exactly from Build 105.
+
+# 21. SEPTEMBER 24, 2026 — LATEST HANDOFF CORRECTION
+
+Do not begin the next chat by assuming the task is merely to neutralize the haze. The immediate problem is to preserve the real production world, explain why production architecture/material rendering becomes visually suppressed/dark while clean forensic rendering reveals the same geometry, and determine whether that mechanism is related to the original stagnant green/yellow camera-space cast.
+
+The user's remembered history — that something may have improved the haze while architecture subsequently stopped rendering visibly — is a valuable hypothesis, but it is NOT yet proven by repository evidence. Do not state it as fact. Investigate the transition in source/commit history.
+
+## Critical discoveries from Builds 123–134
+
+- Build 123 (ea99a54a17a3f70879a944b041388b8e8304ef21, ?raw=1&archframe=1) isolated hero architecture and showed recognizable building shapes. Hero roots are identified by userData.architectureTier === 'hero'.
+- Build 126 (17d28e317442943140017af7f3f399856a984af8, ?raw=1&archwire=1) showed the architecture as real 3D geometry. The user explicitly confirmed: “Yeah i see they are 3d.”
+- Build 127 (b67b567f24f93d7cd3544784189921c3a7769f64, ?raw=1&archview=1) used a meaningful architecture camera. Black/orange changes were traced to the existing pointer-hover/emissive interaction system, not geometry creation.
+- Build 128 (bcd9e9153a906612c8459d434021034c8e25168a, ?raw=1&archlit=1) is decisive: fresh neutral MeshStandardMaterial plus actual scene lights rendered the hero buildings clearly. User: “Yes i clearly see the buildings and the basic brownish materials.” This proves geometry, transforms, camera, bounds and illumination are healthy.
+- Build 129 (f3f115c9f9ea639a82e10a8034d489b5c46c76ca, ?raw=1&archprod=1) cloned production materials while neutralizing shader hooks. User saw black-filled roofs and tan walls. This demonstrates a substantial difference between the clean material path and production material/scalar path.
+- Build 130 (831f6ae36f938a0b85c6d335990d630753883dc0, ?raw=1&archmapless=1) stripped production texture maps and still looked essentially the same. User clarified roofs have enough color variation and edge lines to identify them. Do not waste time redesigning roof textures.
+- Build 131 (?raw=1&archscalar=1) was intended to use entirely fresh scalar StandardMaterials. It was not runtime-verified; do not invent a result or SHA.
+- Build 132 (f3d4b2642075dcc0b8251394ab8a3ff70fbf27e9) tested production direct rendering, with and without fog. User saw the same yellow haze in both. Therefore EffectComposer is not required for the haze and fog is not the cause. Do not restart generic composer/fog cycling.
+- Build 133 (?raw=1&forensicinventory=1) added source/runtime inventory of materials, transparency, camera children, planes, sprites, shader hooks, ownership, depth/renderOrder, maps and emissive. It was not visually verified because the user had reached the attachment limit.
+- Build 134 (6cac304bbe450272ea182f8498b7184710eae05d, ?raw=1&transparentprobe=1) hid transparent meshes/Sprites and directly rendered the remainder. User reported “No visible geometry.” This is not evidence that transparent objects caused the haze; it demonstrates again that broad raw diagnostics can interact badly with renderer/material/state. Do not continue broad transparent-object elimination.
+
+## Correct Build 105 interpretation
+
+Build 105 was a known-good cube sanity check, not a specific “haze fix hid architecture” experiment. It was reached after NormalMaterial could render the world while Basic/Lambert paths produced gray/blank results. The first material-probe implementation itself was invalid because traversal hid the root scene; this was documented in 402891da9435aef31d39c4d1a8495a00b3eb4b96 and corrected by b9eccd388e478305e582fb4c374129b516ddf5de. The corrected probe was historically verified as a visible white cube in Build 106. Always validate the diagnostic harness before interpreting its output.
+
+## Current evidence matrix
+
+Proven: world geometry exists; hero architecture is genuine 3D; meaningful architecture framing works; fresh neutral StandardMaterial plus real lights clearly renders hero architecture; direct MeshNormalMaterial can render the broader world; production architecture can become very dark/black in isolation; removing production texture maps does not materially change that architecture appearance; production direct rendering retains the yellow haze; production direct rendering with fog removed retains it.
+
+Not proven: that one historical haze fix caused architecture suppression; that architecture shader hooks alone cause the global haze; that black roofs mean missing textures; that Build 131 changed anything; that a particular fullscreen plane/camera child is the haze layer; or that tone mapping/PMREM/lighting is the root cause.
+
+High-value hypothesis: a shared renderer/material lifecycle or WebGL-state interaction may connect production material suppression, raw Basic/Lambert failures, successful NormalMaterial rendering, and the persistent global chroma. This is the next hypothesis to investigate.
+
+# 22. MANDATORY NEXT-INSTANCE WORK ORDER
+
+1. Read this entire manifest before touching the repo.
+2. Inspect the current main source and current app/index/service-worker versions. Do not assume an old build is current.
+3. Trace renderer state immediately before raw renderer.render(scene,camera): render target, viewport, scissor/scissor-test, camera projection/aspect, autoClear, depth/stencil, color mask, blending, culling, framebuffer state, composer buffers, and whether a non-default target remains bound.
+4. Trace the hero architecture material lifecycle: source material → conversion/assignment → architectural physicalization → foundation/beauty/grounding hooks → needsUpdate → program compilation/cache → any freezeStaticVisuals/compileAsync path → production frame.
+5. Inventory every camera/fullscreen contributor: camera children, PlaneGeometry, Sprite, ShaderMaterial, fullscreen quads, large transparent planes, renderOrder, screen-space shaders, vignette/grain, grade and camera-space effects.
+6. Compare commit history around protected/modern-yellow-build85 (dc42717a89f81eadc98703ea64bdaa38729bbf3b) and the later green state. Specifically look for simultaneous changes to camera-space effects, OutputPass/color pipeline, architecture material integration, shader hooks, renderer state, visibility/frustum logic, sky/background and material freezing/compilation. Determine whether the user's remembered haze/architecture transition corresponds to an actual source change.
+7. Only then create the next runtime diagnostic. It must answer one precise question and preserve the production world. Do not ship another diagnostic whose only result is “no geometry.”
+
+## Communication/workflow constraints
+
+The user has limited screenshot/attachment availability. Perform as much source-level work as possible before requesting another screenshot. Do not make the user launch a chain of low-information tests. Prefer one high-information controlled build after source investigation. Do not claim a visual fix without real runtime evidence.
+
+Do not drift back into micro-detail art work. The current blocker is the rendering/material/state problem. Once it is surgically understood and corrected, restore all legitimate modern systems and return to the original goal: stunningly beautiful, cohesive, immersive RuneScape-inspired visuals with a modern rendering foundation.

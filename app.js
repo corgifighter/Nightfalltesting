@@ -3442,6 +3442,8 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
+if(window.__HEARTHMERE_READY)applyColorErrorControl();
+enforceColorErrorControlFrame();
 if(window.__HEARTHMERE_READY)applySterileVisualMode();
 runRenderStageProvenance();
 try{

@@ -649,3 +649,33 @@ Three.js documents EffectComposer as an ordered pass chain whose last enabled pa
 
 Test this branch on the actual Android browser. If the stagnant yellow/green wash changes materially, keep the relevant correction and continue from the intact production scene. If it does not, do not revert to geometry isolation; continue looking for modern-only presentation contamination, especially other depthTest=false / blending / fullscreen-space primitives and renderer-state mutations.
 
+
+## RENDER LAB — STAGE PROVENANCE INSTRUMENTATION — 2026-09-25
+
+After comparing against the documented history, the lab did NOT repeat the already-tested cinematic-grade bypass, OutputPass bypass, fog/atmosphere stripping, or geometry isolation.
+
+New commit:
+- 57aa344c9d68578a2b5cdb38b79f36ac7ccd6b2c
+
+The protected render-lab branch now contains an opt-in query mode:
+- `?stageprobe=1`
+
+This mode keeps the complete authored production scene intact and performs a one-time render provenance sequence:
+1. direct production renderer
+2. RenderPass only
+3. RenderPass + SSAO
+4. RenderPass + SSAO + Bloom
+5. RenderPass + SSAO + Bloom + cinematic grade
+6. full chain including OutputPass
+
+At each stage it samples the actual framebuffer/intermediate EffectComposer buffer at multiple screen positions and records average RGB, center RGBA, and green-minus-red / blue-minus-red deltas in:
+`window.__HEARTHMERE_STAGE_PROVENANCE`
+
+This is intended to answer the key question that previous tests did not establish: **at which exact render stage does the intact modern world first acquire the thermal yellow/green cast?** It does not substitute geometry, replace materials, or strip world systems.
+
+Important implementation detail: the diagnostic restores every pass's enabled state and renderer framebuffer state in a finally block, then normal production rendering resumes. It is not a permanent production presentation change.
+
+Cache/query version was advanced to app build 64 / service-worker cache v64 so Android testing cannot silently reuse the previous cached app.js.
+
+### Required next test
+Launch the protected render-lab build with `stageprobe=1` on the actual Android browser. The useful evidence is the console/window diagnostic object and, separately, whether the normal visible world remains the same thermal-washed presentation. Do not interpret any geometry-isolation result as relevant evidence; none is used here.

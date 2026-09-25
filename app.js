@@ -54,6 +54,7 @@ const rawArchitectureProd=params.get('archprod')==='1';
 const rawArchitectureMapless=params.get('archmapless')==='1';
 const rawArchitectureScalar=params.get('archscalar')==='1';
 const rawWorldScalar=params.get('worldscalar')==='1';
+const rawWorldFrame=params.get('worldframe')==='1';
 function runWorldScalarProbe(){
  // BUILD 136: construct the fresh-material control ONCE.
  // The previous Build-135 implementation created a new MeshStandardMaterial for every
@@ -93,6 +94,51 @@ function runWorldScalarProbe(){
   renderer.setClearColor(0x20262a,1);
   window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_SETUP={build:136,meshCount,transparentSourceMaterials:transparent,reusedMaterials:true};
   window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_READY=true;
+ }
+ // BUILD 138: camera/framing control. This is a decisive geometry-path test:
+ // use the already-loaded authored world, bypass its production materials with ONE
+ // shared MeshBasicMaterial, disable culling, and frame the actual world bounds.
+ // If authored buildings/terrain appear here, the world is intact and the previous
+ // no-geometry result was camera/framing related. If they still do not appear, the
+ // failure remains below scene geometry submission/material rendering.
+ if(rawWorldFrame){
+  if(!window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY){
+   const basic=new THREE.MeshBasicMaterial({color:0xb9b9b9,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true,transparent:false,opacity:1});
+   const bounds=new THREE.Box3();
+   let count=0;
+   scene.traverse(o=>{
+    if(o===scene||o===sky||!o.isMesh||!o.geometry)return;
+    o.visible=true;o.frustumCulled=false;o.material=basic;count++;
+    bounds.expandByObject(o,true);
+   });
+   if(!bounds.isEmpty()){
+    const center=bounds.getCenter(new THREE.Vector3());
+    const size=bounds.getSize(new THREE.Vector3());
+    const radius=Math.max(size.length()*0.5,8);
+    const halfFov=THREE.MathUtils.degToRad(camera.fov*0.5);
+    const distance=Math.max(radius/Math.tan(halfFov)*1.18,12);
+    const dir=new THREE.Vector3(1,0.62,1).normalize();
+    camera.position.copy(center).addScaledVector(dir,distance);
+    camera.near=0.05;camera.far=Math.max(3000,distance*4+radius*4);
+    camera.updateProjectionMatrix();
+    camera.lookAt(center);
+    controls.target.copy(center);
+   }
+   scene.updateMatrixWorld(true);
+   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP={build:138,meshCount:count,sharedBasic:true,boundsEmpty:bounds.isEmpty()};
+   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY=true;
+  }
+  const witness=window.__HEARTHMERE_FORENSIC_WITNESS;
+  if(witness)witness.visible=false;
+  renderer.resetState();renderer.setRenderTarget(null);renderer.setScissorTest(false);
+  renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+  renderer.setClearColor(0x20262a,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+  const stats={build:138,mode:'worldframe',setup:window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP,camera:camera.position.toArray(),target:controls.target.toArray(),calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,canvas:[renderer.domElement.width,renderer.domElement.height],viewport:renderer.getViewport(new THREE.Vector4()).toArray(),programs:renderer.info.programs?.length??null};
+  window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS=stats;
+  let el=document.getElementById('hm-worldscalar-witness');
+  if(!el){el=document.createElement('pre');el.id='hm-worldscalar-witness';Object.assign(el.style,{position:'fixed',left:'8px',top:'8px',zIndex:'100001',margin:0,padding:'10px',background:'rgba(0,0,0,.82)',color:'#fff',font:'12px/1.4 monospace',whiteSpace:'pre-wrap',pointerEvents:'none'});document.body.appendChild(el);}
+  el.textContent='BUILD 138 AUTHORED-WORLD FRAME CONTROL\\n'+JSON.stringify(stats,null,2);
+  return;
  }
  // Keep the control state stable and render it repeatedly without rebuilding shaders.
  controls.enabled=false;sky.visible=false;scene.visible=true;

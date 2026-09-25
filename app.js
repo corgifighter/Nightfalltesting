@@ -102,7 +102,7 @@ function runWorldScalarProbe(){
  // no-geometry result was camera/framing related. If they still do not appear, the
  // failure remains below scene geometry submission/material rendering.
  if(rawWorldFrame){
-  // BUILD 140: authored-geometry isolation.
+  // BUILD 141: authored-geometry isolation.
   // Builds 138/139 proved that changing materials/culling/camera framing did not expose
   // the authored world. We now stop treating a generic cube as evidence and test an
   // ACTUAL authored BufferGeometry in isolation, with its geometry rebased to the origin.
@@ -184,7 +184,7 @@ function runWorldScalarProbe(){
    renderer.render(scene,camera);
 
    const stats={
-    build:140,
+    build:141,
     mode:'authored-geometry-isolation',
     candidateCount:candidates.length,
     sourceName:source?.o?.name||source?.o?.type||null,
@@ -214,7 +214,7 @@ function runWorldScalarProbe(){
     });
     document.body.appendChild(el);
    }
-   el.textContent='BUILD 140 • REAL AUTHORED GEOMETRY ISOLATION';
+   el.textContent='BUILD 141 • REAL AUTHORED GEOMETRY ISOLATION';
   }
   renderer.resetState();
   renderer.setRenderTarget(null);

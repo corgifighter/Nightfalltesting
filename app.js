@@ -70,6 +70,7 @@ const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')===
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
+const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const stageProbeMode=false;
 let stageProbeComplete=false;
 const gl=renderer.getContext();
@@ -3358,6 +3359,38 @@ function applyColorErrorControl(){
   document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
   window.__HEARTHMERE_COLOR_CONTROL={active:true,materialCount,customHookCount,fog:false,environment:false,post:false,toneMapping:'NoToneMapping',outputColorSpace:'sRGB',shadows:false,lights:'neutral-white',customMaterialHooks:false,emissive:false,reflections:false,transmission:false,transparentVisuals:false,cssOverlays:false};
 }
+function applyPipelineProbe(){
+  if(!pipelineProbe||window.__HEARTHMERE_PIPELINE_PROBE_APPLIED)return;
+  window.__HEARTHMERE_PIPELINE_PROBE_APPLIED=true;
+  postProcessingFailed=true;
+  scene.fog=null;
+  scene.background=null;
+  scene.traverse(o=>o.visible=false);
+  renderer.setRenderTarget(null);
+  renderer.setScissorTest(false);
+  renderer.autoClear=true;renderer.autoClearColor=true;renderer.autoClearDepth=true;renderer.autoClearStencil=true;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.NoToneMapping;
+  renderer.toneMappingExposure=1;
+  renderer.setClearColor(0xff0000,1);
+  renderer.domElement.style.filter='none';
+  renderer.domElement.style.opacity='1';
+  renderer.domElement.style.mixBlendMode='normal';
+  document.querySelectorAll('.vignette,.grain,.hud,#capture,#cinematic,#minimap').forEach(e=>e.style.display='none');
+  let panel=document.getElementById('pipeline-probe');
+  if(!panel){
+    panel=document.createElement('div');panel.id='pipeline-probe';
+    panel.style.cssText='position:fixed;left:12px;top:12px;z-index:9999;padding:10px 12px;border-radius:8px;background:#111;color:#fff;font:700 12px/1.35 monospace;pointer-events:none';
+    panel.textContent='WEBGL CLEAR PROBE — RED';document.body.appendChild(panel);
+  }
+}
+function enforcePipelineProbe(){
+  if(!pipelineProbe)return;
+  renderer.setRenderTarget(null);renderer.setScissorTest(false);
+  renderer.autoClear=true;renderer.autoClearColor=true;renderer.autoClearDepth=true;renderer.autoClearStencil=true;
+  renderer.setClearColor(0xff0000,1);
+}
+
 function applyMaterialBinaryControl(){
   if(!materialBinaryControl||window.__HEARTHMERE_MATERIAL_BINARY_APPLIED)return;
   window.__HEARTHMERE_MATERIAL_BINARY_APPLIED=true;

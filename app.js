@@ -58,6 +58,26 @@ const rawArchitectureScalar=params.get('archscalar')==='1';
 // that direct render. This is the controlled Phase-3 comparison against the normal composer.
 const rawForensicInventory=params.get('forensicinventory')==='1';
 const rawProductionDirect=params.get('productiondirect')==='1';
+// BUILD 134: isolate every transparent/sprite scene contribution while preserving production materials.
+const rawTransparentProbe=params.get('transparentprobe')==='1';
+
+function runTransparentProbe(){
+  const changed=[];let transparentMeshes=0,sprites=0,materials=0;
+  scene.traverse(o=>{
+    if(o===scene)return;
+    if(o.isSprite){changed.push([o,o.visible]);o.visible=false;sprites++;return;}
+    if(!o.isMesh||o===sky)return;
+    const ms=Array.isArray(o.material)?o.material:[o.material];
+    const isTransparent=ms.some(m=>m&&(m.transparent===true||(m.opacity??1)<.999));
+    if(!isTransparent)return;
+    changed.push([o,o.visible]);o.visible=false;transparentMeshes++;materials+=ms.filter(Boolean).length;
+  });
+  window.__HEARTHMERE_FORENSIC_TRANSPARENT_STATS={build:134,transparentMeshes,sprites,materials,camera:camera.position.toArray(),target:controls.target.toArray()};
+  renderer.setClearColor(0x101820,1);
+  renderer.clear(true,true,true);
+  renderer.render(scene,camera);
+  for(let i=changed.length-1;i>=0;i--)changed[i][0].visible=changed[i][1];
+}
 
 function runForensicInventory(){
  const materials=new Map(),transparent=[],shaderHooks=[],cameraChildren=[],planes=[],sprites=[];let meshCount=0;
@@ -3511,7 +3531,9 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawForensicInventory){runForensicInventory();renderer.clear(true,true,true);renderer.render(scene,camera);}else if(rawProductionDirect){
+    if(rawTransparentProbe){
+      runTransparentProbe();
+    }else if(rawForensicInventory){runForensicInventory();renderer.clear(true,true,true);renderer.render(scene,camera);}else if(rawProductionDirect){
       // BUILD 132: FULL PRODUCTION DIRECT-RENDER CONTROL.
       // No material replacement, no scene isolation, no composer. This is deliberately
       // the production scene as authored, rendered through renderer.render() so the first

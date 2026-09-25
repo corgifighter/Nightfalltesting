@@ -69,6 +69,7 @@ renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
+const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const stageProbeMode=false;
 let stageProbeComplete=false;
 const gl=renderer.getContext();
@@ -3357,6 +3358,24 @@ function applyColorErrorControl(){
   document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
   window.__HEARTHMERE_COLOR_CONTROL={active:true,materialCount,customHookCount,fog:false,environment:false,post:false,toneMapping:'NoToneMapping',outputColorSpace:'sRGB',shadows:false,lights:'neutral-white',customMaterialHooks:false,emissive:false,reflections:false,transmission:false,transparentVisuals:false,cssOverlays:false};
 }
+function applyMaterialBinaryControl(){
+  if(!materialBinaryControl||window.__HEARTHMERE_MATERIAL_BINARY_APPLIED)return;
+  window.__HEARTHMERE_MATERIAL_BINARY_APPLIED=true;
+  let replaced=0;
+  scene.traverse(o=>{
+    if(!o.isMesh||!o.material)return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    const next=mats.map(m=>{
+      if(!m)return m;
+      const p=new THREE.MeshBasicMaterial({color:0xffffff,side:m.side??THREE.FrontSide});
+      p.transparent=false;p.opacity=1;p.depthTest=true;p.depthWrite=true;p.fog=false;p.toneMapped=false;p.blending=THREE.NormalBlending;
+      return p;
+    });
+    o.material=Array.isArray(o.material)?next:next[0];
+    replaced+=mats.length;
+  });
+  window.__HEARTHMERE_MATERIAL_BINARY={replaced,allWhite:true,shaderHooks:false,textures:false,lighting:false};
+}
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;
   scene.fog=null;scene.environment=null;scene.environmentIntensity=0;renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;
@@ -3444,6 +3463,7 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 if(window.__HEARTHMERE_READY)applyColorErrorControl();
 enforceColorErrorControlFrame();
+if(window.__HEARTHMERE_READY)applyMaterialBinaryControl();
 if(window.__HEARTHMERE_READY)applySterileVisualMode();
 runRenderStageProvenance();
 try{

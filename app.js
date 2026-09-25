@@ -53,6 +53,29 @@ const rawArchitectureLit=params.get('archlit')==='1';
 const rawArchitectureProd=params.get('archprod')==='1';
 const rawArchitectureMapless=params.get('archmapless')==='1';
 const rawArchitectureScalar=params.get('archscalar')==='1';
+const rawWorldScalar=params.get('worldscalar')==='1';
+function runWorldScalarProbe(){
+ const prior=[];let meshCount=0,transparent=0;
+ controls.enabled=false;sky.visible=false;scene.visible=true;
+ scene.traverse(o=>{
+  if(o===scene||o===sky)return;
+  prior.push([o,o.visible]);o.visible=true;
+  if(!o.isMesh||!o.geometry)return;
+  o.frustumCulled=false;meshCount++;
+  const source=o.material,ms=Array.isArray(source)?source:[source];
+  const copies=ms.map(m=>{
+   if(!m)return m;
+   if(m.transparent||(m.opacity??1)<.999)transparent++;
+   const c=new THREE.MeshStandardMaterial({color:m.color?.clone?.()||new THREE.Color(0xffffff),roughness:Number.isFinite(m.roughness)?Math.min(1,Math.max(.05,m.roughness)):.78,metalness:Number.isFinite(m.metalness)?Math.min(1,Math.max(0,m.metalness)):0,side:m.side??THREE.FrontSide,flatShading:!!m.flatShading,fog:false});
+   if(m.emissive&&m.emissiveIntensity>0){c.emissive.copy(m.emissive);c.emissiveIntensity=m.emissiveIntensity;}
+   return c;
+  });
+  o.material=Array.isArray(source)?copies:copies[0];
+ });
+ scene.updateMatrixWorld(true);
+ window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS={build:135,meshCount,transparentSourceMaterials:transparent,camera:camera.position.toArray(),target:controls.target.toArray(),fogDisabled:true,freshStandardMaterials:true,productionHooksBypassed:true};
+ renderer.resetState();renderer.setRenderTarget(null);renderer.setScissorTest(false);renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);renderer.setClearColor(0x20262a,1);renderer.clear(true,true,true);renderer.render(scene,camera);
+}
 // BUILD 132 PIPELINE CONTROL: render the untouched production scene directly, bypassing
 // EffectComposer while preserving the normal frame state. `nofog=1` disables fog only for
 // that direct render. This is the controlled Phase-3 comparison against the normal composer.
@@ -3531,7 +3554,9 @@ for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
 try{
   if(rawRender){
-    if(rawTransparentProbe){
+    if(rawWorldScalar){
+      runWorldScalarProbe();
+    }else if(rawTransparentProbe){
       runTransparentProbe();
     }else if(rawForensicInventory){runForensicInventory();renderer.clear(true,true,true);renderer.render(scene,camera);}else if(rawProductionDirect){
       // BUILD 132: FULL PRODUCTION DIRECT-RENDER CONTROL.

@@ -3135,15 +3135,12 @@ function buildGraphicsMasterPass(){
     const id='GraphicsRim_'+name;if(scene.getObjectByName(id))return;
     const l=new THREE.PointLight(color,intensity,distance,.9);l.name=id;l.position.set(x,y,z);scene.add(l);
   });
-  if(!scene.getObjectByName('GraphicsSunHalo')){
-    const c=document.createElement('canvas');c.width=256;c.height=256;const ctx=c.getContext('2d');
-    const g=ctx.createRadialGradient(128,128,4,128,128,124);
-    g.addColorStop(0,'rgba(255,245,206,.78)');g.addColorStop(.12,'rgba(255,220,158,.38)');g.addColorStop(.42,'rgba(255,198,132,.12)');g.addColorStop(1,'rgba(255,180,120,0)');
-    ctx.fillStyle=g;ctx.fillRect(0,0,256,256);
-    const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
-    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false,blending:THREE.AdditiveBlending}));
-    halo.name='GraphicsSunHalo';halo.position.copy(sunDisc.position);halo.scale.set(28,28,1);scene.add(halo);
-  }
+  // Presentation forensic correction: GraphicsSunHalo had previously been removed as
+  // a confirmed camera-image contaminant, but the graphics-master pass reintroduced it.
+  // Its depthTest=false + AdditiveBlending + 28-unit sprite makes it capable of washing
+  // the entire camera image even though the authored world underneath is correct.
+  const staleSunHalo=scene.getObjectByName('GraphicsSunHalo');
+  if(staleSunHalo) staleSunHalo.visible=false;
   window.__HEARTHMERE_GRAPHICS_MASTER={version:1,gradePass:true,heroRig:!!player?.userData.graphicsMasterRig,canopyAccents:[...scene.children].filter(o=>o.userData?.graphicsCanopyDetail).length,landmarkRims:rigs.length};
 }
 function buildLandmarkBannerPass(){
@@ -3311,6 +3308,13 @@ function updateAdaptiveQuality(now){
 }
 function frame(t){
  if(document.hidden)return;
+ // Presentation hardening: reset cached WebGL state before the multi-pass chain.
+ // Shadows, transmission and custom materials all touch renderer state before the
+ // fullscreen passes; a stale state cache can leak into presentation on mobile.
+ renderer.resetState();
+ renderer.setRenderTarget(null);
+ renderer.setScissorTest(false);
+ renderer.autoClear=true;renderer.autoClearColor=true;renderer.autoClearDepth=true;renderer.autoClearStencil=true;
  const rawDt=Math.max(0,t-last)/1000;
  const dt=Math.min(.05,rawDt);
  last=t;time+=dt;

@@ -67,8 +67,16 @@ const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
-const stageProbeMode=new URLSearchParams(location.search).get('stageprobe')==='1';
+const stageProbeMode=new URLSearchParams(location.search).get('stageprobe')==='1'||location.search.includes('stageprobe');
 let stageProbeComplete=false;
+if(stageProbeMode){
+ const earlyProbe=document.createElement('div');
+ earlyProbe.id='hearthmere-stage-probe-boot';
+ earlyProbe.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483647;padding:8px 10px;background:rgba(8,12,12,.92);color:#dfe9e5;font:11px/1.45 monospace;border:1px solid rgba(220,235,228,.3);border-radius:5px;pointer-events:none;white-space:pre';
+ earlyProbe.textContent='RENDER STAGE PROBE\\nmode detected — waiting for world readiness…';
+ document.body.appendChild(earlyProbe);
+}
+
 const gl=renderer.getContext();
 const rendererDiagnostics={
   threeRevision:THREE.REVISION,
@@ -3320,7 +3328,7 @@ function readStagePixelStats(target=null){
  return {size:[w,h],avgRGB:avg,centerRGBA:samples[0],greenRed:avg[1]-avg[0],blueRed:avg[2]-avg[0]};
 }
 function runRenderStageProvenance(){
- if(!stageProbeMode||stageProbeComplete||!window.__HEARTHMERE_READY)return;
+ if(!stageProbeMode||stageProbeComplete)return;\n if(!window.__HEARTHMERE_READY){const p=document.getElementById('hearthmere-stage-probe-boot');if(p)p.textContent='RENDER STAGE PROBE\\nmode detected — waiting for world readiness…';return;}
  stageProbeComplete=true;
  const passes=[renderPass,ssaoPass,bloomPass,cinematicGradePass,outputPass],saved=passes.map(p=>p.enabled),savedScreen=composer.renderToScreen,results=[];
  const probePanel=document.createElement('div');

@@ -3388,6 +3388,38 @@ function runRenderStageProvenance(){
  }
 }
 
+const sterileVisualMode=new URLSearchParams(location.search).get('sterile')==='1';
+let sterileVisualApplied=false;
+function applySterileVisualMode(){
+ if(!sterileVisualMode||sterileVisualApplied)return;
+ sterileVisualApplied=true;
+ // Broad forensic lockdown: preserve the authored world, player, camera and production
+ // materials, but remove every major presentation/atmosphere/light-color contributor at once.
+ // This is deliberately reversible so the next pass can restore systems in small groups.
+ scene.fog=null;
+ scene.background=new THREE.Color(0x808080);
+ scene.environment=null;
+ scene.environmentIntensity=0;
+ [renderPass,ssaoPass,bloomPass,cinematicGradePass,outputPass].forEach(p=>p.enabled=false);
+ [sky,sunDisc].forEach(o=>{if(o)o.visible=false;});
+ scene.traverse(o=>{
+   if(o.isSprite || o.userData?.graphicsCanopyDetail || o.userData?.graphicsCanopyAccent || o.name==='GraphicsSunHalo') o.visible=false;
+   if(o.isLight){
+     o.color.set(0xffffff);
+     if(o.isHemisphereLight)o.groundColor.set(0xffffff);
+     o.intensity=1;
+   }
+ });
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.NoToneMapping;
+ renderer.toneMappingExposure=1;
+ document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+ window.__HEARTHMERE_STERILE_VISUAL={
+   fog:false,background:'neutral-gray',environment:false,post:false,sky:false,sprites:false,
+   lights:'white-neutral',toneMapping:'NoToneMapping',cssOverlays:false
+ };
+}
+
 function frame(t){
  if(document.hidden)return;
  // Presentation hardening: reset cached WebGL state before the multi-pass chain.
@@ -3463,6 +3495,7 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
+if(window.__HEARTHMERE_READY)applySterileVisualMode();
 runRenderStageProvenance();
 try{
   if(!postProcessingFailed) composer.render();

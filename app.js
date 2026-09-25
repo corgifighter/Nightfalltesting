@@ -114,6 +114,52 @@ function runWorldScalarProbe(){
  renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
  renderer.clear(true,true,true);
  renderer.render(scene,camera);
+
+ // BUILD 137: guaranteed renderer-path witness. This is deliberately independent
+ // of world placement, PBR lighting, fog, textures, culling, and post-processing.
+ if(!window.__HEARTHMERE_FORENSIC_WITNESS){
+  const witness=new THREE.Mesh(
+   new THREE.BoxGeometry(2.5,2.5,2.5),
+   new THREE.MeshBasicMaterial({color:0xff2244,side:THREE.DoubleSide,depthTest:false,depthWrite:false,fog:false})
+  );
+  witness.name='FORENSIC_RENDER_PATH_WITNESS';
+  witness.frustumCulled=false;
+  scene.add(witness);
+  window.__HEARTHMERE_FORENSIC_WITNESS=witness;
+ }
+ const witness=window.__HEARTHMERE_FORENSIC_WITNESS;
+ const forward=new THREE.Vector3();
+ camera.getWorldDirection(forward);
+ witness.position.copy(camera.position).addScaledVector(forward,8);
+ witness.quaternion.copy(camera.quaternion);
+ witness.visible=true;
+ scene.updateMatrixWorld(true);
+ renderer.resetState();
+ renderer.setRenderTarget(null);
+ renderer.setScissorTest(false);
+ renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+ renderer.clear(true,true,true);
+ renderer.render(scene,camera);
+ const stats={
+  build:137,
+  meshCount:window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_SETUP?.meshCount??null,
+  calls:renderer.info.render.calls,
+  triangles:renderer.info.render.triangles,
+  canvas:[renderer.domElement.width,renderer.domElement.height],
+  viewport:renderer.getViewport(new THREE.Vector4()).toArray(),
+  camera:camera.position.toArray(),
+  forward:forward.toArray(),
+  witness:witness.position.toArray(),
+  programs:renderer.info.programs?.length??null
+ };
+ window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS=stats;
+ let el=document.getElementById('hm-worldscalar-witness');
+ if(!el){
+  el=document.createElement('pre');el.id='hm-worldscalar-witness';
+  Object.assign(el.style,{position:'fixed',left:'8px',top:'8px',zIndex:'100001',margin:0,padding:'10px',background:'rgba(0,0,0,.82)',color:'#fff',font:'12px/1.4 monospace',whiteSpace:'pre-wrap',pointerEvents:'none'});
+  document.body.appendChild(el);
+ }
+ el.textContent='BUILD 137 RENDER-PATH WITNESS\n'+JSON.stringify(stats,null,2);
 }
 // BUILD 132 PIPELINE CONTROL: render the untouched production scene directly, bypassing
 // EffectComposer while preserving the normal frame state. `nofog=1` disables fog only for

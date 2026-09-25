@@ -67,6 +67,8 @@ const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
+const stageProbeMode=new URLSearchParams(location.search).get('stageprobe')==='1';
+let stageProbeComplete=false;
 const gl=renderer.getContext();
 const rendererDiagnostics={
   threeRevision:THREE.REVISION,
@@ -3306,6 +3308,42 @@ function updateAdaptiveQuality(now){
   rendererDiagnostics.p95FrameMs=p95FrameMs;
   rendererDiagnostics.shadowMapSize=sun.shadow.mapSize.x;
 }
+function readStagePixelStats(target=null){
+ const gl=renderer.getContext(),samples=[],w=target?target.width:renderer.domElement.width,h=target?target.height:renderer.domElement.height;
+ const points=[[.50,.50],[.25,.50],[.75,.50],[.50,.25],[.50,.75],[.18,.18],[.82,.18],[.18,.82],[.82,.82]];
+ for(const [u,v] of points){
+  const x=Math.max(0,Math.min(w-1,Math.floor(u*(w-1)))),y=Math.max(0,Math.min(h-1,Math.floor(v*(h-1)))),px=new Uint8Array(4);
+  if(target)renderer.readRenderTargetPixels(target,x,y,1,1,px);else gl.readPixels(x,y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+  samples.push([px[0],px[1],px[2],px[3]]);
+ }
+ const avg=samples.reduce((a,p)=>{a[0]+=p[0];a[1]+=p[1];a[2]+=p[2];return a},[0,0,0]).map(v=>Math.round(v/samples.length));
+ return {size:[w,h],avgRGB:avg,centerRGBA:samples[0],greenRed:avg[1]-avg[0],blueRed:avg[2]-avg[0]};
+}
+function runRenderStageProvenance(){
+ if(!stageProbeMode||stageProbeComplete||!window.__HEARTHMERE_READY)return;
+ stageProbeComplete=true;
+ const passes=[renderPass,ssaoPass,bloomPass,cinematicGradePass,outputPass],saved=passes.map(p=>p.enabled),results=[];
+ const renderStage=(name,last=false)=>{
+  passes.forEach(p=>p.enabled=false);
+  if(name==='direct'){renderer.resetState();renderer.setRenderTarget(null);renderer.render(scene,camera);results.push({stage:name,screen:readStagePixelStats()});return;}
+  const order={renderpass:0,ssao:1,bloom:2,grade:3,output:4}[name];
+  for(let i=0;i<=order;i++)passes[i].enabled=true;
+  renderer.resetState();composer.render();
+  results.push({stage:name,screen:last?readStagePixelStats():null,buffer:last?null:readStagePixelStats(composer.readBuffer)});
+ };
+ try{
+  renderStage('direct');renderStage('renderpass');renderStage('ssao');renderStage('bloom');renderStage('grade');renderStage('output',true);
+  window.__HEARTHMERE_STAGE_PROVENANCE={timestamp:new Date().toISOString(),note:'Intact authored production scene; no geometry/material substitution.',results,passes:{renderPass:renderPass.enabled,ssao:ssaoPass.enabled,bloom:bloomPass.enabled,grade:cinematicGradePass.enabled,output:outputPass.enabled},renderer:{toneMapping:renderer.toneMapping,toneMappingExposure:renderer.toneMappingExposure,outputColorSpace:renderer.outputColorSpace,pixelRatio:renderer.getPixelRatio()},renderTargets:{readBuffer:[composer.readBuffer.width,composer.readBuffer.height],writeBuffer:[composer.writeBuffer.width,composer.writeBuffer.height]}};
+  console.table(results.map(r=>({stage:r.stage,avg:r.screen?.avgRGB||r.buffer?.avgRGB,center:r.screen?.centerRGBA||r.buffer?.centerRGBA,greenRed:r.screen?.greenRed??r.buffer?.greenRed,blueRed:r.screen?.blueRed??r.buffer?.blueRed})));
+  if(bootStatus)bootStatus.textContent='Render-stage provenance captured — see console/window.__HEARTHMERE_STAGE_PROVENANCE';
+ }catch(err){
+  window.__HEARTHMERE_STAGE_PROVENANCE={error:err?.message||String(err),results};
+  recordRuntimeIssue('errors',{message:err?.message||String(err),source:'runRenderStageProvenance',line:0,column:0});
+ }finally{
+  passes.forEach((p,i)=>p.enabled=saved[i]);renderer.resetState();renderer.setRenderTarget(null);
+ }
+}
+
 function frame(t){
  if(document.hidden)return;
  // Presentation hardening: reset cached WebGL state before the multi-pass chain.
@@ -3381,6 +3419,7 @@ cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
+runRenderStageProvenance();
 try{
   if(!postProcessingFailed) composer.render();
   else renderer.render(scene,camera);

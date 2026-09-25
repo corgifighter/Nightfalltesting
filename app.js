@@ -107,10 +107,14 @@ function runWorldScalarProbe(){
    const bounds=new THREE.Box3();
    let count=0;
    scene.traverse(o=>{
-    if(o===scene||o===sky||!o.isMesh||!o.geometry)return;
-    o.visible=true;o.frustumCulled=false;o.material=basic;count++;
+    if(o===scene||o===sky)return;
+    o.visible=true;
+    if(o.layers?.enableAll)o.layers.enableAll();
+    if(!o.isMesh||!o.geometry)return;
+    o.frustumCulled=false;o.material=basic;count++;
     bounds.expandByObject(o,true);
    });
+   camera.layers.enableAll();
    if(!bounds.isEmpty()){
     const center=bounds.getCenter(new THREE.Vector3());
     const size=bounds.getSize(new THREE.Vector3());

@@ -2,7 +2,7 @@ name: Deploy Hearthmere to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "render-lab-modern-2026-09-25"]
   workflow_dispatch:
 
 permissions:
@@ -48,6 +48,23 @@ jobs:
           test -f assets/grass.png
           test -f assets/cobble.png
           test -f assets/roof.png
+
+
+      - name: Prepare the published shell
+        if: github.ref_name == 'render-lab-modern-2026-09-25'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf site
+          mkdir -p site
+          git archive HEAD | tar -x -C site
+          cp render-lab.html site/index.html
+          # The render-lab source is intentionally self-contained for Pages. Remove
+          # the temporary raw-GitHub delivery override and use the exact app.js from
+          # this branch, with the same-origin asset tree staged above.
+          sed -i '/<base href=/d' site/index.html
+          sed -i 's#https://raw.githubusercontent.com/corgifighter/Nightfalltesting/75a1511c26e9d0792cbf3382531b752097335b36/app.js?renderlab=73#./app.js?renderlab=pages-74#' site/index.html
+          cp -R assets site/assets
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

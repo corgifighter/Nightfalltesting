@@ -102,46 +102,125 @@ function runWorldScalarProbe(){
  // no-geometry result was camera/framing related. If they still do not appear, the
  // failure remains below scene geometry submission/material rendering.
  if(rawWorldFrame){
+  // BUILD 140: authored-geometry isolation.
+  // Builds 138/139 proved that changing materials/culling/camera framing did not expose
+  // the authored world. We now stop treating a generic cube as evidence and test an
+  // ACTUAL authored BufferGeometry in isolation, with its geometry rebased to the origin.
+  // No production scene materials or geometry are modified by this branch.
   if(!window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY){
-   const basic=new THREE.MeshBasicMaterial({color:0xb9b9b9,side:THREE.DoubleSide,fog:false,depthTest:true,depthWrite:true,transparent:false,opacity:1});
-   const bounds=new THREE.Box3();
-   let count=0;
+   controls.enabled=false;
+   sky.visible=false;
+
+   let candidates=[];
    scene.traverse(o=>{
-    if(o===scene||o===sky)return;
-    o.visible=true;
-    if(o.layers?.enableAll)o.layers.enableAll();
-    if(!o.isMesh||!o.geometry)return;
-    o.frustumCulled=false;o.material=basic;count++;
-    bounds.expandByObject(o,true);
+    if(o===scene||o===sky||!o.isMesh||!o.geometry)return;
+    const g=o.geometry;
+    const p=g.attributes?.position;
+    if(!p||p.count<3)return;
+    const box=new THREE.Box3().setFromObject(o);
+    if(box.isEmpty())return;
+    const size=box.getSize(new THREE.Vector3());
+    const volume=Math.max(size.x*size.y*size.z,0);
+    candidates.push({o,g,box,size,volume});
    });
-   camera.layers.enableAll();
-   if(!bounds.isEmpty()){
-    const center=bounds.getCenter(new THREE.Vector3());
-    const size=bounds.getSize(new THREE.Vector3());
-    const radius=Math.max(size.length()*0.5,8);
-    const halfFov=THREE.MathUtils.degToRad(camera.fov*0.5);
-    const distance=Math.max(radius/Math.tan(halfFov)*1.18,12);
-    const dir=new THREE.Vector3(1,0.62,1).normalize();
-    camera.position.copy(center).addScaledVector(dir,distance);
-    camera.near=0.05;camera.far=Math.max(3000,distance*4+radius*4);
+   candidates.sort((a,b)=>b.volume-a.volume);
+
+   const source=candidates[0];
+   let clone=null;
+   if(source){
+    // Clone the actual authored geometry buffer, then bake its local geometry into
+    // a compact local frame. This removes parent transforms, world placement,
+    // visibility hierarchy, layers, camera framing, and production materials from
+    // the equation while retaining the real authored vertices/indices.
+    const geom=source.g.clone();
+    geom.computeBoundingBox();
+    const localBox=geom.boundingBox;
+    if(localBox&&!localBox.isEmpty()){
+     const center=localBox.getCenter(new THREE.Vector3());
+     geom.translate(-center.x,-center.y,-center.z);
+    }
+    const basic=new THREE.MeshBasicMaterial({
+      color:0xc8c8c8,
+      side:THREE.DoubleSide,
+      fog:false,
+      depthTest:true,
+      depthWrite:true,
+      transparent:false,
+      wireframe:false
+    });
+    clone=new THREE.Mesh(geom,basic);
+    clone.name='FORENSIC_AUTHORED_GEOMETRY_ISOLATION';
+    clone.frustumCulled=false;
+    scene.add(clone);
+
+    // Frame the isolated REAL authored geometry, not the whole scene.
+    geom.computeBoundingSphere();
+    const radius=Math.max(geom.boundingSphere?.radius||1,.25);
+    const halfFov=THREE.MathUtils.degToRad(camera.fov*.5);
+    const distance=Math.max(radius/Math.tan(halfFov)*1.35,2);
+    camera.position.set(distance*.72,distance*.42,distance);
+    camera.near=.01;
+    camera.far=Math.max(10000,distance*8);
     camera.updateProjectionMatrix();
-    camera.lookAt(center);
-    controls.target.copy(center);
+    camera.lookAt(0,0,0);
+    controls.target.set(0,0,0);
    }
+
+   // Hide the authored scene objects only for this forensic frame; the geometry clone
+   // above is the sole rendered object. This makes the result unambiguous.
+   scene.traverse(o=>{
+    if(o===scene||o===sky||o===clone)return;
+    if(o.isMesh||o.isSprite)o.visible=false;
+   });
+   if(clone)clone.visible=true;
    scene.updateMatrixWorld(true);
-   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP={build:138,meshCount:count,sharedBasic:true,boundsEmpty:bounds.isEmpty()};
+
+   renderer.resetState();
+   renderer.setRenderTarget(null);
+   renderer.setScissorTest(false);
+   renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+   renderer.setClearColor(0x20262a,1);
+   renderer.clear(true,true,true);
+   renderer.render(scene,camera);
+
+   const stats={
+    build:140,
+    mode:'authored-geometry-isolation',
+    candidateCount:candidates.length,
+    sourceName:source?.o?.name||source?.o?.type||null,
+    sourceType:source?.o?.type||null,
+    vertexCount:source?.g?.attributes?.position?.count||0,
+    indexCount:source?.g?.index?.count||0,
+    geometryType:source?.g?.type||null,
+    bounds:source?{min:source.box.min.toArray(),max:source.box.max.toArray(),size:source.size.toArray()}:null,
+    camera:camera.position.toArray(),
+    calls:renderer.info.render.calls,
+    triangles:renderer.info.render.triangles
+   };
+   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP=stats;
+   window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS=stats;
    window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY=true;
+
+   // Tiny non-obstructive status marker only. No diagnostic panel.
+   let el=document.getElementById('hm-worldscalar-witness');
+   if(!el){
+    el=document.createElement('div');
+    el.id='hm-worldscalar-witness';
+    Object.assign(el.style,{
+     position:'fixed',left:'8px',top:'8px',zIndex:'100001',
+     margin:0,padding:'3px 6px',background:'rgba(0,0,0,.48)',
+     color:'#fff',font:'10px/1.2 monospace',whiteSpace:'nowrap',
+     pointerEvents:'none'
+    });
+    document.body.appendChild(el);
+   }
+   el.textContent='BUILD 140 • REAL AUTHORED GEOMETRY ISOLATION';
   }
-  const witness=window.__HEARTHMERE_FORENSIC_WITNESS;
-  if(witness)witness.visible=false;
-  renderer.resetState();renderer.setRenderTarget(null);renderer.setScissorTest(false);
+  renderer.resetState();
+  renderer.setRenderTarget(null);
+  renderer.setScissorTest(false);
   renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
-  renderer.setClearColor(0x20262a,1);renderer.clear(true,true,true);renderer.render(scene,camera);
-  const stats={build:138,mode:'worldframe',setup:window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP,camera:camera.position.toArray(),target:controls.target.toArray(),calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,canvas:[renderer.domElement.width,renderer.domElement.height],viewport:renderer.getViewport(new THREE.Vector4()).toArray(),programs:renderer.info.programs?.length??null};
-  window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS=stats;
-  let el=document.getElementById('hm-worldscalar-witness');
-  if(!el){el=document.createElement('pre');el.id='hm-worldscalar-witness';Object.assign(el.style,{position:'fixed',left:'8px',top:'8px',zIndex:'100001',margin:0,padding:'10px',background:'rgba(0,0,0,.82)',color:'#fff',font:'12px/1.4 monospace',whiteSpace:'pre-wrap',pointerEvents:'none'});document.body.appendChild(el);}
-  el.textContent='BUILD 138 AUTHORED-WORLD FRAME CONTROL\\n'+JSON.stringify(stats,null,2);
+  renderer.render(scene,camera);
   return;
  }
  // Keep the control state stable and render it repeatedly without rebuilding shaders.

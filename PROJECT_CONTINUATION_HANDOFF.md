@@ -601,3 +601,51 @@ DO NOT reset the plan.
 DO NOT downgrade the ambition.
 DO NOT settle.
 CONTINUE THE DEEP WORK.
+
+
+## RENDER LAB — 2026-09-25
+
+This branch is a protected experimental clone of the modern authored-world renderer. The real/default copy was not modified.
+
+Clone branch:
+- render-lab-modern-2026-09-25
+- base: 46aaae6d8013e3e472f1783d52638f4fcf26fd67
+
+### New investigation
+
+The prior forensic record said GraphicsSunHalo had been ruled out. Source inspection found a critical continuity problem: the halo was later reintroduced by buildGraphicsMasterPass after that historical test.
+
+The current implementation created a depthTest=false, fog=false, AdditiveBlending Sprite with a 28-unit scale. That is materially different from a normal world object and can contaminate the camera image while leaving HUD/CSS sharp. This is therefore a legitimate modern-regression candidate, not a repeat of the old test.
+
+The lab disables that reintroduced halo while preserving:
+- authored world geometry
+- production materials
+- sky
+- sun disc
+- fog
+- environment/PMREM
+- SSAO
+- bloom
+- cinematic grade
+- OutputPass
+- lighting
+- camera
+- gameplay
+
+### Additional presentation hardening
+
+The lab also resets cached WebGL state immediately before the normal multi-pass render and again on composer failure. It explicitly restores:
+- default framebuffer target
+- scissor disabled
+- autoClear color/depth/stencil
+
+This is intended to catch stale WebGL state leaking from shadows, transmission, custom materials, or other renderer work into fullscreen presentation. It does not alter authored scene content.
+
+### Research basis
+
+Three.js documents EffectComposer as an ordered pass chain whose last enabled pass renders to screen, and OutputPass as the final tone-mapping/color-space stage. Three.js also documents renderer.resetState() as the public mechanism for resetting cached WebGL state. These are the basis for the lab changes.
+
+### Next decision
+
+Test this branch on the actual Android browser. If the stagnant yellow/green wash changes materially, keep the relevant correction and continue from the intact production scene. If it does not, do not revert to geometry isolation; continue looking for modern-only presentation contamination, especially other depthTest=false / blending / fullscreen-space primitives and renderer-state mutations.
+

@@ -67,16 +67,8 @@ const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
-const stageProbeMode=new URLSearchParams(location.search).get('stageprobe')==='1'||location.search.includes('stageprobe');
+const stageProbeMode=false;
 let stageProbeComplete=false;
-if(stageProbeMode){
- const earlyProbe=document.createElement('div');
- earlyProbe.id='hearthmere-stage-probe-boot';
- earlyProbe.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483647;padding:8px 10px;background:rgba(8,12,12,.92);color:#dfe9e5;font:11px/1.45 monospace;border:1px solid rgba(220,235,228,.3);border-radius:5px;pointer-events:none;white-space:pre';
- earlyProbe.textContent='RENDER STAGE PROBE\\nmode detected — waiting for world readiness…';
- document.body.appendChild(earlyProbe);
-}
-
 const gl=renderer.getContext();
 const rendererDiagnostics={
   threeRevision:THREE.REVISION,
@@ -3327,98 +3319,7 @@ function readStagePixelStats(target=null){
  const avg=samples.reduce((a,p)=>{a[0]+=p[0];a[1]+=p[1];a[2]+=p[2];return a},[0,0,0]).map(v=>Math.round(v/samples.length));
  return {size:[w,h],avgRGB:avg,centerRGBA:samples[0],greenRed:avg[1]-avg[0],blueRed:avg[2]-avg[0]};
 }
-function runRenderStageProvenance(){
- if(!stageProbeMode||stageProbeComplete)return;\n if(!window.__HEARTHMERE_READY){const p=document.getElementById('hearthmere-stage-probe-boot');if(p)p.textContent='RENDER STAGE PROBE\\nmode detected — waiting for world readiness…';return;}
- stageProbeComplete=true;
- const passes=[renderPass,ssaoPass,bloomPass,cinematicGradePass,outputPass],saved=passes.map(p=>p.enabled),savedScreen=composer.renderToScreen,results=[];
- const probePanel=document.createElement('div');
- probePanel.id='hearthmere-stage-probe';
- probePanel.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483647;padding:8px 10px;background:rgba(8,12,12,.88);color:#dfe9e5;font:11px/1.45 monospace;border:1px solid rgba(220,235,228,.25);border-radius:5px;max-width:calc(100vw - 16px);pointer-events:none;white-space:pre';
- probePanel.textContent='RENDER STAGE PROBE\\nCapturing intact production scene…';
- document.body.appendChild(probePanel);
- const readBufferForLastPass=(lastPass)=>{
-  // EffectComposer swaps after every needsSwap pass. With renderToScreen forced off,
-  // the final image is therefore in readBuffer when the last pass swaps, and in
-  // writeBuffer when a non-swapping terminal pass (OutputPass) writes its result.
-  return lastPass.needsSwap?composer.readBuffer:composer.writeBuffer;
- };
- const renderStage=(name,last=false)=>{
-  passes.forEach(p=>p.enabled=false);
-  if(name==='direct'){
-   renderer.resetState();renderer.setRenderTarget(null);renderer.render(scene,camera);
-   results.push({stage:name,screen:readStagePixelStats()});return;
-  }
-  const order={renderpass:0,ssao:1,bloom:2,grade:3,output:4}[name];
-  for(let i=0;i<=order;i++)passes[i].enabled=true;
-  composer.renderToScreen=false;
-  renderer.resetState();
-  composer.render();
-  const lastPass=passes[order];
-  const target=readBufferForLastPass(lastPass);
-  results.push({stage:name,screen:last?null:null,buffer:readStagePixelStats(target),target:lastPass.needsSwap?'readBuffer':'writeBuffer'});
- };
- try{
-  renderStage('direct');
-  renderStage('renderpass');
-  renderStage('ssao');
-  renderStage('bloom');
-  renderStage('grade');
-  renderStage('output',true);
-  window.__HEARTHMERE_STAGE_PROVENANCE={
-   timestamp:new Date().toISOString(),
-   note:'Intact authored production scene; no geometry/material substitution. Composer renderToScreen disabled during probes so framebuffer attribution is deterministic.',
-   results,
-   passes:{renderPass:renderPass.enabled,ssao:ssaoPass.enabled,bloom:bloomPass.enabled,grade:cinematicGradePass.enabled,output:outputPass.enabled},
-   renderer:{toneMapping:renderer.toneMapping,toneMappingExposure:renderer.toneMappingExposure,outputColorSpace:renderer.outputColorSpace,pixelRatio:renderer.getPixelRatio()},
-   renderTargets:{readBuffer:[composer.readBuffer.width,composer.readBuffer.height],writeBuffer:[composer.writeBuffer.width,composer.writeBuffer.height]}
-  };
-  const lines=['RENDER STAGE PROBE','green-red > 0 = greener than red',''];
-  results.forEach(r=>lines.push(r.stage.padEnd(9)+' RGB '+r.buffer?.avgRGB?.join(',')+'  ΔG-R '+r.buffer?.greenRed+'  ΔB-R '+r.buffer?.blueRed));
-  lines.push('','First stage where RGB shifts = contamination candidate.');
-  probePanel.textContent=lines.join('\\n');
-  console.table(results.map(r=>({stage:r.stage,target:r.target,avg:r.buffer?.avgRGB,center:r.buffer?.centerRGBA,greenRed:r.buffer?.greenRed,blueRed:r.buffer?.blueRed})));
- }catch(err){
-  window.__HEARTHMERE_STAGE_PROVENANCE={error:err?.message||String(err),results};
-  probePanel.textContent='RENDER STAGE PROBE\\nERROR: '+(err?.message||String(err));
-  recordRuntimeIssue('errors',{message:err?.message||String(err),source:'runRenderStageProvenance',line:0,column:0});
- }finally{
-  passes.forEach((p,i)=>p.enabled=saved[i]);
-  composer.renderToScreen=savedScreen;
-  renderer.resetState();renderer.setRenderTarget(null);
- }
-}
-
-const sterileVisualMode=new URLSearchParams(location.search).get('sterile')==='1';
-let sterileVisualApplied=false;
-function applySterileVisualMode(){
- if(!sterileVisualMode||sterileVisualApplied)return;
- sterileVisualApplied=true;
- // Broad forensic lockdown: preserve the authored world, player, camera and production
- // materials, but remove every major presentation/atmosphere/light-color contributor at once.
- // This is deliberately reversible so the next pass can restore systems in small groups.
- scene.fog=null;
- scene.background=new THREE.Color(0x808080);
- scene.environment=null;
- scene.environmentIntensity=0;
- [renderPass,ssaoPass,bloomPass,cinematicGradePass,outputPass].forEach(p=>p.enabled=false);
- [sky,sunDisc].forEach(o=>{if(o)o.visible=false;});
- scene.traverse(o=>{
-   if(o.isSprite || o.userData?.graphicsCanopyDetail || o.userData?.graphicsCanopyAccent || o.name==='GraphicsSunHalo') o.visible=false;
-   if(o.isLight){
-     o.color.set(0xffffff);
-     if(o.isHemisphereLight)o.groundColor.set(0xffffff);
-     o.intensity=1;
-   }
- });
- renderer.outputColorSpace=THREE.SRGBColorSpace;
- renderer.toneMapping=THREE.NoToneMapping;
- renderer.toneMappingExposure=1;
- document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
- window.__HEARTHMERE_STERILE_VISUAL={
-   fog:false,background:'neutral-gray',environment:false,post:false,sky:false,sprites:false,
-   lights:'white-neutral',toneMapping:'NoToneMapping',cssOverlays:false
- };
-}
+function runRenderStageProvenance(){}
 
 function frame(t){
  if(document.hidden)return;

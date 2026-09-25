@@ -108,78 +108,67 @@ function runWorldScalarProbe(){
   // ACTUAL authored BufferGeometry in isolation, with its geometry rebased to the origin.
   // No production scene materials or geometry are modified by this branch.
   if(!window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY){
+   // BUILD 143: use an actual authored ARCHITECTURE mesh and rebuild its vertex
+   // buffer from position data. This removes the remaining geometry ambiguities:
+   // index buffers, drawRange, groups, original transforms, material state and
+   // arbitrary largest-volume terrain selection.
    controls.enabled=false;
    sky.visible=false;
-   // BUILD 142: this forensic mode must own the final canvas. If the normal
-   // EffectComposer runs after this direct render it can overwrite the isolated
-   // authored-geometry result with the production presentation path.
-   if(typeof composer!=='undefined' && composer){ composer.enabled=false; }
+   if(typeof composer!=='undefined' && composer)composer.enabled=false;
    document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
 
-   let candidates=[];
+   const candidates=[];
    scene.traverse(o=>{
     if(o===scene||o===sky||!o.isMesh||!o.geometry)return;
-    const g=o.geometry;
-    const p=g.attributes?.position;
+    const p=o.geometry.attributes?.position;
     if(!p||p.count<3)return;
+    const arch=o.userData?.architectureTier==='hero';
     const box=new THREE.Box3().setFromObject(o);
     if(box.isEmpty())return;
-    const size=box.getSize(new THREE.Vector3());
-    const volume=Math.max(size.x*size.y*size.z,0);
-    candidates.push({o,g,box,size,volume});
+    candidates.push({o,g:o.geometry,p,arch,box});
    });
-   candidates.sort((a,b)=>b.volume-a.volume);
-
-   const source=candidates[0];
-   let clone=null;
+   const archCandidates=candidates.filter(c=>c.arch);
+   const pool=archCandidates.length?archCandidates:candidates;
+   pool.sort((a,b)=>{
+    const av=a.box.getSize(new THREE.Vector3());const bv=b.box.getSize(new THREE.Vector3());
+    return (bv.x*bv.y*bv.z)-(av.x*av.y*av.z);
+   });
+   const source=pool[0];
+   let clone=null,rebuiltVertices=0,finite=true;
    if(source){
-    // Clone the actual authored geometry buffer, then bake its local geometry into
-    // a compact local frame. This removes parent transforms, world placement,
-    // visibility hierarchy, layers, camera framing, and production materials from
-    // the equation while retaining the real authored vertices/indices.
-    const geom=source.g.clone();
-    geom.computeBoundingBox();
-    const localBox=geom.boundingBox;
-    if(localBox&&!localBox.isEmpty()){
-     const center=localBox.getCenter(new THREE.Vector3());
-     geom.translate(-center.x,-center.y,-center.z);
+    const p=source.p;
+    const verts=[];
+    for(let i=0;i<p.count;i++){
+      const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+      if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z)){finite=false;break;}
+      verts.push(x,y,z);
     }
-    const basic=new THREE.MeshBasicMaterial({
-      color:0xc8c8c8,
-      side:THREE.DoubleSide,
-      fog:false,
-      depthTest:true,
-      depthWrite:true,
-      transparent:false,
-      wireframe:false
-    });
-    clone=new THREE.Mesh(geom,basic);
-    clone.name='FORENSIC_AUTHORED_GEOMETRY_ISOLATION';
-    clone.frustumCulled=false;
-    scene.add(clone);
+    if(finite&&verts.length>=9){
+      const geom=new THREE.BufferGeometry();
+      geom.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+      geom.computeBoundingBox();geom.computeBoundingSphere();
+      const c=geom.boundingBox.getCenter(new THREE.Vector3());
+      geom.translate(-c.x,-c.y,-c.z);
+      const mat=new THREE.MeshBasicMaterial({color:0xbfc7cc,side:THREE.DoubleSide,fog:false,transparent:false,depthTest:true,depthWrite:true});
+      clone=new THREE.Mesh(geom,mat);
+      clone.name='FORENSIC_AUTHORED_ARCHITECTURE_REBUILT';
+      clone.frustumCulled=false;
+      scene.add(clone);
+      rebuiltVertices=verts.length/3;
 
-    // Frame the isolated REAL authored geometry, not the whole scene.
-    geom.computeBoundingSphere();
-    const radius=Math.max(geom.boundingSphere?.radius||1,.25);
-    const halfFov=THREE.MathUtils.degToRad(camera.fov*.5);
-    const distance=Math.max(radius/Math.tan(halfFov)*1.35,2);
-    camera.position.set(distance*.72,distance*.42,distance);
-    camera.near=.01;
-    camera.far=Math.max(10000,distance*8);
-    camera.updateProjectionMatrix();
-    camera.lookAt(0,0,0);
-    controls.target.set(0,0,0);
+      const radius=Math.max(geom.boundingSphere?.radius||1,.25);
+      const distance=Math.max(radius/Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*1.25,2);
+      camera.position.set(distance*.72,distance*.42,distance);
+      camera.near=.01;camera.far=Math.max(10000,distance*8);
+      camera.lookAt(0,0,0);camera.updateProjectionMatrix();
+    }
    }
-
-   // Hide the authored scene objects only for this forensic frame; the geometry clone
-   // above is the sole rendered object. This makes the result unambiguous.
    scene.traverse(o=>{
     if(o===scene||o===sky||o===clone)return;
     if(o.isMesh||o.isSprite)o.visible=false;
    });
    if(clone)clone.visible=true;
    scene.updateMatrixWorld(true);
-
    renderer.resetState();
    renderer.setRenderTarget(null);
    renderer.setScissorTest(false);
@@ -189,7 +178,37 @@ function runWorldScalarProbe(){
    renderer.render(scene,camera);
 
    const stats={
-    build:142,
+    build:143,mode:'rebuilt-authored-architecture',
+    candidateCount:candidates.length,architectureCandidates:archCandidates.length,
+    sourceName:source?.o?.name||source?.o?.type||null,
+    sourceType:source?.o?.type||null,
+    sourceVertexCount:source?.p?.count||0,
+    rebuiltVertices,finite,
+    sourceBounds:source?{min:source.box.min.toArray(),max:source.box.max.toArray()}:null,
+    camera:camera.position.toArray(),calls:renderer.info.render.calls,
+    triangles:renderer.info.render.triangles
+   };
+   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_SETUP=stats;
+   window.__HEARTHMERE_FORENSIC_WORLD_SCALAR_STATS=stats;
+   window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY=true;
+   let el=document.getElementById('hm-worldscalar-witness');
+   if(!el){
+    el=document.createElement('div');el.id='hm-worldscalar-witness';
+    Object.assign(el.style,{position:'fixed',left:'8px',top:'8px',zIndex:'100001',margin:0,padding:'3px 6px',background:'rgba(0,0,0,.48)',color:'#fff',font:'10px/1.2 monospace',whiteSpace:'nowrap',pointerEvents:'none'});
+    document.body.appendChild(el);
+   }
+   el.textContent='BUILD 143 • AUTHORED ARCHITECTURE REBUILT';
+  }
+  renderer.resetState();
+   renderer.setRenderTarget(null);
+   renderer.setScissorTest(false);
+   renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+   renderer.setClearColor(0x20262a,1);
+   renderer.clear(true,true,true);
+   renderer.render(scene,camera);
+
+   const stats={
+    build:143,
     mode:'authored-geometry-isolation',
     candidateCount:candidates.length,
     sourceName:source?.o?.name||source?.o?.type||null,

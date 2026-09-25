@@ -679,3 +679,19 @@ Cache/query version was advanced to app build 64 / service-worker cache v64 so A
 
 ### Required next test
 Launch the protected render-lab build with `stageprobe=1` on the actual Android browser. The useful evidence is the console/window diagnostic object and, separately, whether the normal visible world remains the same thermal-washed presentation. Do not interpret any geometry-isolation result as relevant evidence; none is used here.
+
+
+## 2026-09-25 Render-stage provenance instrumentation
+The render-lab remains based on intact modern production world. No geometry isolation, material substitution, fog stripping, cinematic-grade bypass, or OutputPass bypass was added in this pass.
+
+A new query mode `?stageprobe=1` was added to `app.js`. Once the real production world is ready, it performs one controlled provenance sweep over the same authored scene:
+1. direct renderer scene output
+2. RenderPass
+3. RenderPass + SSAO
+4. RenderPass + SSAO + Bloom
+5. + cinematic grade
+6. + OutputPass / final screen
+
+It samples multiple framebuffer points at each stage and stores the result in `window.__HEARTHMERE_STAGE_PROVENANCE`, while restoring the normal pass state afterward. The purpose is to identify the FIRST stage where the thermal yellow/green contamination appears, rather than repeating already-documented effect-disable experiments.
+
+Important: the mode is diagnostic instrumentation only. It does not replace world geometry or materials and must not be interpreted as a geometry test. Android browser output remains authoritative. Build/cache was bumped to v65.

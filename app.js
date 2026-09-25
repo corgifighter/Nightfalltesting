@@ -129,15 +129,32 @@ function runWorldScalarProbe(){
     candidates.push({o,g,box,size,volume});
    });
    candidates.sort((a,b)=>b.volume-a.volume);
-
-   const source=candidates[0];
+   const architectureCandidates=candidates.filter(c=>c.o.userData?.architectureTier==='hero');
+   const sourcePool=architectureCandidates.length?architectureCandidates:candidates;
+   const source=sourcePool[0];
    let clone=null;
    if(source){
-    // Clone the actual authored geometry buffer, then bake its local geometry into
-    // a compact local frame. This removes parent transforms, world placement,
-    // visibility hierarchy, layers, camera framing, and production materials from
-    // the equation while retaining the real authored vertices/indices.
-    const geom=source.g.clone();
+    // BUILD 144: isolate a real authored architecture mesh, not a generic largest-volume
+    // world object. Rebuild only its position/index buffers so original material state,
+    // draw range and shader hooks cannot suppress the test.
+    const src=source.g;
+    const geom=new THREE.BufferGeometry();
+    const pos=src.attributes?.position;
+    if(pos){
+      const verts=new Float32Array(pos.count*3);
+      for(let i=0;i<pos.count;i++){verts[i*3]=pos.getX(i);verts[i*3+1]=pos.getY(i);verts[i*3+2]=pos.getZ(i);}
+      geom.setAttribute('position',new THREE.BufferAttribute(verts,3));
+    }
+    if(src.index)geom.setIndex(src.index.clone());
+    geom.clearGroups();
+    // Recompute bounds from the real authored vertex data, then center it.
+    geom.computeBoundingBox();
+    if(geom.boundingBox&&!geom.boundingBox.isEmpty()){
+      const center=geom.boundingBox.getCenter(new THREE.Vector3());
+      geom.translate(-center.x,-center.y,-center.z);
+    }
+    // Keep the remaining framing logic below; material is deliberately Basic.
+
     geom.computeBoundingBox();
     const localBox=geom.boundingBox;
     if(localBox&&!localBox.isEmpty()){
@@ -189,12 +206,13 @@ function runWorldScalarProbe(){
    renderer.render(scene,camera);
 
    const stats={
-    build:142,
+    build:144,
     mode:'authored-geometry-isolation',
     candidateCount:candidates.length,
     sourceName:source?.o?.name||source?.o?.type||null,
     sourceType:source?.o?.type||null,
     vertexCount:source?.g?.attributes?.position?.count||0,
+    architectureCandidates:architectureCandidates.length,
     indexCount:source?.g?.index?.count||0,
     geometryType:source?.g?.type||null,
     bounds:source?{min:source.box.min.toArray(),max:source.box.max.toArray(),size:source.size.toArray()}:null,
@@ -219,7 +237,7 @@ function runWorldScalarProbe(){
     });
     document.body.appendChild(el);
    }
-   el.textContent='BUILD 142 • REAL AUTHORED GEOMETRY ISOLATION';
+   el.textContent='BUILD 144 • REAL AUTHORED ARCHITECTURE ISOLATION';
   }
   renderer.resetState();
   renderer.setRenderTarget(null);

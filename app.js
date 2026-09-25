@@ -110,6 +110,11 @@ function runWorldScalarProbe(){
   if(!window.__HEARTHMERE_FORENSIC_WORLD_FRAME_READY){
    controls.enabled=false;
    sky.visible=false;
+   // BUILD 142: this forensic mode must own the final canvas. If the normal
+   // EffectComposer runs after this direct render it can overwrite the isolated
+   // authored-geometry result with the production presentation path.
+   if(typeof composer!=='undefined' && composer){ composer.enabled=false; }
+   document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
 
    let candidates=[];
    scene.traverse(o=>{
@@ -184,7 +189,7 @@ function runWorldScalarProbe(){
    renderer.render(scene,camera);
 
    const stats={
-    build:141,
+    build:142,
     mode:'authored-geometry-isolation',
     candidateCount:candidates.length,
     sourceName:source?.o?.name||source?.o?.type||null,
@@ -214,7 +219,7 @@ function runWorldScalarProbe(){
     });
     document.body.appendChild(el);
    }
-   el.textContent='BUILD 141 • REAL AUTHORED GEOMETRY ISOLATION';
+   el.textContent='BUILD 142 • REAL AUTHORED GEOMETRY ISOLATION';
   }
   renderer.resetState();
   renderer.setRenderTarget(null);

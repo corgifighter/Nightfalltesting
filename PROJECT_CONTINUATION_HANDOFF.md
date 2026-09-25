@@ -695,3 +695,47 @@ A new query mode `?stageprobe=1` was added to `app.js`. Once the real production
 It samples multiple framebuffer points at each stage and stores the result in `window.__HEARTHMERE_STAGE_PROVENANCE`, while restoring the normal pass state afterward. The purpose is to identify the FIRST stage where the thermal yellow/green contamination appears, rather than repeating already-documented effect-disable experiments.
 
 Important: the mode is diagnostic instrumentation only. It does not replace world geometry or materials and must not be interpreted as a geometry test. Android browser output remains authoritative. Build/cache was bumped to v65.
+
+## 2026-09-25 — MAXIMAL MODERN COLOR-ERROR CONTROL TEST
+
+User-directed strategy: stop geometry isolation. The intact modern authored world is the control subject. The new test disables every plausible presentation/color contaminant simultaneously on the protected render-lab branch. The purpose is binary: if the world becomes normally colored/sharp, reintroduce systems in small batches; if the wash survives, the search moves below the quarantined presentation stack into the remaining opaque material/texture/renderer path.
+
+### Systems deliberately disabled in one shot
+- Global scene fog and all dynamic fog color/density updates.
+- Procedural sky sphere and sun-disc visual.
+- PMREM scene environment and environment intensity/rotation.
+- Entire EffectComposer path: RenderPass, SSAO, UnrealBloom, cinematic grade ShaderPass and OutputPass.
+- Renderer tone mapping/exposure; control uses NoToneMapping and sRGB canvas output.
+- Renderer transmission resolution enhancement.
+- Shadow map generation and all object cast/receive shadow participation.
+- All scene lights are forced to neutral white; hemisphere ground color is white; animated light-color changes are suppressed by the control frame guard.
+- All sprites, points, lines and every mesh using transparency, sub-1 opacity, non-normal blending, depth-test/write suppression, transmission, alpha-hash or non-tone-mapped presentation is hidden. This catches smoke, mist, glints, clouds, labels, fireflies, foliage cards, water/glass overlays, glow layers, additive/depth-independent primitives and similar image contamination.
+- All emissive colors/maps/intensities are removed from remaining opaque materials.
+- All material environment maps/intensities, clearcoat, sheen, iridescence, transmission and specular intensity are removed.
+- Material fog participation is disabled.
+- All application-installed onBeforeCompile shader mutations are removed and materials marked needsUpdate, eliminating the graphics-foundation world-space color/edge/foliage/grounding/water shader modifications from the control.
+- Material onBeforeRender hooks are removed.
+- CSS vignette and grain overlays are hidden.
+- The frame loop reasserts the control because the production simulation normally rewrites fog, exposure, environment intensity, light colors and animated presentation elements every frame.
+
+### What is intentionally preserved
+- The complete authored modern world geometry and its transforms.
+- The production camera and camera-follow behavior.
+- Opaque base material colors and their ordinary color maps.
+- Opaque world meshes and their geometry hierarchy.
+- Character/world transforms and gameplay movement.
+- Normal WebGLRenderer direct rendering to the real canvas.
+
+Three.js documentation supports this separation: Scene fog affects everything rendered in the scene; Scene.environment affects physical materials; EffectComposer executes ordered post-processing passes; OutputPass performs tone mapping/color-space conversion; material onBeforeCompile can modify built-in shaders and requires needsUpdate when recompiling. These are the mechanisms being controlled, not an invented geometry test.
+
+### Current control-test commits
+- app.js maximal control implementation: 197f712629fc2e9b267168a6db83c8067442d10f
+- Pages shell: e307911f5a47c31a1f3837011bd5b3c49ec8c30a
+- Pages packaging correction: 8bedb6b833149c02a0f591f03d9735ef1d2ee339
+- branch: render-lab-modern-2026-09-25
+- query: ?colorcontrol=1
+
+### Required interpretation after mobile test
+A clean/sharp normally colored intact world means the root is in the quarantined set. Re-enable in small coherent batches, with a real mobile visual check after each batch, until the error returns. Suggested order: (1) opaque material shader hooks/world-space material variation, (2) environment/reflections, (3) neutral-to-authored lighting, (4) shadows, (5) atmosphere/fog/sky, (6) translucent world/VFX layers, (7) SSAO, (8) bloom, (9) cinematic grade, (10) OutputPass/tone mapping. Do not re-enable several unrelated systems at once.
+
+If the maximal control still shows the same stagnant yellow/green wash over the intact world, do NOT return to worldframe/worldscalar/geometry isolation. The remaining high-value suspects are the opaque base textures/material colors, texture color-space handling, renderer/canvas output path, or another render-state mutation not covered by the control. Preserve this control build as a forensic reference.

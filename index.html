@@ -17,7 +17,7 @@ body.cinematic .hud-main{opacity:0;pointer-events:none;transition:opacity .35s}b
 <body>
 
 <div id="boot" class="boot"><div class="boot-card"><div class="boot-mark">✦</div><div class="boot-title">HEARTHMERE</div><div class="boot-sub">Ashenvale Crossing</div><div class="boot-track"><i id="boot-progress"></i></div><div id="boot-status">Preparing the crossing…</div></div></div>
-<div id="scene"></div><div class="vignette"></div><div class="grain"></div>
+<div id="startup-watchdog" style="display:none;position:fixed;left:10px;top:10px;z-index:10001;max-width:calc(100vw - 20px);padding:10px 12px;border:1px solid rgba(228,200,120,.45);border-radius:8px;background:rgba(0,0,0,.92);color:#fff;font:700 11px/1.5 monospace;white-space:pre-wrap;pointer-events:none"></div><div id="scene"></div><div class="vignette"></div><div class="grain"></div>
 <div class="hud">
 <div class="hud-main">
 <div class="top"><div class="brand"><div class="crest"></div><div><div class="title">HEARTHMERE</div><div class="sub">Ashenvale Crossing</div></div></div><div class="bars"><div class="stat"><div class="label"><span>VITALITY</span><b>84 / 100</b></div><div class="meter"><div class="hp"></div></div></div><div class="stat"><div class="label"><span>FOCUS</span><b>62 / 100</b></div><div class="meter"><div class="fp"></div></div></div></div></div>
@@ -42,17 +42,38 @@ window.addEventListener("unhandledrejection",e=>{
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js"}}
 </script>
 <script>
-(async()=>{
-  try{
-    if("serviceWorker" in navigator){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r=>r.unregister()));
-    }
-  }catch(_){ }
-  const s=document.createElement("script");
-  s.type="module";
-  s.src="./app.js?renderlab=pages-88&framebufferprobe=1";
-  document.body.appendChild(s);
+(()=>{
+  const params=new URLSearchParams(location.search);
+  const diag=document.getElementById("startup-watchdog");
+  const boot=document.getElementById("boot-status");
+  const report=(msg)=>{
+    if(!params.has("framebufferprobe"))return;
+    diag.style.display="block";
+    diag.textContent="STARTUP WATCHDOG\n"+msg;
+  };
+  let moduleStarted=false;
+  window.__HEARTHMERE_MODULE_STARTED=false;
+  const timer=setTimeout(()=>{
+    if(!window.__HEARTHMERE_MODULE_STARTED) report("app.js has not started after 8s.\nLikely module import/load failure.");
+  },8000);
+  window.addEventListener("error",e=>{
+    report("window error: "+(e.message||"unknown")+"\nsource: "+(e.filename||"unknown")+"\nline: "+(e.lineno||"?")+":"+ (e.colno||"?"));
+  });
+  window.addEventListener("unhandledrejection",e=>report("unhandled rejection: "+(e.reason?.message||String(e.reason||"unknown"))));
+  (async()=>{
+    try{
+      if("serviceWorker" in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+    }catch(_){}
+    const s=document.createElement("script");
+    s.type="module";
+    s.src="./app.js?renderlab=pages-89&framebufferprobe=1";
+    s.onload=()=>{clearTimeout(timer);report("app.js module loaded. Waiting for renderer frame loop…");};
+    s.onerror=()=>{clearTimeout(timer);report("MODULE LOAD ERROR\nThe browser could not execute/import app.js.\nCheck CDN/module network or syntax.");};
+    document.body.appendChild(s);
+  })();
 })();
 </script>
 

@@ -814,3 +814,33 @@ Final commits for this terminal repair:
 - prior stale-symbol fix: 5fb36fd8e58049d848c78ff5d01b035f38019834
 
 This means the next instance should use pages-90 for the first real verification. The first objective is NOT to diagnose the yellow haze yet; it is to establish a clean frame-loop/probe execution after the JavaScript exception was removed.
+
+## 2026-09-26 — RUNTIME SCREENSHOT: NEW RESOLUTION CLUE + HAZE CONFIRMED
+
+A real Android runtime screenshot was supplied after the pages-91 Render Lab repair.
+
+Observed directly from the watchdog text visible in the screenshot:
+- canvas logical size: 450 x 681
+- renderer DPR: 1.25
+- authored world is rendering; this is NOT the prior black-screen/no-geometry failure.
+- the canvas image is dramatically softer than the surrounding browser/HUD text.
+- the screenshot still shows the established broad yellow/gold camera-wide haze/wash.
+- the framebuffer-probe panel itself was not visible in this capture; the startup watchdog only showed "app.js module loaded. Waiting for renderer frame loop…".
+
+Important interpretation:
+The softness now has a concrete resolution lead. Three.js documents that setPixelRatio controls the physical drawing-buffer resolution and that EffectComposer.setPixelRatio is specifically used to prevent blurry HiDPI output. The current runtime reports only 1.25 while the physical phone screenshot is approximately 2x the 450-CSS-pixel viewport width. This is strong evidence that the canvas is being rendered below the phone's physical display resolution and then upscaled. Treat this as a separate problem from the color/haze contamination.
+
+New isolated diagnostic controls:
+- ?hires=1 forces renderer + composer pixel ratio to 2.0 and disables adaptive-quality changes during the test.
+- ?nofog=1 forces the existing FogExp2 density to zero while preserving the rest of the authored pipeline.
+These are diagnostic controls, not yet production changes to the visual target.
+
+Current Render Lab page:
+- pages-93
+- service-worker cache v72
+
+Next verification priority:
+1. Run pages-93 with hires=1 and compare perceived geometry sharpness. No screenshot is required unless the result is ambiguous; a simple "sharper / same / worse" observation is sufficient.
+2. Do NOT combine hires and nofog for the first test; keep the variables isolated.
+3. If high-resolution materially restores edge/detail clarity, make resolution architecture a production fix before continuing color forensics.
+4. The yellow wash remains a separate issue and must not be declared solved by a sharpness improvement.

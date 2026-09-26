@@ -3489,7 +3489,6 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   renderer.toneMappingExposure=.82+.12*day+.035*golden;
   scene.environmentIntensity=.22+.12*day;
   cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
-  }
 }
 
  if(player){

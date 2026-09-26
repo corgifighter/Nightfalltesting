@@ -202,3 +202,142 @@ Only after the graphics foundation is strong: gameplay systems, economy, quests,
 **Do the big visual work first.** A beautiful coherent world with a few assets is more valuable at this stage than a large amount of content rendered with weak art direction. Quality is more important than speed. Each major working pass should produce a meaningful visual leap, not a collection of tiny invisible tweaks.
 
 **Continuation target: VISIBLE + NATURAL COLOR + COHESIVE + BEAUTIFUL + IMMERSIVE.**
+
+
+
+## 15. CURRENT DIAGNOSTIC STATUS — 2026-09-26
+
+This section supersedes the older color-problem descriptions above where they conflict with the latest verified runtime evidence.
+
+### 15.1 Confirmed rendering improvement: drawing-buffer resolution
+
+A low-resolution presentation problem was isolated. The Android runtime initially reported approximately **450x681 CSS canvas with DPR 1.25**, while the game image was visibly soft even though the surrounding HTML/UI was sharp.
+
+A focused `hires=1` test forced a 2x renderer/composer pixel ratio. The user explicitly reported:
+
+> "Significantly sharper. Visuals are crisp now. Color problem remains unchanged."
+
+The production baseline was subsequently promoted to a 2x starting pixel ratio while retaining adaptive quality scaling for sustained performance pressure. Do not reopen generic pixel-ratio/FXAA/SSAO blur investigation unless new runtime evidence requires it.
+
+### 15.2 Confirmed current visual symptom
+
+The remaining defect is not merely a warm atmosphere. The latest Android screenshot shows:
+
+- geometry is clearly present and sharply rendered;
+- terrain, buildings, character, props and other objects remain spatially distinguishable;
+- however, nearly the entire world is pushed into a common pale yellow/tan range;
+- material colors are heavily suppressed;
+- directional/light-vs-shadow color separation is unusually weak;
+- the appearance resembles a **global color/lighting response applied to the rendered world**, rather than ordinary environmental haze;
+- the user specifically reports that moving around the world does not produce the expected changing environmental response: objects/terrain remain uniformly color-shifted and are distinguishable mainly through their geometry.
+
+This observation is now a primary diagnostic clue.
+
+### 15.3 Focused tests completed
+
+#### Cinematic grade isolation
+Diagnostic flag:
+`gradeoff=1`
+
+It forces the custom cinematic grade uniforms to neutral values:
+- saturation = 1
+- contrast = 1
+- warmth = 0
+- vignette = 0
+
+It does not disable fog, environment lighting, tone mapping, direct lighting, bloom, SSAO, materials or geometry.
+
+Runtime result reported by the user:
+- slightly less yellow;
+- actually more visibly hazy/washed in a lighter tan color.
+
+Conclusion: the cinematic grade contributes some warm/color shaping, but **is not the root cause of the global wash**. Do not treat the grade as the primary culprit.
+
+#### Fog isolation
+Diagnostic flag:
+`nofog=1`
+
+Fog density is forced to zero during the frame loop while the rest of the normal presentation remains active.
+
+Runtime result:
+- color problem remained essentially unchanged.
+
+Conclusion: **fog is not the root cause**. Do not keep tuning fog as though it explains the global color wash.
+
+#### Environment isolation
+Diagnostic flag:
+`noenv=1`
+
+This sets `scene.environment=null` and `scene.environmentIntensity=0` during the normal frame loop while preserving direct lights, materials, post-processing, tone mapping, geometry and the rest of the world.
+
+Latest Android screenshot was taken during this test. The user asked whether the result matched the suspected global color-pipeline behavior; it does.
+
+Conclusion: the generated environment map/global environment illumination is **not the primary root cause** of the uniform yellow/tan presentation.
+
+### 15.4 Current working hypothesis
+
+The investigation should now move **downstream/upstream of those eliminated contributors** and inspect the actual color path:
+
+1. material base/color texture interpretation;
+2. direct-light color/intensity response;
+3. hemisphere/fill/character presentation lights;
+4. renderer tone mapping and exposure;
+5. OutputPass tone-mapping/color-space conversion;
+6. custom shader/material output paths and any missing/duplicate color-space conversion;
+7. any hidden pass or shader that modifies RGB globally.
+
+Three.js documentation is relevant here: when using EffectComposer, OutputPass is responsible for tone mapping and color-space conversion, taking those settings from the renderer. Three.js also specifies Linear-sRGB as the working space and sRGB for display output; incorrect or duplicated output conversion can make an entire scene globally lighter/darker or unexpectedly alter colors. The repository uses Three.js 0.181.1 and an EffectComposer + OutputPass pipeline, so this path must be traced rather than guessed.
+
+### 15.5 Important diagnostic discipline from this point
+
+Do NOT:
+- revert to the destructive `colorErrorControl` as the first response;
+- disable the entire renderer/post stack;
+- replace all materials with diagnostic materials;
+- remove world geometry;
+- interpret a blank/flat diagnostic screen as proof that the authored world is broken;
+- keep cycling fog/grade/environment values after their focused tests have produced unchanged results.
+
+DO:
+- preserve the visible-world production baseline;
+- isolate one color-pipeline stage at a time;
+- prefer diagnostics that leave geometry, authored materials and the normal renderer intact;
+- compare framebuffer behavior before and after each focused change;
+- make production changes only after a runtime result identifies the responsible stage;
+- maintain reversible query-flag diagnostics until the culprit is established.
+
+### 15.6 Current recent implementation checkpoints
+
+Recent diagnostic/rendering commits, in chronological order:
+- `de29164fd5fb65a416b4eb0cb42a099049817ca4` — fixed `hires` diagnostic initialization order.
+- `a28138b7fd47ccd18a3682a15ad24a7af2447540` — render-lab loader cache-buster to pages-94.
+- `d4dd567d106d466eb0f15a83501c4dcaa9802270` — promoted crisp 2x rendering and added focused cinematic-grade isolation.
+- `e3b211a93121793c39351ba36a61fa02fa2f4aef` — preserved adaptive pixel-ratio scaling after the 2x baseline.
+- `5d298bab84684bac4602218aae8239a7bcb36775` — render-lab loader cache-buster to pages-95.
+- `654d37040120ac0826435c7aea9868c38d801ce8` — added focused environment isolation via `noenv=1`.
+- `35e705aa924d93e13315d668dfe8cded584ff021` — render-lab loader cache-buster to pages-96.
+
+The current render-lab loader is pages-96. The environment-isolation implementation is intentionally retained as a reversible diagnostic and must not be mistaken for a production removal of environment lighting.
+
+### 15.7 Next diagnostic target
+
+The next test should investigate the **tone-mapping/output/color-space boundary** or another equally fundamental global color transform, not fog/environment/grade.
+
+A particularly useful controlled test should preserve the normal scene and materials while temporarily changing only the renderer/output transform in a reversible query-flag diagnostic. Because OutputPass obtains tone-mapping and output-color-space settings from the renderer, the test must account for the fact that changing renderer tone mapping while keeping OutputPass active changes the final displayed image.
+
+The objective is to determine whether the yellow/tan flattening is introduced:
+- in the shaded scene before OutputPass,
+- by tone mapping/exposure,
+- by color-space conversion,
+- or by a material/shader path.
+
+Do not make a permanent tone-mapping change solely from source inspection. Require the user's runtime result.
+
+### 15.8 Runtime verification rule remains absolute
+
+The assistant cannot directly see the GitHub Pages runtime. Source inspection is not visual verification. The user's Android runtime reports/screenshots are the authoritative evidence for whether a diagnostic changes the actual image.
+
+The current verified state is therefore:
+
+**VISIBLE + CRISP WORLD / GLOBAL YELLOW-TAN COLOR WASH REMAINS / FOG, CINEMATIC GRADE, AND ENVIRONMENT ISOLATIONS DID NOT SOLVE IT.**
+

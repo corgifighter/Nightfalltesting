@@ -66,12 +66,13 @@ scene.fog=new THREE.FogExp2(0x66776f,.00118);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.55));
+renderer.setPixelRatio(hiresControl?2.0:Math.min(devicePixelRatio,1.55));
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const noFogControl=new URLSearchParams(location.search).get('nofog')==='1';
+const hiresControl=new URLSearchParams(location.search).get('hires')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -3292,7 +3293,7 @@ function updatePerformanceStats(now,frameMs){
   perfStats.frames=0;perfStats.frameMs=0;perfStats.minFrameMs=Infinity;perfStats.maxFrameMs=0;perfStats.drawCallsAccum=0;perfStats.trianglesAccum=0;
 }
 function updateAdaptiveQuality(now){
-  if(captureMode||document.hidden)return;
+  if(captureMode||document.hidden||hiresControl)return;
   quality.frameSamples.push(perfStats.lastFrameMs);
   if(quality.frameSamples.length<120)return;
   const samples=quality.frameSamples.splice(0);
@@ -3307,7 +3308,7 @@ function updateAdaptiveQuality(now){
   quality.pixelRatioCap=[1.55,1.40,1.25,1.10][quality.level];
   quality.ssaoScale=[.75,.70,.64,.58][quality.level];
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
-  const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
+  const pixelRatio=hiresControl?2.0:Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();
   rendererDiagnostics.pixelRatio=pixelRatio;

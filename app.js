@@ -71,6 +71,7 @@ renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
+const noFogControl=new URLSearchParams(location.search).get('nofog')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -3467,7 +3468,11 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
 
  if(!colorErrorControl){
   const golden=1-Math.abs(day-.52)*1.92;
-  scene.fog.density=.00105+.00058*(1-day);
+  if(noFogControl){
+    scene.fog.density=0;
+  }else{
+    scene.fog.density=.00105+.00058*(1-day);
+  }
   scene.fog.color.setHSL(.42,.10,.39+.08*day);
   sun.position.y=48+day*58;
   sun.position.x=-58+Math.sin(time*.018)*22;
@@ -3484,6 +3489,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   renderer.toneMappingExposure=.82+.12*day+.035*golden;
   scene.environmentIntensity=.22+.12*day;
   cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
+  }
 }
 
  if(player){
@@ -3520,7 +3526,7 @@ runFramebufferProbe();
 const currentDrawCalls=renderer.info.render.calls;
 const currentTriangles=renderer.info.render.triangles;
 const frameRendered=currentDrawCalls>0;
-if(frameRendered)window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;
+if(frameRendered){window.__HEARTHMERE_READY_STATE.firstFrameRendered=true;window.__HEARTHMERE_RUNTIME_DIAGNOSTICS={fog:noFogControl?'disabled':scene.fog?.density??null,rendererPixelRatio:renderer.getPixelRatio(),drawCalls:currentDrawCalls,postFailed:postProcessingFailed};}
 const frameMs=rawDt*1000;
 perfStats.lastFrameMs=frameMs;
 perfStats.drawCallsAccum+=currentDrawCalls;perfStats.trianglesAccum+=currentTriangles;

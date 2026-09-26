@@ -3501,7 +3501,7 @@ controls.update();
   if(colorErrorControl)applyColorErrorControl();
   enforceColorErrorControlFrame();
   if(materialBinaryControl)applyMaterialBinaryControl();
-  if(sterileVisualMode)applySterileVisualMode();
+  // Retired sterile visual diagnostic: its implementation is no longer present.
 runRenderStageProvenance();
 try{
   if(!postProcessingFailed && !colorErrorControl) composer.render();

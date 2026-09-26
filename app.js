@@ -25,6 +25,7 @@ function worldRandom(){
   return ((t^(t>>>14))>>>0)/4294967296;
 }
 const captureMode=new URLSearchParams(location.search).get('capture')==='1';
+const hiresControl=new URLSearchParams(location.search).get('hires')==='1';
 const toast=document.querySelector('#toast');
 const cinematic=document.querySelector('#cinematic');
 const captureButton=document.querySelector('#capture');
@@ -72,7 +73,6 @@ const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')===
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const noFogControl=new URLSearchParams(location.search).get('nofog')==='1';
-const hiresControl=new URLSearchParams(location.search).get('hires')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -4352,4 +4352,4 @@ window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=hiresControl?2.0:Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

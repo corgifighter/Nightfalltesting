@@ -3394,20 +3394,31 @@ function enforcePipelineProbe(){
 function applyMaterialBinaryControl(){
   if(!materialBinaryControl||window.__HEARTHMERE_MATERIAL_BINARY_APPLIED)return;
   window.__HEARTHMERE_MATERIAL_BINARY_APPLIED=true;
-  let replaced=0;
-  scene.traverse(o=>{
-    if(!o.isMesh||!o.material)return;
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    const next=mats.map(m=>{
-      if(!m)return m;
-      const p=new THREE.MeshBasicMaterial({color:0xffffff,side:m.side??THREE.FrontSide});
-      p.transparent=false;p.opacity=1;p.depthTest=true;p.depthWrite=true;p.fog=false;p.toneMapped=false;p.blending=THREE.NormalBlending;
-      return p;
-    });
-    o.material=Array.isArray(o.material)?next:next[0];
-    replaced+=mats.length;
+  // Use Scene.overrideMaterial rather than replacing hundreds of live materials.
+  // This preserves every authored mesh, transform, draw path and geometry while giving
+  // the renderer one known-simple material. Replacing materials in-place was producing
+  // a black framebuffer on the mobile WebGL path before it could answer the diagnostic.
+  const p=new THREE.MeshBasicMaterial({
+    color:0xffffff,
+    side:THREE.DoubleSide,
+    fog:false,
+    toneMapped:false,
+    transparent:false,
+    opacity:1,
+    depthTest:true,
+    depthWrite:true,
+    blending:THREE.NormalBlending
   });
-  window.__HEARTHMERE_MATERIAL_BINARY={replaced,allWhite:true,shaderHooks:false,textures:false,lighting:false};
+  scene.overrideMaterial=p;
+  window.__HEARTHMERE_MATERIAL_BINARY={
+    active:true,
+    strategy:'scene.overrideMaterial',
+    allWhite:true,
+    textures:false,
+    lighting:false,
+    customMaterialShaders:false,
+    authoredGeometryPreserved:true
+  };
 }
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;

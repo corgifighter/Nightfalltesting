@@ -739,3 +739,67 @@ Three.js documentation supports this separation: Scene fog affects everything re
 A clean/sharp normally colored intact world means the root is in the quarantined set. Re-enable in small coherent batches, with a real mobile visual check after each batch, until the error returns. Suggested order: (1) opaque material shader hooks/world-space material variation, (2) environment/reflections, (3) neutral-to-authored lighting, (4) shadows, (5) atmosphere/fog/sky, (6) translucent world/VFX layers, (7) SSAO, (8) bloom, (9) cinematic grade, (10) OutputPass/tone mapping. Do not re-enable several unrelated systems at once.
 
 If the maximal control still shows the same stagnant yellow/green wash over the intact world, do NOT return to worldframe/worldscalar/geometry isolation. The remaining high-value suspects are the opaque base textures/material colors, texture color-space handling, renderer/canvas output path, or another render-state mutation not covered by the control. Preserve this control build as a forensic reference.
+
+## TERMINAL SESSION FINDING — 2026-09-25 — STARTUP WATCHDOG CAUGHT A STALE DIAGNOSTIC SYMBOL
+
+The latest Android screenshot is important evidence and must be interpreted correctly.
+
+### What the screenshot showed
+
+The Render Lab URL with ?renderlab=pages-89&framebufferprobe=1 displayed a large STARTUP WATCHDOG panel reporting:
+
+- window error: Uncaught ReferenceError: sterileVisualMode is not defined
+- source: the live app.js
+- line: 3504:3
+
+The underlying Hearthmere HUD was visibly present behind the watchdog (title/quest/vitality/hotbar/cinematic controls), proving this was not a Pages/HTML blank-page failure and not evidence that the authored world had disappeared.
+
+### Exact cause
+
+The frame loop still contained this stale call:
+
+    if(sterileVisualMode)applySterileVisualMode();
+
+but the corresponding sterileVisualMode declaration/function had already been removed during later diagnostic cleanup. Therefore the browser entered the frame function and threw a ReferenceError before completing the normal render/probe sequence.
+
+This was a diagnostic-code continuity bug introduced by our own investigation, not a discovery about the game's geometry, materials, haze, or renderer.
+
+### Immediate repair already committed
+
+Commit: 5fb36fd8e58049d848c78ff5d01b035f38019834
+Message: Remove stale sterile visual diagnostic call that halted the frame loop
+
+The stale invocation was removed. The sterile visual diagnostic is retired and must NOT be resurrected as a new geometry-isolation path.
+
+The Pages shell is currently cache-busted to:
+    app.js?renderlab=pages-89&framebufferprobe=1
+
+The index already contains the startup watchdog that unregisters stale service workers, reports window errors/unhandled rejections, reports module-load failures, and times out if app.js never starts.
+
+### Important interpretation for the next instance
+
+1. Do not treat the screenshot's dark/obscured appearance as the rendering result. The watchdog overlay covers most of the viewport.
+2. Do not return to geometry isolation. The production modern scene has repeatedly been confirmed to contain the complete authored world underneath the yellow/green contamination.
+3. The immediate task after this chat is to verify that the repaired frame loop now reaches runFramebufferProbe() and produces its measured framebuffer panel.
+4. If the framebuffer probe appears, record its actual canvas dimensions, DPR, contextLost state, GL error, average RGBA, center RGBA, draw calls, and postFailed state. Those measurements are the next evidence.
+5. If another runtime error appears, fix that concrete startup/frame-loop error before interpreting any visual result. Do not infer a renderer/geometry cause from a JS exception.
+6. Optional shader precompile is now guarded by the explicit ?precompile query flag; normal launches do not block on renderer.compileAsync. This removes the earlier concern that startup might stall before the frame loop.
+7. The material-binary diagnostic remains retired/invalid. Do not revive it.
+8. The sterileVisualMode diagnostic remains retired. Do not revive it.
+
+### Current render-lab chain after this repair
+
+- Protected modern-world forensic base: 46aaae6d8013e3e472f1783d52638f4fcf26fd67
+- Render-lab branch lineage: render-lab-modern-2026-09-25
+- Latest main repair commit: 5fb36fd8e58049d848c78ff5d01b035f38019834
+- Current diagnostic query: ?renderlab=pages-89&framebufferprobe=1
+- Known haze-free historical reference: 25a725ad2b8622ed41fb4736f2e4f2ebc82d76fe
+- Protected advanced-world forensic reference: 46aaae6d8013e3e472f1783d52638f4fcf26fd67
+
+### Do not lose the central problem
+
+The real production target remains:
+
+intact modern authored world visible + eliminate the stagnant yellow/orange/green camera-wide wash and severe softness.
+
+The no-geometry white/blank diagnostic states from Builds 135–144 were artifacts of forensic isolation and are not the production failure. The modern game already has geometry; the job is to identify and correct the presentation/color contamination without destroying that world.

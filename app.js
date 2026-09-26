@@ -4329,6 +4329,11 @@ async function buildWorldArtDirectionV5(){
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();
+// Diagnostic material replacement must occur BEFORE shader compilation. Replacing a large
+// authored material set only after compileAsync can leave mobile WebGL with a mixed program
+// cache/compile state and a blank framebuffer. The binary test is deliberately compiled as
+// the actual scene configuration it is about to render.
+if(materialBinaryControl)applyMaterialBinaryControl();
 bootSet(.975,'Preparing materials and shaders…');if(!new URLSearchParams(location.search).has('browser-smoke'))await renderer.compileAsync(scene,camera);bootSet(1,'The lanterns are lit.');window.__HEARTHMERE_READY_STATE.requiredAssetsReady=(assetLoadStats.requested>0 && assetLoadStats.pending===0 && assetLoadStats.failed===0 && distilledLoadStats.pending===0 && distilledLoadStats.failed===0 && cc0LoadStats.pending===0);
 window.__HEARTHMERE_READY_STATE.visualWorldReady=true;
 window.__HEARTHMERE_READY_STATE.shadersReady=true;

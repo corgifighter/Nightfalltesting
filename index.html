@@ -69,7 +69,7 @@ window.addEventListener("unhandledrejection",e=>{
     }catch(_){}
     const s=document.createElement("script");
     s.type="module";
-    s.src="./app.js?renderlab=pages-89&framebufferprobe=1";
+    s.src="./app.js?renderlab=pages-90&framebufferprobe=1";
     s.onload=()=>{clearTimeout(timer);report("app.js module loaded. Waiting for renderer frame loop…");};
     s.onerror=()=>{clearTimeout(timer);report("MODULE LOAD ERROR\nThe browser could not execute/import app.js.\nCheck CDN/module network or syntax.");};
     document.body.appendChild(s);

@@ -75,6 +75,7 @@ const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')
 const noFogControl=new URLSearchParams(location.search).get('nofog')==='1';
 const gradeOffControl=new URLSearchParams(location.search).get('gradeoff')==='1';
 const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='1';
+const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -3492,6 +3493,9 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   renderer.toneMappingExposure=.82+.12*day+.035*golden;
   if(noEnvironmentControl){scene.environment=null;scene.environmentIntensity=0;}else{scene.environmentIntensity=.22+.12*day;}
   cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
+  if(neutralLightsControl){
+    scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
+  }
 }
 
  if(player){

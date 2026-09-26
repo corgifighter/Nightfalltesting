@@ -9,6 +9,8 @@ import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js
 import {FXAAPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/FXAAPass.js';
 import {ShaderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/postprocessing/ShaderPass.js';
 
+window.__HEARTHMERE_MODULE_STARTED=true;
+
 const root=document.querySelector('#scene');
 // Stage 2 engineering foundation: deterministic world generation.
 // Visual iteration must be reproducible so screenshots, performance samples, and bug reports

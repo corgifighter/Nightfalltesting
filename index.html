@@ -71,7 +71,7 @@ window.addEventListener("unhandledrejection",e=>{
     }catch(_){}
     const s=document.createElement("script");
     s.type="module";
-    s.src="./app.js?renderlab=pages-92&framebufferprobe=1";
+    s.src="./app.js?renderlab=pages-93&framebufferprobe=1";
     s.onload=()=>{clearTimeout(timer);report("app.js module loaded. Waiting for renderer frame loop…");setTimeout(()=>{if(window.__HEARTHMERE_MODULE_STARTED && !window.__HEARTHMERE_READY_STATE?.firstFrameRendered){report("MODULE STARTED BUT NO FIRST FRAME\n"+JSON.stringify({ready:window.__HEARTHMERE_READY_STATE,runtime:window.__HEARTHMERE_RUNTIME_DIAGNOSTICS},null,2));}},12000);};
     s.onerror=()=>{clearTimeout(timer);report("MODULE LOAD ERROR\nThe browser could not execute/import app.js.\nCheck CDN/module network or syntax.");};
     document.body.appendChild(s);

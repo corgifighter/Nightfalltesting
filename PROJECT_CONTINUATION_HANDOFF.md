@@ -803,3 +803,14 @@ The real production target remains:
 intact modern authored world visible + eliminate the stagnant yellow/orange/green camera-wide wash and severe softness.
 
 The no-geometry white/blank diagnostic states from Builds 135–144 were artifacts of forensic isolation and are not the production failure. The modern game already has geometry; the job is to identify and correct the presentation/color contamination without destroying that world.
+## FOLLOW-UP REPAIR — 2026-09-25
+
+After the stale sterileVisualMode call was removed, app.js was additionally instrumented to set window.__HEARTHMERE_MODULE_STARTED=true immediately after successful ES-module imports.
+
+Final commits for this terminal repair:
+- app.js: e6d508ec3ad6652315ba16d6cbe76e2b6f354132
+- index.html: 50a87f6dcfdb8329b65feab48eaf9ac536feb211
+- diagnostic URL is now cache-busted to ?renderlab=pages-90&framebufferprobe=1
+- prior stale-symbol fix: 5fb36fd8e58049d848c78ff5d01b035f38019834
+
+This means the next instance should use pages-90 for the first real verification. The first objective is NOT to diagnose the yellow haze yet; it is to establish a clean frame-loop/probe execution after the JavaScript exception was removed.

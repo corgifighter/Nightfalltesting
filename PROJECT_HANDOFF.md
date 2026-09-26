@@ -341,3 +341,28 @@ The current verified state is therefore:
 
 **VISIBLE + CRISP WORLD / GLOBAL YELLOW-TAN COLOR WASH REMAINS / FOG, CINEMATIC GRADE, AND ENVIRONMENT ISOLATIONS DID NOT SOLVE IT.**
 
+
+
+## 16. NEXT LIVE TEST — 2026-09-26
+
+After the environment-isolation result, the next hypothesis is **global direct-light coloration**, especially the warm sun/hemisphere/ground-fill palette. The source contains several deliberately warm global light settings: a warm directional sun, warm hemisphere ground response, dynamic HSL light colors, and additional presentation/local lights. Because the fog, environment and cinematic-grade isolation tests did not remove the wash, these direct-light contributions are now worth isolating.
+
+A reversible diagnostic flag was added:
+
+`neutrallights=1`
+
+During the normal frame loop it preserves light intensities and all scene/material/post-processing systems, but forces every active `THREE.Light` color to white and the hemisphere ground color to white. This is intentionally a **color-only lighting isolation**, not a renderer replacement.
+
+Current diagnostic commit:
+- `a25bd144b383a5fe20662a6a75a4cec5c9d630ca` — neutral-light isolation.
+- `f31aca948a92fc8c051960cb6115c8c39f420ddd` — render-lab loader pages-97.
+
+Test URL:
+`https://corgifighter.github.io/Nightfalltesting/?renderlab=pages-97&hires=1&neutrallights=1&framebufferprobe=1`
+
+Interpretation:
+- If the tan/yellow wash substantially clears and material colors return, direct-light coloration is implicated. Then re-enable lights selectively and identify the specific global light(s), followed by a proper art-directed palette correction.
+- If the wash is essentially unchanged, direct light color is not the main source. The next target should be the tone-mapping/output-color-space boundary, using a similarly narrow reversible diagnostic.
+- Do not make the neutral-light values permanent based on this test alone.
+
+The user's runtime response remains authoritative; do not claim the test outcome before the user reports it.

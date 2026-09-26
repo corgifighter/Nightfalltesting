@@ -67,12 +67,13 @@ scene.fog=new THREE.FogExp2(0x66776f,.00118);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.08,1800);
 camera.position.set(14.6,8.2,14.8);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:captureMode});
-renderer.setPixelRatio(hiresControl?2.0:Math.min(devicePixelRatio,1.55));
+renderer.setPixelRatio(2.0);
 renderer.info.autoReset=false;
 const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')==='1';
 // Full presentation/color control: preserve the authored modern world, but quarantine every non-essential mechanism capable of contributing to a camera-wide color/softness error.
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const noFogControl=new URLSearchParams(location.search).get('nofog')==='1';
+const gradeOffControl=new URLSearchParams(location.search).get('gradeoff')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -128,7 +129,7 @@ composer.addPass(ssaoPass);
 // composited back into the full-resolution chain, preserving the important contact
 // shading while avoiding a second full-resolution depth/normal/AO workload.
 const quality={
-  pixelRatioCap:1.70,
+  pixelRatioCap:2.00,
   pixelRatioMin:1.00,
   ssaoScale:1.00,
   level:0,
@@ -3305,10 +3306,10 @@ function updateAdaptiveQuality(now){
   else if(p95FrameMs<18 && avgFrameMs<15 && quality.level>0) next=quality.level-1;
   if(next===quality.level) return;
   quality.level=next;
-  quality.pixelRatioCap=[1.55,1.40,1.25,1.10][quality.level];
+  quality.pixelRatioCap=[2.00,1.75,1.50,1.25][quality.level];
   quality.ssaoScale=[.75,.70,.64,.58][quality.level];
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
-  const pixelRatio=hiresControl?2.0:Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
+  const pixelRatio=2.0;
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();
   rendererDiagnostics.pixelRatio=pixelRatio;
@@ -3499,6 +3500,12 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   const dx=controls.target.x-oldTargetX,dz=controls.target.z-oldTargetZ;
   camera.position.x+=dx;camera.position.z+=dz;
   if(!camera.userData.followInit){camera.position.set(controls.target.x+14.6,8.2,controls.target.z+14.8);camera.userData.followInit=true;}
+}
+if(gradeOffControl){
+  cinematicGradePass.uniforms.uSaturation.value=1.0;
+  cinematicGradePass.uniforms.uContrast.value=1.0;
+  cinematicGradePass.uniforms.uWarmth.value=0.0;
+  cinematicGradePass.uniforms.uVignette.value=0.0;
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
@@ -4352,4 +4359,4 @@ window.__HEARTHMERE_READY_STATE.readyAt=performance.now();
 captureReadyAt=performance.now();setTimeout(()=>{boot.style.opacity='0';setTimeout(()=>boot.remove(),650)},420)})().catch(err=>{console.error(err);bootStatus.textContent='Runtime error: '+(err?.message||String(err));});
 
 document.querySelectorAll('.tabs button').forEach((btn,i)=>btn.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const bodies=['INVENTORY — 15 carried items','SKILLS — Combat 1 · Gathering 1 · Crafting 1','EQUIPMENT — Iron blade · Traveller cloak · Field boots','MAP — Ashenvale Crossing'];say(bodies[i]||'Hearthmere');}));
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=hiresControl?2.0:Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const pixelRatio=renderer.getPixelRatio();renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();rendererDiagnostics.pixelRatio=pixelRatio;rendererDiagnostics.drawingBuffer=[renderer.domElement.width,renderer.domElement.height];mini.style.right=innerWidth<600?'10px':'18px';mini.style.top=innerWidth<600?'58px':'95px'});

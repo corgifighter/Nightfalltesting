@@ -3309,7 +3309,7 @@ function updateAdaptiveQuality(now){
   quality.pixelRatioCap=[2.00,1.75,1.50,1.25][quality.level];
   quality.ssaoScale=[.75,.70,.64,.58][quality.level];
   setShadowMapSize([3072,2560,2048,1536][quality.level]);
-  const pixelRatio=2.0;
+  const pixelRatio=hiresControl?2.0:Math.max(quality.pixelRatioMin,Math.min(devicePixelRatio,quality.pixelRatioCap));
   renderer.setPixelRatio(pixelRatio);renderer.setSize(innerWidth,innerHeight);
   composer.setPixelRatio(pixelRatio);composer.setSize(innerWidth,innerHeight);resizeSSAO();
   rendererDiagnostics.pixelRatio=pixelRatio;

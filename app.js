@@ -3515,7 +3515,14 @@ controls.update();
   if(sterileVisualMode)applySterileVisualMode();
 runRenderStageProvenance();
 try{
-  if(!postProcessingFailed && !colorErrorControl) composer.render();
+  if(materialBinaryControl){
+    // The binary experiment must not be contaminated by the production composer.
+    // Render the intact authored scene directly with its scene-wide override material.
+    renderer.setRenderTarget(null);
+    renderer.setScissorTest(false);
+    renderer.autoClear=true;renderer.autoClearColor=true;renderer.autoClearDepth=true;renderer.autoClearStencil=true;
+    renderer.render(scene,camera);
+  }else if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

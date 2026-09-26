@@ -71,6 +71,7 @@ const diagnosticsMode=new URLSearchParams(location.search).get('diagnostics')===
 const colorErrorControl=new URLSearchParams(location.search).get('colorcontrol')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
+const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1';
 const stageProbeMode=false;
 let stageProbeComplete=false;
 const gl=renderer.getContext();
@@ -3392,33 +3393,8 @@ function enforcePipelineProbe(){
 }
 
 function applyMaterialBinaryControl(){
-  if(!materialBinaryControl||window.__HEARTHMERE_MATERIAL_BINARY_APPLIED)return;
-  window.__HEARTHMERE_MATERIAL_BINARY_APPLIED=true;
-  // Use Scene.overrideMaterial rather than replacing hundreds of live materials.
-  // This preserves every authored mesh, transform, draw path and geometry while giving
-  // the renderer one known-simple material. Replacing materials in-place was producing
-  // a black framebuffer on the mobile WebGL path before it could answer the diagnostic.
-  const p=new THREE.MeshBasicMaterial({
-    color:0xffffff,
-    side:THREE.DoubleSide,
-    fog:false,
-    toneMapped:false,
-    transparent:false,
-    opacity:1,
-    depthTest:true,
-    depthWrite:true,
-    blending:THREE.NormalBlending
-  });
-  scene.overrideMaterial=p;
-  window.__HEARTHMERE_MATERIAL_BINARY={
-    active:true,
-    strategy:'scene.overrideMaterial',
-    allWhite:true,
-    textures:false,
-    lighting:false,
-    customMaterialShaders:false,
-    authoredGeometryPreserved:true
-  };
+  // Retired: material replacement was an invalid diagnostic on the mobile renderer.
+  if(!materialBinaryControl)return;
 }
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;
@@ -3428,6 +3404,19 @@ function enforceColorErrorControlFrame(){
   const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;
 }
 
+function runFramebufferProbe(){
+  if(!framebufferProbe)return;
+  const gl=renderer.getContext(),w=renderer.domElement.width,h=renderer.domElement.height;
+  const pts=[[.5,.5],[.25,.5],[.75,.5],[.5,.25],[.5,.75],[.18,.18],[.82,.18],[.18,.82],[.82,.82]],pixels=[];
+  for(const [u,v] of pts){
+    const x=Math.max(0,Math.min(w-1,Math.floor(u*(w-1)))),y=Math.max(0,Math.min(h-1,Math.floor((1-v)*(h-1)))),p=new Uint8Array(4);
+    gl.readPixels(x,y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);pixels.push([p[0],p[1],p[2],p[3]]);
+  }
+  const avg=pixels.reduce((a,p)=>{a[0]+=p[0];a[1]+=p[1];a[2]+=p[2];a[3]+=p[3];return a},[0,0,0,0]).map(v=>Math.round(v/pixels.length));
+  let panel=document.getElementById('framebuffer-probe');
+  if(!panel){panel=document.createElement('div');panel.id='framebuffer-probe';panel.style.cssText='position:fixed;left:10px;top:10px;z-index:9999;padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.88);color:#fff;font:700 11px/1.5 monospace;pointer-events:none;white-space:pre';document.body.appendChild(panel);}
+  panel.textContent=['FRAMEBUFFER PROBE','canvas: '+w+'x'+h+' DPR '+renderer.getPixelRatio().toFixed(2),'contextLost: '+gl.isContextLost(),'GL error: 0x'+gl.getError().toString(16),'avg RGBA: '+avg.join(','),'center RGBA: '+pixels[0].join(','),'draw calls: '+renderer.info.render.calls,'postFailed: '+postProcessingFailed].join('\\n');
+}
 function frame(t){
  if(document.hidden)return;
  // Presentation hardening: reset cached WebGL state before the multi-pass chain.
@@ -3515,14 +3504,7 @@ controls.update();
   if(sterileVisualMode)applySterileVisualMode();
 runRenderStageProvenance();
 try{
-  if(materialBinaryControl){
-    // The binary experiment must not be contaminated by the production composer.
-    // Render the intact authored scene directly with its scene-wide override material.
-    renderer.setRenderTarget(null);
-    renderer.setScissorTest(false);
-    renderer.autoClear=true;renderer.autoClearColor=true;renderer.autoClearDepth=true;renderer.autoClearStencil=true;
-    renderer.render(scene,camera);
-  }else if(!postProcessingFailed && !colorErrorControl) composer.render();
+  if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;
@@ -3532,6 +3514,7 @@ try{
     recordRuntimeIssue('errors',{message:fallbackErr?.message||String(fallbackErr),source:'renderer.render fallback',line:0,column:0});
   }
 }
+runFramebufferProbe();
 const currentDrawCalls=renderer.info.render.calls;
 const currentTriangles=renderer.info.render.triangles;
 const frameRendered=currentDrawCalls>0;

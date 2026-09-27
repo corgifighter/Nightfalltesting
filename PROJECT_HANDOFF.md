@@ -366,3 +366,22 @@ Interpretation:
 - Do not make the neutral-light values permanent based on this test alone.
 
 The user's runtime response remains authoritative; do not claim the test outcome before the user reports it.
+
+
+### 17. Atmospheric-visual contamination check — implementation correction
+The focused `noatmo=1` diagnostic is a **residual camera-adjacent/decorative visual check**, not a reopening of the already-resolved fog/environment/direct-light hypotheses.
+
+The earlier focused tests established:
+- `nofog=1`: the global wash remained; fog is not the root cause.
+- `noenv=1`: the global wash remained; generated environment illumination is not the primary cause.
+- `neutrallights=1`: the global wash remained; direct light coloration is not the primary cause.
+- `gradeoff=1`: only a modest change; the cinematic grade is not the root cause.
+- `notonemap=1`: no meaningful color change; tone mapping is not the root cause.
+
+The purpose of `noatmo=1` is narrower: temporarily remove authored sky/sun-disc/cloud/ambient decorative effects and CSS vignette/grain as a sanity check for a camera-adjacent contaminant that is neither fog nor global lighting.
+
+**Important runtime correction:** the first implementation called the isolation code before `sky`, `sunDisc`, and the atmosphere arrays had initialized. That produced `Cannot access sky before initialization` and prevented the world from booting. This was a diagnostic implementation error, not evidence about the renderer or the atmospheric hypothesis.
+
+The diagnostic has now been corrected in commit `578d698fad680dd3df5a5d33beba519baa292793`. The isolation function is called only after the world construction sequence has initialized the referenced scene objects/arrays.
+
+Do not interpret the `noatmo=1` test as reversing the earlier conclusion that fog/environment/direct-light coloration have already been ruled out. If `noatmo=1` changes the image, the next task is to isolate the specific decorative/camera-adjacent contributor. If it does not, proceed to the remaining global material/shader/post-processing boundary investigation.

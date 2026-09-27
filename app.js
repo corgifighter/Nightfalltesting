@@ -79,6 +79,7 @@ const neutralLightsControl=new URLSearchParams(location.search).get('neutralligh
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
 const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
 const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmocore')==='1';
+const noSkyControl=new URLSearchParams(location.search).get('nosky')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -173,6 +174,7 @@ renderer.toneMapping=THREE.AgXToneMapping;
 renderer.toneMappingExposure=1.02;
 if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
 function applyAtmosphereVisualIsolation(){
+  if(noSkyControl){sky.visible=false;}
   if(noAtmosphereVisualsControl){
     // Full residual-atmosphere isolation: disable every authored atmospheric/decorative
     // visual only after all referenced objects have initialized.

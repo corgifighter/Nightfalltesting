@@ -78,6 +78,7 @@ const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='
 const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
 const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
+const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmocore')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -172,16 +173,22 @@ renderer.toneMapping=THREE.AgXToneMapping;
 renderer.toneMappingExposure=1.02;
 if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
 function applyAtmosphereVisualIsolation(){
-  if(!noAtmosphereVisualsControl)return;
-  // This function is intentionally called only after the module's scene objects and
-  // atmosphere arrays have all been initialized. Calling it during renderer setup
-  // caused a TDZ ReferenceError ("sky before initialization") and prevented the
-  // entire modern world from booting.
-  sky.visible=false;
-  sunDisc.visible=false;
-  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds]
-    .forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
-  document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+  if(noAtmosphereVisualsControl){
+    // Full residual-atmosphere isolation: disable every authored atmospheric/decorative
+    // visual only after all referenced objects have initialized.
+    sky.visible=false;
+    sunDisc.visible=false;
+    [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds]
+      .forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+    document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+  }else if(noAtmosphereCoreControl){
+    // Split diagnostic A: isolate only the background/camera-presentation layer.
+    // Leave mist, smoke, particles, shoreline effects and world life active.
+    sky.visible=false;
+    sunDisc.visible=false;
+    clouds.forEach(o=>{if(o)o.visible=false;});
+    document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+  }
 }
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights

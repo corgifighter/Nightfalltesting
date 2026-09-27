@@ -171,7 +171,18 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
 renderer.toneMappingExposure=1.02;
 if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
-if(noAtmosphereVisualsControl){sky.visible=false;sunDisc.visible=false;[clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');}
+function applyAtmosphereVisualIsolation(){
+  if(!noAtmosphereVisualsControl)return;
+  // This function is intentionally called only after the module's scene objects and
+  // atmosphere arrays have all been initialized. Calling it during renderer setup
+  // caused a TDZ ReferenceError ("sky before initialization") and prevented the
+  // entire modern world from booting.
+  sky.visible=false;
+  sunDisc.visible=false;
+  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds]
+    .forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+  document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
+}
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -4354,6 +4365,7 @@ async function buildWorldArtDirectionV5(){
 }
 
 (async()=>{bootSet(.10,'Assembling the village…');await buildLandmarks();bootSet(.69,'Dressing Hearthmere…');await dressVillage();await buildResidentialQuarter();addVillageMicroDressing();bootSet(.79,'Growing the woodland…');await buildFoliage();bootSet(.82,'Finishing woodland dressing…');await buildNaturalDressing();buildLandscapeAnchors();buildWorldVisualPass();buildCinematicLighting();buildFarmArrival();buildStoryScenes();bootSet(.86,'Placing gathering sites…');await buildResourceNodes();bootSet(.91,'Calling the villagers…');await buildCharacters();await replaceLegacyVisuals();await buildDistilledNature();await buildVegetationBiomes();await applyCC0Materials();await buildInteractions();buildMasterArtDirectionPass();buildCivicArchitecturePass();buildPresentationMaterialPass();buildLandmarkCourtyardPass();buildBeautyLightingPass();buildHighEndAtmospherePass();buildCinematicWorldDepthPass();buildWaterDetailPass();buildLandmarkBannerPass();buildGraphicsFoundationV2();buildGraphicsMasterPass();buildWorldMaterialIntegrationPass();buildGroundIntegrationPass();buildWildflowerMeadowPass();strengthenMaterialGrounding();buildCharacterPresentationPass();buildWorldLifeAndInteractionPass();buildWorldArtDirectionV3();await buildWorldArtDirectionV4();await buildWorldArtDirectionV5();
+applyAtmosphereVisualIsolation();
 interactables.forEach(o=>registerInteractionRoot(o));
 applyShadowPolicy();
 freezeStaticVisuals();

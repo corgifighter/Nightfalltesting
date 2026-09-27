@@ -77,6 +77,7 @@ const gradeOffControl=new URLSearchParams(location.search).get('gradeoff')==='1'
 const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='1';
 const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
+const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -170,6 +171,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.AgXToneMapping;
 renderer.toneMappingExposure=1.02;
 if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
+if(noAtmosphereVisualsControl){sky.visible=false;sunDisc.visible=false;[clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');}
 renderer.setClearColor(0x8fa49e,1);
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
@@ -4104,6 +4106,7 @@ function buildWorldArtDirectionV3(){
   renderer.toneMapping=THREE.AgXToneMapping;
   renderer.toneMappingExposure=1.10;
   if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
+  if(noAtmosphereVisualsControl){sky.visible=false;sunDisc.visible=false;[clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});}
   scene.environmentIntensity=.44;
   sun.intensity=2.95;fill.intensity=.56;hemi.intensity=1.04;
   bloomPass.strength=.095;bloomPass.radius=.36;bloomPass.threshold=.88;

@@ -78,6 +78,7 @@ const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='
 const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
 const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
+const noSunDiscControl=new URLSearchParams(location.search).get('nosundisc')==='1';
 const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmocore')==='1';
 const noSkyControl=new URLSearchParams(location.search).get('nosky')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
@@ -175,6 +176,7 @@ renderer.toneMappingExposure=1.02;
 if(noToneMapControl){renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;}
 function applyAtmosphereVisualIsolation(){
   if(noSkyControl){sky.visible=false;}
+  if(noSunDiscControl){sunDisc.visible=false;}
   if(noAtmosphereVisualsControl){
     // Full residual-atmosphere isolation: disable every authored atmospheric/decorative
     // visual only after all referenced objects have initialized.

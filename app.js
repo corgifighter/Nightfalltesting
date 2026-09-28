@@ -83,6 +83,7 @@ const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmoco
 const noSkyControl=new URLSearchParams(location.search).get('nosky')==='1';
 const noCloudsControl=new URLSearchParams(location.search).get('noclouds')==='1';
 const noRiverMistControl=new URLSearchParams(location.search).get('norivermist')==='1';
+const noSmokeControl=new URLSearchParams(location.search).get('nosmoke')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -181,6 +182,7 @@ function applyAtmosphereVisualIsolation(){
   if(noSunDiscControl){sunDisc.visible=false;}
   if(noCloudsControl){clouds.forEach(o=>{if(o)o.visible=false;});}
   if(noRiverMistControl){riverMist.forEach(o=>{if(o)o.visible=false;});}
+  if(noSmokeControl){smoke.forEach(o=>{if(o)o.visible=false;});}
   if(noAtmosphereVisualsControl){
     // Full residual-atmosphere isolation: disable every authored atmospheric/decorative
     // visual only after all referenced objects have initialized.

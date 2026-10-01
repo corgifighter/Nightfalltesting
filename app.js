@@ -3369,42 +3369,43 @@ function runRenderStageProvenance(){}
 function applyColorErrorControl(){
   if(!colorErrorControl||window.__HEARTHMERE_COLOR_CONTROL_APPLIED)return;
   window.__HEARTHMERE_COLOR_CONTROL_APPLIED=true;
-  scene.fog=null;scene.background=new THREE.Color(0x6f756f);scene.environment=null;scene.environmentIntensity=0;scene.environmentRotation.set(0,0,0);
-  renderPass.enabled=false;ssaoPass.enabled=false;bloomPass.enabled=false;cinematicGradePass.enabled=false;outputPass.enabled=false;postProcessingFailed=true;
-  renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.transmissionResolutionScale=1;
+
+  // SAFE GEOMETRY-ONLY CONTROL:
+  // Do not mutate individual authored materials. The previous diagnostic did so and
+  // could encounter loader-specific null material properties. renderer.overrideMaterial
+  // instead asks Three.js to draw every mesh with one known-good diagnostic material,
+  // leaving the actual world/material architecture untouched.
+  scene.fog=null;
+  scene.background=new THREE.Color(0x202020);
+  scene.environment=null;
+  renderPass.enabled=false;ssaoPass.enabled=false;bloomPass.enabled=false;
+  cinematicGradePass.enabled=false;outputPass.enabled=false;postProcessingFailed=true;
+  renderer.toneMapping=THREE.NoToneMapping;
+  renderer.toneMappingExposure=1;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.shadowMap.enabled=false;
-  scene.traverse(o=>{
-    if(o.isLight){if(o.color?.set)o.color.set(0xffffff);if(o.isHemisphereLight&&o.groundColor?.set)o.groundColor.set(0xffffff);o.intensity=Math.max(.35,Math.min(2.25,o.intensity));o.castShadow=false;}
-    if(o.isMesh||o.isSprite||o.isPoints||o.isLine){o.castShadow=false;o.receiveShadow=false;}
-  });
-  scene.traverse(o=>{
-    if(o.isSprite||o.isPoints||o.isLine){o.visible=false;return;}
-    if(!o.isMesh||!o.material)return;
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    if(mats.some(m=>m&&(m.transparent||(m.opacity??1)<.999||m.depthTest===false||m.depthWrite===false||m.blending!==THREE.NormalBlending||m.transmission>0||m.alphaHash||m.toneMapped===false)))o.visible=false;
-  });
-  let materialCount=0,customHookCount=0;const seen=new Set();
-  scene.traverse(o=>{
-    if(!o.material)return;const mats=Array.isArray(o.material)?o.material:[o.material];
-    mats.forEach(m=>{if(!m||seen.has(m.uuid))return;seen.add(m.uuid);materialCount++;if(typeof m.onBeforeCompile==='function')customHookCount++;
-      m.onBeforeCompile=null;m.onBeforeRender=null;m.customProgramCacheKey=THREE.Material.prototype.customProgramCacheKey;m.needsUpdate=true;
-      // Some Three.js material properties exist but are null on specific material
-      // classes/loader paths. Guard object-valued properties before calling .set().
-      // This control is diagnostic-only; it must never crash the production scene.
-      if(m.emissive?.set){m.emissive.set(0x000000);m.emissiveIntensity=0;m.emissiveMap=null;}
-      if('envMap' in m)m.envMap=null;if('envMapIntensity' in m)m.envMapIntensity=0;
-      if('clearcoat' in m)m.clearcoat=0;if('clearcoatMap' in m)m.clearcoatMap=null;
-      if('sheen' in m)m.sheen=0;if(m.sheenColor?.set)m.sheenColor.set(0x000000);
-      if('iridescence' in m)m.iridescence=0;if('transmission' in m)m.transmission=0;
-      if(m.attenuationColor?.set)m.attenuationColor.set(0xffffff);
-      if('specularIntensity' in m)m.specularIntensity=0;if('fog' in m)m.fog=false;
-      m.toneMapped=true;m.blending=THREE.NormalBlending;m.depthTest=true;m.depthWrite=true;
-    });
-  });
-  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
-  const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;if(destinationMarker)destinationMarker.visible=false;
+
+  const hideList=[clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds];
+  hideList.forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+  const halo=scene.getObjectByName('GraphicsSunHalo');
+  if(halo)halo.visible=false;
+  if(sunDisc)sunDisc.visible=false;
+  if(sky)sky.visible=false;
+  if(destinationMarker)destinationMarker.visible=false;
   document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
-  window.__HEARTHMERE_COLOR_CONTROL={active:true,materialCount,customHookCount,fog:false,environment:false,post:false,toneMapping:'NoToneMapping',outputColorSpace:'sRGB',shadows:false,lights:'neutral-white',customMaterialHooks:false,emissive:false,reflections:false,transmission:false,transparentVisuals:false,cssOverlays:false};
+
+  // Normal visualization makes the presence and silhouette of rasterized geometry
+  // unambiguous without depending on lighting, environment, texture color, or PBR.
+  renderer.overrideMaterial=new THREE.MeshNormalMaterial({flatShading:false});
+  window.__HEARTHMERE_COLOR_CONTROL={
+    active:true,
+    mode:'renderer.overrideMaterial MeshNormalMaterial',
+    authoredMaterialsUntouched:true,
+    post:false,
+    fog:false,
+    environment:false,
+    shadows:false
+  };
 }
 function applyPipelineProbe(){
   if(!pipelineProbe||window.__HEARTHMERE_PIPELINE_PROBE_APPLIED)return;

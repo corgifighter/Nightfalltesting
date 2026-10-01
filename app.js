@@ -86,6 +86,7 @@ const noRiverMistControl=new URLSearchParams(location.search).get('norivermist')
 const noSmokeControl=new URLSearchParams(location.search).get('nosmoke')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
+const pipelineStageControl=new URLSearchParams(location.search).get('pipelinestage')||'full';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
 const stageProbeMode=false;
 let stageProbeComplete=false;
@@ -3557,7 +3558,22 @@ controls.update();
   // Retired sterile visual diagnostic: its implementation is no longer present.
 runRenderStageProvenance();
 try{
-  if(!postProcessingFailed && !colorErrorControl) composer.render();
+  // Render-pipeline isolation: keep the authored modern world intact and vary only
+  // the presentation stages. This identifies the exact stage where the camera-wide
+  // wash enters instead of removing world systems one at a time.
+  if(pipelineStageControl!=='full'){
+    const stage=pipelineStageControl;
+    ssaoPass.enabled=stage==='ssao'||stage==='bloom'||stage==='grade';
+    bloomPass.enabled=stage==='bloom'||stage==='grade';
+    cinematicGradePass.enabled=stage==='grade';
+    outputPass.enabled=stage==='output';
+    if(stage==='raw'){
+      renderer.render(scene,camera);
+    }else{
+      renderPass.enabled=true;
+      composer.render();
+    }
+  }else if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

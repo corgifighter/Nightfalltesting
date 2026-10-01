@@ -3446,7 +3446,7 @@ function applyMaterialBinaryControl(){
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;
   scene.fog=null;scene.environment=null;scene.environmentIntensity=0;renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;
-  scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
+  scene.traverse(o=>{if(o.isLight){if(o.color&&o.color.set)o.color.set(0xffffff);if(o.isHemisphereLight&&o.groundColor&&o.groundColor.set)o.groundColor.set(0xffffff);}});
   [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
   const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;
 }

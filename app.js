@@ -78,6 +78,7 @@ const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='
 const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
 const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
+const noAtmoBackgroundControl=new URLSearchParams(location.search).get('noatmocolor')==='1';
 const noSunDiscControl=new URLSearchParams(location.search).get('nosundisc')==='1';
 const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmocore')==='1';
 const noSkyControl=new URLSearchParams(location.search).get('nosky')==='1';
@@ -202,6 +203,12 @@ function applyAtmosphereVisualIsolation(){
   }
 }
 renderer.setClearColor(0x8fa49e,1);
+if(noAtmoBackgroundControl){
+  // Controlled noatmo follow-up: neutralize only the fallback clear/background color.
+  // Everything else in the successful noatmo state remains untouched.
+  scene.background.set(0x202020);
+  renderer.setClearColor(0x202020,1);
+}
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;

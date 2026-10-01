@@ -3388,10 +3388,16 @@ function applyColorErrorControl(){
     if(!o.material)return;const mats=Array.isArray(o.material)?o.material:[o.material];
     mats.forEach(m=>{if(!m||seen.has(m.uuid))return;seen.add(m.uuid);materialCount++;if(typeof m.onBeforeCompile==='function')customHookCount++;
       m.onBeforeCompile=null;m.onBeforeRender=null;m.customProgramCacheKey=THREE.Material.prototype.customProgramCacheKey;m.needsUpdate=true;
-      if('emissive' in m){m.emissive.set(0x000000);m.emissiveIntensity=0;m.emissiveMap=null;}
-      if('envMap' in m)m.envMap=null;if('envMapIntensity' in m)m.envMapIntensity=0;if('clearcoat' in m)m.clearcoat=0;if('clearcoatMap' in m)m.clearcoatMap=null;
-      if('sheen' in m)m.sheen=0;if('sheenColor' in m)m.sheenColor.set(0x000000);if('iridescence' in m)m.iridescence=0;if('transmission' in m)m.transmission=0;
-      if('attenuationColor' in m)m.attenuationColor.set(0xffffff);if('specularIntensity' in m)m.specularIntensity=0;if('fog' in m)m.fog=false;
+      // Some Three.js material properties exist but are null on specific material
+      // classes/loader paths. Guard object-valued properties before calling .set().
+      // This control is diagnostic-only; it must never crash the production scene.
+      if(m.emissive?.set){m.emissive.set(0x000000);m.emissiveIntensity=0;m.emissiveMap=null;}
+      if('envMap' in m)m.envMap=null;if('envMapIntensity' in m)m.envMapIntensity=0;
+      if('clearcoat' in m)m.clearcoat=0;if('clearcoatMap' in m)m.clearcoatMap=null;
+      if('sheen' in m)m.sheen=0;if(m.sheenColor?.set)m.sheenColor.set(0x000000);
+      if('iridescence' in m)m.iridescence=0;if('transmission' in m)m.transmission=0;
+      if(m.attenuationColor?.set)m.attenuationColor.set(0xffffff);
+      if('specularIntensity' in m)m.specularIntensity=0;if('fog' in m)m.fog=false;
       m.toneMapped=true;m.blending=THREE.NormalBlending;m.depthTest=true;m.depthWrite=true;
     });
   });

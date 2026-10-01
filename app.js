@@ -3374,7 +3374,7 @@ function applyColorErrorControl(){
   renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.transmissionResolutionScale=1;
   renderer.shadowMap.enabled=false;
   scene.traverse(o=>{
-    if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);o.intensity=Math.max(.35,Math.min(2.25,o.intensity));o.castShadow=false;}
+    if(o.isLight){if(o.color?.set)o.color.set(0xffffff);if(o.isHemisphereLight&&o.groundColor?.set)o.groundColor.set(0xffffff);o.intensity=Math.max(.35,Math.min(2.25,o.intensity));o.castShadow=false;}
     if(o.isMesh||o.isSprite||o.isPoints||o.isLine){o.castShadow=false;o.receiveShadow=false;}
   });
   scene.traverse(o=>{

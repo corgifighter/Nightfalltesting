@@ -86,6 +86,7 @@ const noCloudsControl=new URLSearchParams(location.search).get('noclouds')==='1'
 const noRiverMistControl=new URLSearchParams(location.search).get('norivermist')==='1';
 const noSmokeControl=new URLSearchParams(location.search).get('nosmoke')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
+const materialNeutralControl=new URLSearchParams(location.search).get('materialneutral')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const pipelineStageControl=new URLSearchParams(location.search).get('pipelinestage')||'full';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -3450,6 +3451,30 @@ function applyMaterialBinaryControl(){
   // Retired: material replacement was an invalid diagnostic on the mobile renderer.
   if(!materialBinaryControl)return;
 }
+function applyMaterialNeutralControl(){
+  if(!materialNeutralControl)return;
+  // Material-layer isolation: preserve geometry, camera, lights and renderer, but
+  // remove authored albedo/normal textures and custom material shader hooks.
+  // Reloading the page restores the production materials automatically.
+  scene.traverse(o=>{
+    if(!o.isMesh || !o.material)return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.forEach(m=>{
+      if(!m || !m.isMaterial)return;
+      if('color' in m && m.color && m.color.set)m.color.set(0xffffff);
+      if('map' in m)m.map=null;
+      if('normalMap' in m)m.normalMap=null;
+      if('roughnessMap' in m)m.roughnessMap=null;
+      if('metalnessMap' in m)m.metalnessMap=null;
+      if('aoMap' in m)m.aoMap=null;
+      if('emissiveMap' in m)m.emissiveMap=null;
+      if('alphaMap' in m)m.alphaMap=null;
+      if('emissive' in m && m.emissive && m.emissive.set)m.emissive.set(0x000000);
+      m.onBeforeCompile=null;
+      m.needsUpdate=true;
+    });
+  });
+}
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;
   scene.fog=null;scene.environment=null;scene.environmentIntensity=0;renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;
@@ -3577,6 +3602,7 @@ controls.update();
   if(colorErrorControl)applyColorErrorControl();
   enforceColorErrorControlFrame();
   if(materialBinaryControl)applyMaterialBinaryControl();
+  if(materialNeutralControl)applyMaterialNeutralControl();
   // Retired sterile visual diagnostic: its implementation is no longer present.
 runRenderStageProvenance();
 try{

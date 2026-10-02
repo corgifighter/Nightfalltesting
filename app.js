@@ -3542,7 +3542,15 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(noEnvironmentControl){scene.environment=null;scene.environmentIntensity=0;}else{scene.environmentIntensity=.22+.12*day;}
   cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
   if(neutralLightsControl){
-    scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
+    // Green-state diagnostic: preserve every light's intensity and position, but remove
+    // authored light/hemisphere color as a variable. This is intentionally narrower than
+    // changing materials or the environment.
+    scene.traverse(o=>{
+      if(o.isLight){
+        if(o.color&&o.color.set)o.color.set(0xffffff);
+        if(o.isHemisphereLight&&o.groundColor&&o.groundColor.set)o.groundColor.set(0xffffff);
+      }
+    });
   }
 }
 

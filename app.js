@@ -3610,17 +3610,16 @@ try{
   // the presentation stages. This identifies the exact stage where the camera-wide
   // wash enters instead of removing world systems one at a time.
   if(pipelineStageControl!=='full'){
+    // Every composer isolation mode must still finish through OutputPass. Without a
+    // final pass that writes to screen, EffectComposer leaves the intermediate buffer
+    // off-screen and the browser shows black.
     const stage=pipelineStageControl;
+    renderPass.enabled=true;
     ssaoPass.enabled=stage==='ssao'||stage==='bloom'||stage==='grade';
     bloomPass.enabled=stage==='bloom'||stage==='grade';
     cinematicGradePass.enabled=stage==='grade';
-    outputPass.enabled=stage==='output';
-    if(stage==='raw'){
-      renderer.render(scene,camera);
-    }else{
-      renderPass.enabled=true;
-      composer.render();
-    }
+    outputPass.enabled=true;
+    composer.render();
   }else if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

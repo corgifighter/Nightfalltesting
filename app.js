@@ -3615,10 +3615,18 @@ try{
     // off-screen and the browser shows black.
     const stage=pipelineStageControl;
     renderPass.enabled=true;
+    // SSAOPass is known to be capable of invalidating the mobile framebuffer. Keep
+    // this diagnostic stage explicitly separate so the first pipeline control is a
+    // safe RenderPass -> OutputPass baseline.
     ssaoPass.enabled=stage==='ssao'||stage==='bloom'||stage==='grade';
     bloomPass.enabled=stage==='bloom'||stage==='grade';
     cinematicGradePass.enabled=stage==='grade';
     outputPass.enabled=true;
+    if(stage==='renderpass'){
+      ssaoPass.enabled=false;
+      bloomPass.enabled=false;
+      cinematicGradePass.enabled=false;
+    }
     composer.render();
   }else if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);

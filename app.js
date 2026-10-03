@@ -3595,6 +3595,14 @@ if(gradeOffControl){
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
+if(noAtmoBackgroundControl){
+  // The high-end atmosphere builder runs after the initial clear-color setup and
+  // intentionally restores the production green background. Reassert the diagnostic
+  // background immediately before rendering so this control actually isolates the
+  // fallback/background contribution instead of silently testing the production color.
+  scene.background.set(0x202020);
+  renderer.setClearColor(0x202020,1);
+}
 // Diagnostic controls must not depend on the production asset-readiness gate.
   // Asset failures can legitimately keep __HEARTHMERE_READY false while the authored
   // world is already on screen; gating the controls made previous A/B tests silently

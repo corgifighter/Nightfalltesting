@@ -906,3 +906,111 @@ Confirmed user-observed outcomes and their proper interpretation:
 
 Ultimate acceptance criterion:
 **Complete modern authored world + crisp mobile presentation + natural, differentiated materials and lighting + no stagnant yellow/orange/green camera-wide wash.** Neither a black/flat diagnostic field nor a permanently stripped-down green scene meets the goal.
+
+## 2026-10-05 — PRESERVED COLOR-WASH FORENSICS + PIPELINE RECOVERY PLAN
+
+### Critical separation of objectives
+The project has TWO distinct problems/tasks and they must not be conflated:
+
+**A. Immediate:** recover a trustworthy visible-world render path from the render-pipeline diagnostic that produced black/flat output.
+
+**B. Deferred:** solve the original broad yellow/orange/green camera-wide color wash, then deliberately restore the complete modern rendering machinery and verify it visually.
+
+The authored world/geometry is known to exist. Black, white, gray, or flat diagnostic output is NOT evidence that the world geometry is missing. Do not restart a geometry-removal investigation based on those states.
+
+### Pipeline recovery anchor — exact commits
+- Known green-world parent: `c545e7082f3b0a0f6d36516475d125f5c6756e02`
+- Pipeline isolation commit: `8d9a3fa39c7034fe42847879a2ee11adf439227f`
+- Verified by GitHub compare: `c545e708` -> `8d9a3fa` is exactly ONE commit, with only `app.js` changed.
+- `8d9a3fa` message: “Add render pipeline stage isolation diagnostics”
+- The commit added `pipelinestage` and changed only final render routing:
+  - `ssao`: SSAO enabled; Bloom/grade disabled; OutputPass disabled.
+  - `bloom`: SSAO + Bloom enabled; grade disabled; OutputPass disabled.
+  - `grade`: SSAO + Bloom + grade enabled; OutputPass disabled.
+  - `output`: only OutputPass enabled among those stages.
+  - `raw`: bypasses EffectComposer and directly calls `renderer.render(scene,camera)`.
+- This means the stage diagnostic itself was capable of producing black/invalid output simply by ending the composer chain before OutputPass. Do not mistake the broken diagnostic route for a broken authored world.
+- Later repair `6d40c88593ccdb978b233b0d33c7095201c805fb` attempted to force OutputPass on and always use composer rendering. User still saw black in the SSAO test. Therefore there is an additional issue in the stage isolation path, likely related to the mobile renderer/pass state, and it must be isolated from the green-world problem.
+- Later `renderpass` work produced a flat green/gray field. This is diagnostic evidence only, not evidence of missing geometry.
+- Current controlled source on branch `diagnostic/noatmo-clear-neutral` was reset on 2026-10-05 to the exact `app.js` content from `8d9a3fa`; reset commit: `0008d6df4a2fa625828b0ddca721967695bdc55e`.
+- Before that reset, a full archive branch was created: `archive/diagnostic-noatmo-clear-neutral-pre-pipeline-reverse`. Preserve it.
+
+### Immediate test sequence
+Do ONE runtime test at a time. Do not stack new diagnostics while reverse-engineering this commit.
+
+First planned test after reset:
+`?noatmo=1&pipelinestage=output`
+
+This is the safest original stage-isolation route: RenderPass -> OutputPass, with SSAO/Bloom/cinematic grade disabled. User has not yet reported the result at the time this note was written.
+
+After that result, modify ONLY the stage-routing behavior and test the smallest possible change. Never alter world systems during this phase.
+
+### Color-wash findings that must be retained for later
+Original modern build: complete authored world was visible beneath a broad stagnant yellow/gold camera-wide wash. High-resolution mode made the world substantially sharper while leaving the color wash unchanged; sharpness and color are separate issues.
+
+User-reported diagnostic findings:
+
+- `gradeoff=1`: slightly less yellow, but lighter/tan and possibly hazier. Cinematic grade contributes some shaping but is not the root cause.
+- `nofog=1`: no meaningful change in original yellow state; later green-state combined test also unchanged. Fog is not the leading cause.
+- `noenv=1`: original yellow/tan remained; in the green state, environment removal substantially improved visibility but did NOT change the green hue. Environment is not the primary hue source.
+- `neutrallights=1`: no meaningful change to original wash. In the green state, neutralizing direct/hemisphere light colors also did not change green. Direct light color is not the leading source.
+- `notonemap=1`: little/no color change; perhaps some improvement in world distinction.
+- `noatmo=1`: produced a much clearer, predominantly green view. This is important and should be revisited after pipeline recovery, but it is NOT a final fix because it disables a broad group of presentation/atmosphere systems.
+- `noatmocore=1` (sky, sun disc, clouds, CSS vignette/grain): still predominantly green.
+- `nosky=1`: still predominantly green. Giant sky sphere alone is not the source.
+- `nosundisc=1`: yellow wash remained and visibility was substantially worse than green state.
+- `noclouds=1`: washed-out tan with poor visibility. Clouds are not primary.
+- `norivermist=1`: became much more yellow; visibility still poor. River mist is not source.
+- `nosmoke=1`: yellow/tan wash and poor visibility. Smoke is not source.
+- Green-state combined `noatmo=1&noatmocolor=1&neutrallights=1`: remained green.
+- Adding `noenv=1`: green hue unchanged while underlying visibility improved substantially.
+- Adding `materialneutral=1`: green unchanged. That diagnostic removed common albedo/normal/roughness/metalness/AO/emissive/alpha maps and common `onBeforeCompile` hooks while preserving geometry. This is evidence against authored material color as the simple source, but not proof of every GPU path.
+- Adding `nofog=1` to the above combined green-state test: unchanged.
+- `colorcontrol=1` repeatedly caused null-color runtime errors despite attempted hardening. Treat it as an unreliable/retired diagnostic and do not revive it.
+- `noatmocolor` initially had a timing flaw because `buildHighEndAtmospherePass()` later restored the green scene background; a later reassertion immediately before rendering still left the combined renderpass result flat green/gray. Do not infer geometry absence from that result.
+- `pipelinestage=ssao`: black on two attempts. First because OutputPass was disabled by the original 8d9 routing; later still black after the OutputPass repair. This means the SSAO isolation path itself is unsafe/unresolved on the target mobile renderer.
+- `pipelinestage=raw`: world appeared to disappear. Treat as a faulty/insufficient diagnostic route, not as evidence of absent geometry.
+- `pipelinestage=renderpass`: flat green/gray field with UI/watchdog. Again, do not infer missing geometry.
+
+### Modern machinery preservation checklist
+After the color wash is understood, the complete modern system must be restored deliberately. Preserve and account for:
+
+1. Three.js r0.181.1 renderer.
+2. sRGB output color space.
+3. AgX tone mapping and dynamic exposure.
+4. 2x/high-resolution renderer + composer pixel-ratio architecture and adaptive quality controls.
+5. EffectComposer chain:
+   RenderPass -> SSAOPass -> UnrealBloomPass -> custom cinematicGradePass -> OutputPass.
+6. Fog/time-of-day system and dynamic light colors/intensities.
+7. PMREM/equirectangular scene environment and dynamic environment intensity.
+8. Custom sky shader.
+9. Sun disc and cloud sprites.
+10. High-end atmosphere systems.
+11. Shoreline glints, foam, embers, smoke, motes, ambient leaves, fireflies, river mist, birds.
+12. World labels and CSS vignette/grain presentation.
+13. Graphics-master presentation pass.
+14. World material integration, authored textures, material variation, custom shader hooks.
+15. Character presentation pass and localized hero lighting/rim lighting.
+16. Complete authored terrain, architecture, characters, water and world-life geometry.
+17. Startup/watchdog/framebuffer diagnostics must remain subordinate to the actual renderer and must never be mistaken for the game image.
+
+A diagnostic disabling one of these systems is NOT permission to permanently remove it. Once the color cause is known, reintroduce systems in controlled groups while maintaining a visible authored world.
+
+### Restoration philosophy
+Do NOT choose “delete the machinery that makes the screenshot ugly.” The goal is the complete modern world with correct color.
+
+The correct sequence is:
+1. Restore stable visible-world rendering.
+2. Identify the exact color contamination mechanism.
+3. Fix the mechanism without deleting modern features.
+4. Re-enable/reconcile atmosphere, environment, materials, post-processing and presentation in small logical groups.
+5. Verify each group against the corrected color baseline.
+6. Only then resume broader visual development.
+
+### Communication/test protocol
+- One test at a time.
+- User will normally provide a short qualitative result rather than a screenshot.
+- Do not repeatedly request screenshots.
+- Do not chase “missing geometry” when the user has established that the diagnostic output is an artifact.
+- Do not claim direct Android runtime execution; runtime observations come from the user's test.
+- Keep exact commit SHAs and URL flags in the handoff.

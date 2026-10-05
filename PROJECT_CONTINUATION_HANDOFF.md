@@ -844,3 +844,65 @@ Next verification priority:
 2. Do NOT combine hires and nofog for the first test; keep the variables isolated.
 3. If high-resolution materially restores edge/detail clarity, make resolution architecture a production fix before continuing color forensics.
 4. The yellow wash remains a separate issue and must not be declared solved by a sharpness improvement.
+
+
+## 2026-10-05 — PRESERVE TWO DISTINCT INVESTIGATION TRACKS: PIPELINE REGRESSION AND ORIGINAL COLOR WASH
+
+This section supersedes any implication that the current black/flat diagnostic result means the authored world geometry is missing. The user has repeatedly confirmed that the modern production build showed the world under a broad color wash. Do not restart geometry-presence investigations.
+
+### Track A — reverse the render-pipeline diagnostic regression first
+
+User's explicit instruction: isolate the exact render-pipeline diagnostic change that turned the known green world into black/flat output, by testing its individual changes or small groups. Restore reliable visibility before returning to the color problem.
+
+Relevant history:
+- Known green baseline immediately before the pipeline-stage isolation commit: `c545e7082f3b0a0f6d36516475d125f5c6756e02`.
+- Pipeline-stage isolation introduced by `8d9a3fa39c7034fe42847879a2ee11adf439227f`, message: “Add render pipeline stage isolation diagnostics.”
+- The isolation mode defaults to `full`, so the new behavior is activated by `pipelinestage=...`, not merely by deploying that commit.
+- The original `8d9` implementation set `outputPass.enabled=stage==='output'`. For `ssao`, `bloom`, and `grade`, it disabled OutputPass while still calling `composer.render()`. This is a strong, source-grounded explanation for black output in those modes: the composer was not guaranteed to finish through the output/color-conversion stage.
+- The original `raw` mode bypassed the composer with `renderer.render(scene,camera)`; that path also produced an unusable user-observed result and must not be treated as evidence of missing geometry.
+- Later repair `6d40c88593ccdb978b233b0d33c7095201c805fb` always enabled OutputPass, but user still observed black on the SSAO test. The later renderpass-only experiment also yielded a flat green/gray field. Do not assume the first fix solved all stage-mode problems.
+- The current diagnostic branch's `app.js` was restored to the exact `8d9a3fa...` file state in commit `0008d6df4a2fa625828b0ddca721967695bdc55e`. The prior diagnostic branch was archived at `archive/diagnostic-noatmo-clear-neutral-pre-pipeline-reverse`.
+
+Current single-test instruction (user has not yet reported its result):
+- Run `https://corgifighter.github.io/Nightfalltesting/?noatmo=1&pipelinestage=output`
+- This uses the original `8d9` stage-isolation implementation and selects the RenderPass + OutputPass route, with SSAO, Bloom and grade disabled.
+- Record the user's simple visual report before changing any other variable. Do not combine more flags or request a screenshot unless the result is ambiguous.
+- Next, use the outcome to decide which exact stage operation to test. Keep each step reversible and narrowly scoped. Never interpret black/flat output as proof that geometry is absent.
+
+### Track B — retain a durable record of the original yellow-to-green color investigation
+
+The original goal remains to eliminate the stagnant camera-wide yellow/tan/green cast while preserving the complete modern world. This investigation is independent from Track A and must resume after the pipeline diagnostic is stable.
+
+Confirmed user-observed outcomes and their proper interpretation:
+- Initial advanced world: geometry and architecture visible beneath a broad yellow/gold wash; canvas looked soft compared with browser UI.
+- `hires=1`: user reported substantially sharper/crisper visuals; color issue unchanged. Resolution/softness is a separate issue.
+- `gradeoff=1`: user reported perhaps slightly less yellow but lighter tan/hazier. Cinematic grade contributes some color shaping but was not the sole cause.
+- `nofog=1`: original yellow wash unchanged; fog is not the sole cause.
+- `noenv=1`: yellow/tan wash persisted, material colors suppressed and object/light-shadow separation weak; environment is not the sole cause.
+- `neutrallights=1`: original yellow state unchanged; direct/hemisphere light hue alone is not the cause.
+- `notonemap=1`: color wash essentially unchanged, with some hard-to-describe increase in distinguishability; tone mapping alone is not the cause.
+- `noatmo=1`: produced a much clearer predominantly green image, a useful diagnostic state but not a solution. It suppresses a broad group of atmosphere and decorative VFX.
+- `noatmocore=1` and `nosky=1`: image remained predominantly green; the sky sphere/core presentation group is not by itself the green source.
+- `nosundisc=1`: yellow wash remained and visibility was worse; sun disc not the primary source.
+- `noclouds=1`: washed-out tan persisted with poor visibility; clouds not the primary source.
+- `norivermist=1`: image became much more yellow again; river mist is not the sole cause of the green state.
+- `nosmoke=1`: yellow/tan wash and poor visibility persisted; smoke is not the sole cause.
+- In the green-state combined test, `neutrallights=1` did not change green hue.
+- In the green-state combined test, `noenv=1` did not change green hue, although visibility improved substantially.
+- `materialneutral=1` did not change the green hue; authored mesh colors/maps/custom material shader hooks are unlikely to be the sole green source, subject to the limitations of that diagnostic.
+- `nofog=1` added to the green-state combined test did not change hue; fog is not the green source.
+- `noatmocolor=1` was initially flawed because `buildHighEndAtmospherePass()` could later restore the green scene background. The override was reapplied immediately before rendering; the user reported no visual change. Do not repeat this test without a new reason.
+- The color-control diagnostic repeatedly threw null-color errors even after attempted hardening; it is unreliable and must not be used as evidence.
+- Several no-geometry/black/gray tests came from diagnostic pipeline or startup failures. Do not mix those outcomes into the original color-cast evidence.
+
+### Required future color-wash strategy
+
+1. Keep the pipeline regression and color-wash findings in separate sections/logs. Never discard the earlier green-state observations when fixing Track A.
+2. Once stage rendering is reliable, return to a known visible green-state baseline and establish exactly which source commit and combination of presentation/VFX changes produced green versus yellow. Use commit-level diffs and narrow reversible groups rather than repeatedly dismantling the renderer.
+3. Treat the green state as a clue, not the target. Neutralize or correct its hue only after determining what changed.
+4. Reintroduce all modern systems after the base color is understood: authored materials/textures, environment/reflections, lighting and shadows, fog/sky/atmosphere, translucent VFX, SSAO, bloom, cinematic grade and output/tone mapping. Restore one coherent group at a time, checking the mobile browser after each group.
+5. Preserve the full modern production build and the known green forensic baseline. Do not make a stripped diagnostic state the permanent solution.
+6. User prefers one test at a time, a direct URL, and a short qualitative result (“green / yellow / visible / black / gray” or similar). Do not ask for a screenshot for every test.
+
+Ultimate acceptance criterion:
+**Complete modern authored world + crisp mobile presentation + natural, differentiated materials and lighting + no stagnant yellow/orange/green camera-wide wash.** Neither a black/flat diagnostic field nor a permanently stripped-down green scene meets the goal.

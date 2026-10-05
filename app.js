@@ -78,7 +78,6 @@ const noEnvironmentControl=new URLSearchParams(location.search).get('noenv')==='
 const neutralLightsControl=new URLSearchParams(location.search).get('neutrallights')==='1';
 const noToneMapControl=new URLSearchParams(location.search).get('notonemap')==='1';
 const noAtmosphereVisualsControl=new URLSearchParams(location.search).get('noatmo')==='1';
-const noAtmoBackgroundControl=new URLSearchParams(location.search).get('noatmocolor')==='1';
 const noSunDiscControl=new URLSearchParams(location.search).get('nosundisc')==='1';
 const noAtmosphereCoreControl=new URLSearchParams(location.search).get('noatmocore')==='1';
 const noSkyControl=new URLSearchParams(location.search).get('nosky')==='1';
@@ -86,7 +85,6 @@ const noCloudsControl=new URLSearchParams(location.search).get('noclouds')==='1'
 const noRiverMistControl=new URLSearchParams(location.search).get('norivermist')==='1';
 const noSmokeControl=new URLSearchParams(location.search).get('nosmoke')==='1';
 const materialBinaryControl=new URLSearchParams(location.search).get('materialbinary')==='1';
-const materialNeutralControl=new URLSearchParams(location.search).get('materialneutral')==='1';
 const pipelineProbe=new URLSearchParams(location.search).get('pipelineprobe')==='1';
 const pipelineStageControl=new URLSearchParams(location.search).get('pipelinestage')||'full';
 const framebufferProbe=new URLSearchParams(location.search).get('framebufferprobe')==='1' || window.__HEARTHMERE_FRAMEBUFFER_PROBE===true;
@@ -204,12 +202,6 @@ function applyAtmosphereVisualIsolation(){
   }
 }
 renderer.setClearColor(0x8fa49e,1);
-if(noAtmoBackgroundControl){
-  // Controlled noatmo follow-up: neutralize only the fallback clear/background color.
-  // Everything else in the successful noatmo state remains untouched.
-  scene.background.set(0x202020);
-  renderer.setClearColor(0x202020,1);
-}
 // r155+ uses physically-correct lighting by default; the legacy/physicallyCorrectLights
 // toggles are obsolete API surface and should not be carried in a r181 renderer.
 renderer.sortObjects=true;
@@ -3377,43 +3369,36 @@ function runRenderStageProvenance(){}
 function applyColorErrorControl(){
   if(!colorErrorControl||window.__HEARTHMERE_COLOR_CONTROL_APPLIED)return;
   window.__HEARTHMERE_COLOR_CONTROL_APPLIED=true;
-
-  // SAFE GEOMETRY-ONLY CONTROL:
-  // Do not mutate individual authored materials. The previous diagnostic did so and
-  // could encounter loader-specific null material properties. renderer.overrideMaterial
-  // instead asks Three.js to draw every mesh with one known-good diagnostic material,
-  // leaving the actual world/material architecture untouched.
-  scene.fog=null;
-  scene.background=new THREE.Color(0x202020);
-  scene.environment=null;
-  renderPass.enabled=false;ssaoPass.enabled=false;bloomPass.enabled=false;
-  cinematicGradePass.enabled=false;outputPass.enabled=false;postProcessingFailed=true;
-  renderer.toneMapping=THREE.NoToneMapping;
-  renderer.toneMappingExposure=1;
-  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  scene.fog=null;scene.background=new THREE.Color(0x6f756f);scene.environment=null;scene.environmentIntensity=0;scene.environmentRotation.set(0,0,0);
+  renderPass.enabled=false;ssaoPass.enabled=false;bloomPass.enabled=false;cinematicGradePass.enabled=false;outputPass.enabled=false;postProcessingFailed=true;
+  renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.transmissionResolutionScale=1;
   renderer.shadowMap.enabled=false;
-
-  const hideList=[clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds];
-  hideList.forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
-  const halo=scene.getObjectByName('GraphicsSunHalo');
-  if(halo)halo.visible=false;
-  if(sunDisc)sunDisc.visible=false;
-  if(sky)sky.visible=false;
-  if(destinationMarker)destinationMarker.visible=false;
+  scene.traverse(o=>{
+    if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);o.intensity=Math.max(.35,Math.min(2.25,o.intensity));o.castShadow=false;}
+    if(o.isMesh||o.isSprite||o.isPoints||o.isLine){o.castShadow=false;o.receiveShadow=false;}
+  });
+  scene.traverse(o=>{
+    if(o.isSprite||o.isPoints||o.isLine){o.visible=false;return;}
+    if(!o.isMesh||!o.material)return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    if(mats.some(m=>m&&(m.transparent||(m.opacity??1)<.999||m.depthTest===false||m.depthWrite===false||m.blending!==THREE.NormalBlending||m.transmission>0||m.alphaHash||m.toneMapped===false)))o.visible=false;
+  });
+  let materialCount=0,customHookCount=0;const seen=new Set();
+  scene.traverse(o=>{
+    if(!o.material)return;const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.forEach(m=>{if(!m||seen.has(m.uuid))return;seen.add(m.uuid);materialCount++;if(typeof m.onBeforeCompile==='function')customHookCount++;
+      m.onBeforeCompile=null;m.onBeforeRender=null;m.customProgramCacheKey=THREE.Material.prototype.customProgramCacheKey;m.needsUpdate=true;
+      if('emissive' in m){m.emissive.set(0x000000);m.emissiveIntensity=0;m.emissiveMap=null;}
+      if('envMap' in m)m.envMap=null;if('envMapIntensity' in m)m.envMapIntensity=0;if('clearcoat' in m)m.clearcoat=0;if('clearcoatMap' in m)m.clearcoatMap=null;
+      if('sheen' in m)m.sheen=0;if('sheenColor' in m)m.sheenColor.set(0x000000);if('iridescence' in m)m.iridescence=0;if('transmission' in m)m.transmission=0;
+      if('attenuationColor' in m)m.attenuationColor.set(0xffffff);if('specularIntensity' in m)m.specularIntensity=0;if('fog' in m)m.fog=false;
+      m.toneMapped=true;m.blending=THREE.NormalBlending;m.depthTest=true;m.depthWrite=true;
+    });
+  });
+  [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
+  const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;if(destinationMarker)destinationMarker.visible=false;
   document.querySelectorAll('.vignette,.grain').forEach(e=>e.style.display='none');
-
-  // Normal visualization makes the presence and silhouette of rasterized geometry
-  // unambiguous without depending on lighting, environment, texture color, or PBR.
-  renderer.overrideMaterial=new THREE.MeshNormalMaterial({flatShading:false});
-  window.__HEARTHMERE_COLOR_CONTROL={
-    active:true,
-    mode:'renderer.overrideMaterial MeshNormalMaterial',
-    authoredMaterialsUntouched:true,
-    post:false,
-    fog:false,
-    environment:false,
-    shadows:false
-  };
+  window.__HEARTHMERE_COLOR_CONTROL={active:true,materialCount,customHookCount,fog:false,environment:false,post:false,toneMapping:'NoToneMapping',outputColorSpace:'sRGB',shadows:false,lights:'neutral-white',customMaterialHooks:false,emissive:false,reflections:false,transmission:false,transparentVisuals:false,cssOverlays:false};
 }
 function applyPipelineProbe(){
   if(!pipelineProbe||window.__HEARTHMERE_PIPELINE_PROBE_APPLIED)return;
@@ -3451,34 +3436,10 @@ function applyMaterialBinaryControl(){
   // Retired: material replacement was an invalid diagnostic on the mobile renderer.
   if(!materialBinaryControl)return;
 }
-function applyMaterialNeutralControl(){
-  if(!materialNeutralControl)return;
-  // Material-layer isolation: preserve geometry, camera, lights and renderer, but
-  // remove authored albedo/normal textures and custom material shader hooks.
-  // Reloading the page restores the production materials automatically.
-  scene.traverse(o=>{
-    if(!o.isMesh || !o.material)return;
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    mats.forEach(m=>{
-      if(!m || !m.isMaterial)return;
-      if('color' in m && m.color && m.color.set)m.color.set(0xffffff);
-      if('map' in m)m.map=null;
-      if('normalMap' in m)m.normalMap=null;
-      if('roughnessMap' in m)m.roughnessMap=null;
-      if('metalnessMap' in m)m.metalnessMap=null;
-      if('aoMap' in m)m.aoMap=null;
-      if('emissiveMap' in m)m.emissiveMap=null;
-      if('alphaMap' in m)m.alphaMap=null;
-      if('emissive' in m && m.emissive && m.emissive.set)m.emissive.set(0x000000);
-      m.onBeforeCompile=null;
-      m.needsUpdate=true;
-    });
-  });
-}
 function enforceColorErrorControlFrame(){
   if(!colorErrorControl)return;
   scene.fog=null;scene.environment=null;scene.environmentIntensity=0;renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=1;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;
-  scene.traverse(o=>{if(o.isLight){if(o.color&&o.color.set)o.color.set(0xffffff);if(o.isHemisphereLight&&o.groundColor&&o.groundColor.set)o.groundColor.set(0xffffff);}});
+  scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
   [clouds,worldLabels,shorelineGlints,foam,embers,smoke,motes,ambientLeaves,fireflies,riverMist,birds].forEach(list=>{if(Array.isArray(list))list.forEach(o=>{if(o)o.visible=false;});});
   const halo=scene.getObjectByName('GraphicsSunHalo');if(halo)halo.visible=false;if(sunDisc)sunDisc.visible=false;if(sky)sky.visible=false;
 }
@@ -3567,15 +3528,7 @@ birds.forEach((b,i)=>{b.position.x+=dt*(1.2+i*.15);b.position.z+=Math.sin(time*.
   if(noEnvironmentControl){scene.environment=null;scene.environmentIntensity=0;}else{scene.environmentIntensity=.22+.12*day;}
   cinematicSpots.forEach((l,i)=>{l.intensity=(2.8+(i%3)*.55)*(1.0+(1-day)*1.9);});
   if(neutralLightsControl){
-    // Green-state diagnostic: preserve every light's intensity and position, but remove
-    // authored light/hemisphere color as a variable. This is intentionally narrower than
-    // changing materials or the environment.
-    scene.traverse(o=>{
-      if(o.isLight){
-        if(o.color&&o.color.set)o.color.set(0xffffff);
-        if(o.isHemisphereLight&&o.groundColor&&o.groundColor.set)o.groundColor.set(0xffffff);
-      }
-    });
+    scene.traverse(o=>{if(o.isLight){o.color.set(0xffffff);if(o.isHemisphereLight)o.groundColor.set(0xffffff);}});
   }
 }
 
@@ -3595,14 +3548,6 @@ if(gradeOffControl){
 }
 for(const labelMesh of worldLabels) labelMesh.visible=!cinematicMode;
 controls.update();
-if(noAtmoBackgroundControl){
-  // The high-end atmosphere builder runs after the initial clear-color setup and
-  // intentionally restores the production green background. Reassert the diagnostic
-  // background immediately before rendering so this control actually isolates the
-  // fallback/background contribution instead of silently testing the production color.
-  scene.background.set(0x202020);
-  renderer.setClearColor(0x202020,1);
-}
 // Diagnostic controls must not depend on the production asset-readiness gate.
   // Asset failures can legitimately keep __HEARTHMERE_READY false while the authored
   // world is already on screen; gating the controls made previous A/B tests silently
@@ -3610,7 +3555,6 @@ if(noAtmoBackgroundControl){
   if(colorErrorControl)applyColorErrorControl();
   enforceColorErrorControlFrame();
   if(materialBinaryControl)applyMaterialBinaryControl();
-  if(materialNeutralControl)applyMaterialNeutralControl();
   // Retired sterile visual diagnostic: its implementation is no longer present.
 runRenderStageProvenance();
 try{
@@ -3618,24 +3562,17 @@ try{
   // the presentation stages. This identifies the exact stage where the camera-wide
   // wash enters instead of removing world systems one at a time.
   if(pipelineStageControl!=='full'){
-    // Every composer isolation mode must still finish through OutputPass. Without a
-    // final pass that writes to screen, EffectComposer leaves the intermediate buffer
-    // off-screen and the browser shows black.
     const stage=pipelineStageControl;
-    renderPass.enabled=true;
-    // SSAOPass is known to be capable of invalidating the mobile framebuffer. Keep
-    // this diagnostic stage explicitly separate so the first pipeline control is a
-    // safe RenderPass -> OutputPass baseline.
     ssaoPass.enabled=stage==='ssao'||stage==='bloom'||stage==='grade';
     bloomPass.enabled=stage==='bloom'||stage==='grade';
     cinematicGradePass.enabled=stage==='grade';
-    outputPass.enabled=true;
-    if(stage==='renderpass'){
-      ssaoPass.enabled=false;
-      bloomPass.enabled=false;
-      cinematicGradePass.enabled=false;
+    outputPass.enabled=stage==='output';
+    if(stage==='raw'){
+      renderer.render(scene,camera);
+    }else{
+      renderPass.enabled=true;
+      composer.render();
     }
-    composer.render();
   }else if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){

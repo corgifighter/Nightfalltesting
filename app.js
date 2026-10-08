@@ -3558,22 +3558,10 @@ controls.update();
   // Retired sterile visual diagnostic: its implementation is no longer present.
 runRenderStageProvenance();
 try{
-  // Render-pipeline isolation: keep the authored modern world intact and vary only
-  // the presentation stages. This identifies the exact stage where the camera-wide
-  // wash enters instead of removing world systems one at a time.
-  if(pipelineStageControl!=='full'){
-    const stage=pipelineStageControl;
-    ssaoPass.enabled=stage==='ssao'||stage==='bloom'||stage==='grade';
-    bloomPass.enabled=stage==='bloom'||stage==='grade';
-    cinematicGradePass.enabled=stage==='grade';
-    outputPass.enabled=stage==='output';
-    if(stage==='raw'){
-      renderer.render(scene,camera);
-    }else{
-      renderPass.enabled=true;
-      composer.render();
-    }
-  }else if(!postProcessingFailed && !colorErrorControl) composer.render();
+  // Reverse-isolation checkpoint: retain the new query flag but restore the exact
+  // pre-8d9 production render routing. This isolates whether the render-stage block
+  // itself is responsible for the green-world -> flat/black transition.
+  if(!postProcessingFailed && !colorErrorControl) composer.render();
   else renderer.render(scene,camera);
 }catch(err){
   postProcessingFailed=true;

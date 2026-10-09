@@ -385,3 +385,23 @@ The purpose of `noatmo=1` is narrower: temporarily remove authored sky/sun-disc/
 The diagnostic has now been corrected in commit `578d698fad680dd3df5a5d33beba519baa292793`. The isolation function is called only after the world construction sequence has initialized the referenced scene objects/arrays.
 
 Do not interpret the `noatmo=1` test as reversing the earlier conclusion that fog/environment/direct-light coloration have already been ruled out. If `noatmo=1` changes the image, the next task is to isolate the specific decorative/camera-adjacent contributor. If it does not, proceed to the remaining global material/shader/post-processing boundary investigation.
+
+
+## 2026-10-09 — MAIN-BRANCH PAGES IDENTITY CHECK (CONTROLLED TEST)
+
+User preference: keep all GitHub work automated through the assistant. Do not ask the user to manually change GitHub Pages settings.
+
+Pages is configured by the user as **Deploy from a branch → main / (root)**. GitHub connector tools available in this session do not expose a Pages publishing-source setting, so no settings change was made. To avoid a manual branch switch, the main branch's root `index.html` received a narrowly scoped deployment-identification change only:
+- Commit: `275060644a6d954db229a7172a1b1f3bbf02f72d`
+- `index.html` blob: `95f1475f7ee69aa2e84992105f03dd3ab216ace7`
+- Startup watchdog label: `STARTUP WATCHDOG [pages-98-main-controlled-pipeline]`
+- Module URL cache-buster: `app.js?renderlab=pages-98&framebufferprobe=1`
+- `app.js` was not modified; current main blob remains `a12fe652ada24925fe32b67bff668c793655e3cf`.
+
+The main-branch `app.js` already contains query-gated `pipelinestage` routing. With `pipelinestage=output`, it enables only the OutputPass among SSAO/bloom/grade, keeps the RenderPass active, and calls `composer.render()`. The normal default path (`pipelinestage` absent or `full`) remains the existing production composer path. No renderer systems were removed and no main-branch render logic was changed in this step.
+
+**Next controlled phone test:** open
+`https://corgifighter.github.io/Nightfalltesting/?noatmo=1&pipelinestage=output&pagescheck=98`
+after GitHub Pages has published the new main commit. First verify the startup watchdog panel, if visible, includes `pages-98-main-controlled-pipeline`. If the marker is absent, stop: deployment/cache identity is not confirmed and the scene result must not be used as evidence. If the marker is present, report only whether the view is (a) visible world/character, (b) flat gray/green, or (c) black/error. No screenshot is required unless the result is ambiguous.
+
+Limit: the available environment cannot directly fetch the live GitHub Pages response, so the new marker has been verified in the committed repository source but still needs confirmation in the user's browser. Do not claim the live CDN is verified until the marker is seen. This test uses the existing query-gated pipeline isolation already in main; it is not a permanent visual fix. Preserve the diagnostic branch and archive branch unchanged.
